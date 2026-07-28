@@ -1,0 +1,111 @@
+ body {
+     background-color: whitesmoke !important;
+ }
+ 
+ #sidebar {
+     width: 250px;
+     height: 100vh;
+     position: fixed;
+     top: 0;
+     left: 0;
+     background-color: #212121;
+     z-index: 1000;
+ }
+ 
+ #main-wrapper {
+     margin-left: 250px;
+ }
+ 
+ .content-body {
+     height: calc(100vh - 60px);
+     overflow-y: auto;
+     padding: 20px;
+ }
+ 
+ body.sidebar-hidden #sidebar {
+     left: -250px;
+ }
+ 
+ body.sidebar-hidden #main-wrapper {
+     margin-left: 0;
+ }
+ 
+ .product-card {
+     background-color: white;
+     cursor: pointer;
+     transition: all 0.2s ease;
+ }
+ 
+ .product-card:hover {
+     border: 2px solid orange;
+ }
+ 
+ .product-card.out-of-stock-card {
+     opacity: 0.7;
+     cursor: not-allowed !important;
+ }
+ 
+ #cart-items-container {
+     max-height: 220px;
+     overflow-y: auto;
+ }
+ 
+ .swal2-popup {
+     background-color: #1e293b !important;
+     color: #f8fafc !important;
+     border: 1px solid #334155;
+ }
+ 
+ .swal2-title,
+ .swal2-html-container {
+     color: #f8fafc !important;
+ }
+ 
+ .receipt-container {
+     background-color: #ffffff;
+     color: #000000;
+     font-family: 'Courier New', Courier, monospace;
+     padding: 15px;
+     border-radius: 5px;
+ }
+ 
+ .sidebar-link {
+     border-radius: 8px;
+     margin-bottom: 5px;
+     color: white;
+ }
+ 
+ .sidebar-link.active {
+     background-color: orange !important;
+     color: white !important;
+ }
+ 
+ .nav-link {
+     color: white!important;
+     font-weight: bold;
+ }
+ 
+ .input-guide {
+     font-size: 11px;
+     display: block;
+     margin-top: 2px;
+ }
+ 
+ @media print {
+     body * {
+         visibility: hidden;
+     }
+     #printable-receipt-area,
+     #printable-receipt-area * {
+         visibility: visible;
+     }
+     #printable-receipt-area {
+         position: absolute;
+         left: 0;
+         top: 0;
+         width: 100%;
+     }
+     .no-print {
+         display: none !important;
+     }
+ }
