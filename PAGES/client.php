@@ -1,5 +1,5 @@
 <?php
-// 1. DATABASE CONNECTION (Palitan ang 'hrms_db' kung iba ang pangalan ng database mo)
+// 1. DATABASE CONNECTION (Palitan ang 'pos' kung iba ang pangalan ng database mo)
 $hostname = "localhost";
 $username = "root";
 $password = "";
@@ -10,15 +10,36 @@ $conn = mysqli_connect($hostname, $username, $password, $database);
 // 2. PHP INSERT LOGIC (Dito tinatanggap at ipinapasok sa database)
 if (isset($_GET['action']) && $_GET['action'] == 'apply') {
     header('Content-Type: application/json');
-
+    
     if (!$conn) {
         echo json_encode(["status" => "error", "message" => "Database connection failed: " . mysqli_connect_error()]);
         exit;
     }
 
+    // Kunin at i-sanitize muna ang mga inputs bago gamitin sa queries
     $full_name = mysqli_real_escape_string($conn, $_POST['full_name']);
     $email     = mysqli_real_escape_string($conn, $_POST['email']);
     $phone     = mysqli_real_escape_string($conn, $_POST['phone']);
+
+    // --- DUPLICATE CHECK SA APPLICANTS AT EMPLOYEES ---
+    // Sinusuri kung ang pangalan o email ay nag-e-exist na sa applicants O sa employees
+    $dup_query = "SELECT 'applicants' AS source FROM applicants WHERE LOWER(full_name) = LOWER('$full_name') OR LOWER(email) = LOWER('$email')
+                  UNION 
+                  SELECT 'employees' AS source FROM employees WHERE LOWER(full_name) = LOWER('$full_name') OR LOWER(email) = LOWER('$email')";
+    
+    $dup_result = mysqli_query($conn, $dup_query);
+
+    if ($dup_result && mysqli_num_rows($dup_result) > 0) {
+        $row = mysqli_fetch_assoc($dup_result);
+        $existing_source = $row['source'];
+        
+        echo json_encode([
+            "status" => "error", 
+            "message" => "An applicant or employee with this name, email, resume or phone number already exists in our $existing_source records."
+        ]);
+        exit;
+    }
+    // ------------------------------------------
     
     // File Upload handling para sa resume
     $target_dir = "../UPLOADS/";
@@ -32,7 +53,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
 
     if (move_uploaded_file($_FILES["resume"]["tmp_name"], $target_file)) {
         
-        // Ginamit ang mga eksaktong columns mula sa phpMyAdmin table mo
+        // Ginamit ang mga eksaktong columns mula sa database table mo
         $query = "INSERT INTO applicants (full_name, email, phone, resume_path, status, interview_date, created_at) 
                   VALUES ('$full_name', '$email', '$phone', '$target_file', 'Pending', NULL, NOW())";
         
@@ -130,7 +151,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
         function fetchActiveHiringPools() {
             const listContainer = document.getElementById("job-checklist");
 
-            // Pinatilihin ito sa recruitment.php kung doon kinukuha ang listahan ng bakante
             fetch("recruitment.php?action=fetch")
                 .then(res => res.json())
                 .then(data => {
@@ -248,7 +268,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                 if (result.isConfirmed && result.value) {
                     Swal.fire({ title: 'Processing profile...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-                    // DITO: Tinatapon na sa sarili niyang file (`client.php?action=apply`)
                     fetch("client.php?action=apply", {
                         method: "POST",
                         body: result.value
@@ -264,7 +283,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                                 buttonsStyling: false
                             });
                         } else {
-                            // Ipapakita nito ang eksaktong error galing sa database para alam mo agad kung bakit ayaw pumunta doon
                             Swal.fire({ icon: 'error', title: 'Registration Failed', text: data.message });
                         }
                     })
