@@ -403,12 +403,14 @@ function triggerDelete(dbId, name) {
         const cutOffPeriod = day <= 15 ? `1st Cut-off (1–15, ${currentMonthYear})` : `2nd Cut-off (16–31, ${currentMonthYear})`;
         const payDateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+        // Baguhin ang bahaging ito sa loob ng function na triggerPayslip() (mula sa line 454 onwards)
+
         document.getElementById('printArea').innerHTML = `
             <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs">
-              <!-- Company Header -->
+              <!-- Company Header (Inalis ang Logo, pinalitan ang address) -->
               <div class="text-center border-b pb-4 mb-4">
                 <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">PannaKoda Stores Inc.</h3>
-                <p class="text-[11px] text-gray-500 font-medium">123 Business Corporate Center, Cavite, Philippines</p>
+                <p class="text-[11px] text-gray-500 font-medium">Zone 1, Dasmariñas, Cavite, Philippines</p>
                 <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000</p>
                 <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
                   PAYSLIP STATEMENT | ${cutOffPeriod}
@@ -478,7 +480,7 @@ function triggerDelete(dbId, name) {
                 </div>
               </div>
 
-              <!-- Summary Reference Box (Monthly vs Kinsenas Reference) -->
+              <!-- Summary Reference Box -->
               <div class="bg-slate-100 p-2.5 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-600 border border-slate-200">
                 <div><span class="font-semibold">Monthly Base Reference:</span> ₱${f(monthlyBase)}</div>
                 <div><span class="font-semibold">Monthly Gross Reference:</span> ₱${f(monthlyGross)}</div>
@@ -498,7 +500,6 @@ function triggerDelete(dbId, name) {
               </div>
             </div>
         `;
-
         if (!bsModalInstance) {
             bsModalInstance = new bootstrap.Modal(document.getElementById('payslipModal'));
         }

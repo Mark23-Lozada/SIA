@@ -153,6 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['time_in']) || isset($
         }
         $check->close();
     }
+    
 
     header("Location: " . $_SERVER['PHP_SELF'] . "?page=attendance-page");
     exit();
@@ -410,11 +411,22 @@ if ($is_employee_role && !empty($all_employees)) {
                         <p class="text-slate-500 mb-4">Current Server Time Node: <span class="font-mono bg-slate-200 px-2 py-0.5 rounded text-sm font-bold"><?= date('h:i A') ?></span></p>
                         
                         <?php if ($is_employee_role && !empty($all_employees)): ?>
-                            <form method="POST" class="flex gap-4">
-                                <input type="hidden" name="employee_id" value="<?= $all_employees[0]['id'] ?>">
-                                <button type="submit" name="time_in" class="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs uppercase shadow-md hover:bg-emerald-700">Time In</button>
-                                <button type="submit" name="time_out" class="px-6 py-3 bg-rose-600 text-white font-bold rounded-xl text-xs uppercase shadow-md hover:bg-rose-700">Time Out</button>
-                            </form>
+                           <form method="POST" id="attendanceForm" class="flex gap-4">
+    <input type="hidden" name="employee_id" value="<?= $all_employees[0]['id'] ?>">
+
+    <input type="hidden" name="latitude" id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+
+    <button type="submit" name="time_in" id="btnTimeIn"
+        class="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs uppercase shadow-md">
+        Time In
+    </button>
+
+    <button type="submit" name="time_out" id="btnTimeOut"
+        class="px-6 py-3 bg-rose-600 text-white font-bold rounded-xl text-xs uppercase shadow-md">
+        Time Out
+    </button>
+</form>
                         <?php else: ?>
                             <div class="p-4 bg-slate-50 rounded-xl border text-xs font-mono text-slate-600">
                                 [System Log] Biometric pipeline active. Server monitoring operational nodes...
@@ -685,6 +697,69 @@ if ($is_employee_role && !empty($all_employees)) {
             }
             bsModalInstance.show();
         }
+        
+    
+const OFFICE_LAT = 14.3018;      // PALITAN ng company latitude
+const OFFICE_LNG = 120.9586;     // PALITAN ng company longitude
+const MAX_DISTANCE = 100;        // meters
+
+function distance(lat1, lon1, lat2, lon2){
+
+    const R = 6371000;
+
+    const dLat = (lat2-lat1) * Math.PI/180;
+    const dLon = (lon2-lon1) * Math.PI/180;
+
+    const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1*Math.PI/180) *
+        Math.cos(lat2*Math.PI/180) *
+        Math.sin(dLon/2) *
+        Math.sin(dLon/2);
+
+    return R * 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+document.getElementById("attendanceForm").addEventListener("submit",function(e){
+
+    e.preventDefault();
+
+    if(!navigator.geolocation){
+        Swal.fire("Error","GPS not supported.","error");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(function(pos){
+
+        const lat=pos.coords.latitude;
+        const lng=pos.coords.longitude;
+
+        document.getElementById("latitude").value=lat;
+        document.getElementById("longitude").value=lng;
+
+        const meters=distance(lat,lng,OFFICE_LAT,OFFICE_LNG);
+
+        if(meters>MAX_DISTANCE){
+
+            Swal.fire({
+                icon:"error",
+                title:"Check In Denied",
+                text:"You are outside the allowed location."
+            });
+
+            return;
+        }
+
+        e.target.submit();
+
+    },function(){
+
+        Swal.fire("Error","Please enable Location.","error");
+
+    });
+
+});
+
     </script>
 </body>
 </html>
