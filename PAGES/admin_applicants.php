@@ -20,7 +20,6 @@ if ($conn->connect_error) {
 // ==========================================
 // BACKEND ACTION HANDLERS
 // ==========================================
-$department_query = $conn->query("SELECT department FROM job_openings WHERE status = 'Active'");
 // ACTION: REGISTER HR ACCOUNT
 if (isset($_POST['action']) && $_POST['action'] == 'register_hr') {
     $hr_check = $conn->query("SELECT COUNT(*) as total FROM hr_accounts");
@@ -38,67 +37,98 @@ if (isset($_POST['action']) && $_POST['action'] == 'register_hr') {
 }
 
 // ACTION: APPROVE
-// ACTION: APPROVE
 if (isset($_GET['action']) && $_GET['action'] == 'approve' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    
-    // I-update ang status
-    $update = $conn->query("UPDATE applicants SET status = 'Approved' WHERE id = $id");
-    
-    // Siguraduhing walang ibang output bago ang JSON
+
+    // Use a prepared statement instead of interpolating $id directly
+    $stmt = $conn->prepare("UPDATE applicants SET status = 'Approved' WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $update = $stmt->execute();
+
     header('Content-Type: application/json');
-    
+
     if ($update) {
-        echo json_encode(['status' => 'success']);
+        // Fetch the full record so the JS can populate the Hire modal
+        // with the applicant's submitted address/government IDs.
+        $fetch = $conn->prepare("SELECT * FROM applicants WHERE id = ?");
+        $fetch->bind_param("i", $id);
+        $fetch->execute();
+        $applicant = $fetch->get_result()->fetch_assoc();
+
+        echo json_encode(['status' => 'success', 'applicant' => $applicant]);
     } else {
-        echo json_encode(['status' => 'error', 'message' => $conn->error]);
+        echo json_encode(['status' => 'error', 'message' => $stmt->error]);
     }
     exit;
 }
+
+// ACTION: REJECT (permanently delete the applicant record)
+if (isset($_GET['action']) && $_GET['action'] == 'admin_reject' && isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+    header('Content-Type: application/json');
+
+    // Look up the resume path first so we can clean up the uploaded file too
+    $fetch = $conn->prepare("SELECT resume_path FROM applicants WHERE id = ?");
+    $fetch->bind_param("i", $id);
+    $fetch->execute();
+    $applicant = $fetch->get_result()->fetch_assoc();
+
+    $stmt = $conn->prepare("DELETE FROM applicants WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $deleted = $stmt->execute();
+
+    if ($deleted) {
+        if ($applicant && !empty($applicant['resume_path']) && file_exists($applicant['resume_path'])) {
+            @unlink($applicant['resume_path']);
+        }
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => $stmt->error]);
+    }
+    exit;
+}
+
 // ACTION: CONFIRM HIRE & REGISTER EMPLOYEE
 if (isset($_POST['action']) && $_POST['action'] == 'confirm_hire') {
+    header('Content-Type: application/json');
     $app_id = intval($_POST['applicant_id']);
-    
-    // 1. Check for duplicates
-    // 1. Check for duplicates
-$check = $conn->prepare("SELECT id FROM employees WHERE employee_gmail = ? OR email = ? OR phone = ? OR gsis_id = ? OR philhealth_id = ? OR pagibig_id = ? OR sss_id = ?");
 
-// Siguraduhing 7 ang 's' at 7 ang variables
-$check->bind_param("sssssss", 
-    $_POST['employee_gmail'], 
-    $_POST['email'], 
-    $_POST['phone'], 
-    $_POST['gsis_id'], 
-    $_POST['philhealth_id'], 
-    $_POST['pagibig_id'], 
-    $_POST['sss_id']
-);
-$check->execute();
-    
+    // 1. Check for duplicates
+    $check = $conn->prepare("SELECT id FROM employees WHERE employee_gmail = ? OR email = ? OR phone = ? OR gsis_id = ? OR philhealth_id = ? OR pagibig_id = ? OR sss_id = ?");
+    $check->bind_param("sssssss",
+        $_POST['employee_gmail'],
+        $_POST['email'],
+        $_POST['phone'],
+        $_POST['gsis_id'],
+        $_POST['philhealth_id'],
+        $_POST['pagibig_id'],
+        $_POST['sss_id']
+    );
+    $check->execute();
+
     if ($check->get_result()->num_rows > 0) {
-        header('Content-Type: application/json');
         echo json_encode(['status' => 'error', 'message' => 'Duplicate credentials found.']);
         exit;
     }
 
     // 2. Insert into employees
-    $insert_sql = "INSERT INTO employees (full_name, phone, email, employee_gmail, address, gsis_id, sss_id, philhealth_id, pagibig_id, department, employee_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $insert_sql = "INSERT INTO employees (full_name, email, phone, employee_gmail, address, gsis_id, sss_id, philhealth_id, pagibig_id, department, employee_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($insert_sql);
     $hashed_password = password_hash($_POST['employee_password'], PASSWORD_BCRYPT);
-    $stmt->bind_param("sssssssssss", 
-        $_POST['full_name'], $_POST['phone'], $_POST['email'], $_POST['employee_gmail'], 
-        $_POST['address'], $_POST['gsis_id'], $_POST['sss_id'], $_POST['philhealth_id'], 
+    $stmt->bind_param("sssssssssss",
+        $_POST['full_name'], $_POST['email'], $_POST['phone'], $_POST['employee_gmail'],
+        $_POST['address'], $_POST['gsis_id'], $_POST['sss_id'], $_POST['philhealth_id'],
         $_POST['pagibig_id'], $_POST['department'], $hashed_password
     );
 
     if ($stmt->execute()) {
         // 3. IMPORTANT: Update status to 'Hired' so it disappears from the pending list
-        $conn->query("UPDATE applicants SET status = 'Hired' WHERE id = $app_id"); 
-        
-        header('Content-Type: application/json');
+        $status_stmt = $conn->prepare("UPDATE applicants SET status = 'Hired' WHERE id = ?");
+        $status_stmt->bind_param("i", $app_id);
+        $status_stmt->execute();
+
         echo json_encode(['status' => 'success', 'message' => 'Employee added successfully.']);
     } else {
-        header('Content-Type: application/json');
         echo json_encode(['status' => 'error', 'message' => $stmt->error]);
     }
     exit;
@@ -119,20 +149,20 @@ $admin_pipeline = $conn->query("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Control Board - Administration</title>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
-   
+
 </head>
 <body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
 
     <div class="flex h-screen w-full overflow-hidden">
-        
- 
-     
+
+
+
      <?php include 'sidebar.php'; ?>
 
 
         <div class="flex-1 h-screen overflow-y-auto p-8 bg-zinc-100 min-w-0">
             <div class="max-w-6xl mx-auto">
-                
+
                 <div class="mb-8">
                     <h1 class="text-3xl font-black text-zinc-800 tracking-tight">Final Decision Terminal</h1>
                     <p class="text-sm text-zinc-500">Review applicants forwarded by the HR Screening Desk. Complete corporate onboarding details upon hiring.</p>
@@ -140,14 +170,14 @@ $admin_pipeline = $conn->query("
 
                 <div class="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
                     <table class="w-full text-left border-collapse">
-                       
+
                         <tbody class="text-sm text-zinc-700 divide-y divide-zinc-200">
                             <?php if($admin_pipeline->num_rows == 0): ?>
                                 <tr>
                                     <td colspan="5" class="p-12 text-center text-zinc-400 font-medium">No candidates are currently scheduled for executive decision review.</td>
                                 </tr>
                             <?php endif; ?>
-                            
+
                             <?php while($row = $admin_pipeline->fetch_assoc()): ?>
                                 <tr class="hover:bg-zinc-50/50 transition-colors" data-id="<?= $row['id'] ?>">
                                     <td class="p-4">
@@ -173,17 +203,18 @@ $admin_pipeline = $conn->query("
                                     </td>
                             <td class="p-4 space-x-2" id="action-cell-<?= $row['id'] ?>">
     <?php if ($row['status'] === 'Final Interview Set'): ?>
-        <button type="button" onclick="approveApplicant(<?= $row['id'] ?>, '<?= addslashes($row['full_name']) ?>', '<?= $row['email'] ?>', '<?= $row['phone'] ?>')" ...>
-        Approve
-    </button>
+        <button type="button" onclick="approveApplicant(<?= $row['id'] ?>)"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
+            Approve
+        </button>
     <?php elseif ($row['status'] === 'Approved'): ?>
-        <button type="button" onclick="openHireModal(<?= $row['id'] ?>, '<?= addslashes($row['full_name']) ?>', '<?= $row['email'] ?>', '<?= $row['phone'] ?>')" 
+        <button type="button" data-applicant='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8") ?>' onclick="openHireModal(this)" 
                 class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
             Hire
         </button>
     <?php endif; ?>
-    <a href="admin_applicants.php?action=admin_reject&id=<?= $row['id'] ?>" 
-       class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs inline-block">Reject</a>
+    <button type="button" onclick="rejectApplicant(<?= $row['id'] ?>)" 
+            class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs cursor-pointer">Reject</button>
 </td>
                                 </tr>
                             <?php endwhile; ?>
@@ -201,7 +232,7 @@ $admin_pipeline = $conn->query("
                 <i class="bi bi-person-plus-fill text-xl"></i>
                 <h3 class="text-lg font-bold text-zinc-900">Create HR Admin Account</h3>
             </div>
-            <form id="hireForm" method="POST">
+            <form id="registerHrForm" method="POST">
                 <input type="hidden" name="action" value="register_hr">
                 <div>
                     <label class="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">HR Gmail Address</label>
@@ -225,7 +256,6 @@ $admin_pipeline = $conn->query("
                 <i class="bi bi-check-circle-fill text-xl"></i>
                 <h3 class="text-lg font-bold text-zinc-900">Official Employee Onboarding Terminal</h3>
             </div>
-            <p id="hireModalName" class="text-xs text-zinc-500 mb-6"></p>
 
            <form id="confirmHireForm" method="POST" class="space-y-4">
     <input type="hidden" name="action" value="confirm_hire">
@@ -248,33 +278,33 @@ $admin_pipeline = $conn->query("
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Assign Employee Work Email</label>
-                        <input type="email" name="employee_gmail" required placeholder="e.g. juandelacruz@company.com" class="w-full text-sm border border-zinc-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-600 text-zinc-800">
+                        <input type="email" name="employee_gmail" id="modal_employee_gmail" required placeholder="e.g. delacruz.juan@gmail.com" class="w-full text-sm border border-zinc-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-600 text-zinc-800">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Home Address</label>
-                    <textarea name="address" required placeholder="Enter complete address" rows="2" class="w-full text-sm border border-zinc-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-600 text-zinc-800"></textarea>
+                    <label class="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Home Address</label>
+                    <textarea name="address" id="modal_address" readonly required rows="2" class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none resize-none"></textarea>
                 </div>
 
                 <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-zinc-700 uppercase tracking-wide mb-3">Statutory & Government Identification</h4>
+                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Statutory & Government Identification <span class="normal-case font-medium text-zinc-400">(as submitted by applicant)</span></h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">GSIS ID</label>
-                            <input type="text" name="gsis_id" placeholder="XX-XXXXXXX-X" class="w-full text-sm bg-white border border-zinc-300 rounded-xl px-4 py-2">
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">GSIS ID</label>
+                            <input type="text" name="gsis_id" id="modal_gsis_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">SSS ID</label>
-                            <input type="text" name="sss_id" placeholder="XX-XXXXXXX-X" class="w-full text-sm bg-white border border-zinc-300 rounded-xl px-4 py-2">
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">SSS ID</label>
+                            <input type="text" name="sss_id" id="modal_sss_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">PhilHealth ID</label>
-                            <input type="text" name="philhealth_id" placeholder="XX-XXXXXXXXX-X" class="w-full text-sm bg-white border border-zinc-300 rounded-xl px-4 py-2">
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">PhilHealth ID</label>
+                            <input type="text" name="philhealth_id" id="modal_philhealth_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Pag-IBIG MID</label>
-                            <input type="text" name="pagibig_id" placeholder="XXXX-XXXX-XXXX" class="w-full text-sm bg-white border border-zinc-300 rounded-xl px-4 py-2">
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Pag-IBIG MID</label>
+                            <input type="text" name="pagibig_id" id="modal_pagibig_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
                         </div>
                     </div>
                 </div>
@@ -283,20 +313,8 @@ $admin_pipeline = $conn->query("
                     <h4 class="text-xs font-bold text-orange-800 uppercase tracking-wide mb-3">Corporate Configuration</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Department Deployment</label>
-                            <select name="department" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2.5 text-zinc-800 focus:outline-none">
-                                <option value="" disabled selected>Select Department</option>
-                                <?php if($department_query && $department_query->num_rows > 0): ?>
-                                    <?php while($dept_row = $department_query->fetch_assoc()): ?>
-                                        <option value="<?= htmlspecialchars($dept_row['department']) ?>"><?= htmlspecialchars($dept_row['department']) ?></option>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <option value="Executive Board">Executive Board</option>
-                                    <option value="Human Resources">Human Resources</option>
-                                    <option value="Operations">Operations</option>
-                                    <option value="Looking For Job">Looking For Job</option>
-                                <?php endif; ?>
-                            </select>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Department Applied For</label>
+                            <input type="text" name="department" id="modal_department" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Set Employee Password</label>
@@ -315,12 +333,52 @@ $admin_pipeline = $conn->query("
  <script src="../LIBRARIES/tailwind.js"></script>
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
    <script>
-    // --- 1. MODAL FUNCTIONS ---
-    function openHireModal(id, name, email, phone) {
-        document.getElementById('hire_candidate_id').value = id;
-        document.getElementById('modal_full_name').value = name;
-        document.getElementById('modal_personal_email').value = email;
-        document.getElementById('modal_phone').value = phone;
+    // --- 1. HELPER: Generate suggested employee email from full name ---
+    // Format: lastname.firstname@gmail.com
+    function generateEmployeeEmail(fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        const clean = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (parts.length < 2) {
+            // Fallback: only one name segment available
+            return clean(parts[0]) + '@panacoda.com';
+        }
+
+        const lastName = parts[parts.length - 1];       // last word = last name
+        const firstName = parts.slice(0, -1).join('');  // everything before = first name(s)
+
+        return `${clean(lastName)}.${clean(firstName)}@panacoda.com`;
+    }
+
+    // --- 2. MODAL FUNCTIONS ---
+    // Takes the button element clicked, and reads the applicant's full
+    // record from its data-applicant attribute (JSON), so we don't have
+    // to hand-escape every field into onclick="" args.
+    function openHireModal(btn) {
+        const data = JSON.parse(btn.dataset.applicant);
+
+        document.getElementById('hire_candidate_id').value = data.id;
+
+        // Maps modal field id -> applicant record key
+        const readonlyFields = {
+            modal_full_name: 'full_name',
+            modal_personal_email: 'email',
+            modal_phone: 'phone',
+            modal_address: 'address',
+            modal_gsis_id: 'gsis_id',
+            modal_sss_id: 'sss_id',
+            modal_philhealth_id: 'philhealth_id',
+            modal_pagibig_id: 'pagibig_id',
+            modal_department: 'department'
+        };
+
+        for (const [elementId, key] of Object.entries(readonlyFields)) {
+            document.getElementById(elementId).value = data[key] || '';
+        }
+
+        // Auto-suggest the employee work email (admin can still edit it)
+        document.getElementById('modal_employee_gmail').value = generateEmployeeEmail(data.full_name);
+
         document.getElementById('hireModal').classList.remove('hidden');
     }
 
@@ -328,178 +386,183 @@ $admin_pipeline = $conn->query("
         document.getElementById('hireModal').classList.add('hidden');
     }
 
-    // --- 2. APPROVE ACTION ---
-    async function approveApplicant(id, name, email, phone) {
-    const result = await Swal.fire({
-        title: 'Approve Candidate?',
-        text: "Are you sure you want to approve?",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#2563eb',
-        confirmButtonText: 'Yes, Approve'
-    });
+    function closeHrModal() {
+        document.getElementById('hrModal').classList.add('hidden');
+    }
 
-    if (result.isConfirmed) {
-        try {
-            const response = await fetch('admin_applicants.php?action=approve&id=' + id);
-            
-            // DITO ANG PAGBABAGO: I-parse natin ang JSON
-            const data = await response.json(); 
+    // --- 3. APPROVE ACTION ---
+    async function approveApplicant(id) {
+        const result = await Swal.fire({
+            title: 'Approve Candidate?',
+            text: "Are you sure you want to approve?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            confirmButtonText: 'Yes, Approve'
+        });
 
-            if (data.status === 'success') {
-                const cell = document.getElementById('action-cell-' + id);
-                
-                // Palitan ang content ng button
-                cell.innerHTML = `
-                    <button type="button" onclick="openHireModal(${id}, '${name}', '${email}', '${phone}')" 
-                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
-                        Hire
-                    </button>
-                    <a href="admin_applicants.php?action=admin_reject&id=${id}" 
-                       class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs inline-block">Reject</a>
-                `;
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch('admin_applicants.php?action=approve&id=' + id);
+                const data = await response.json();
 
-                Swal.fire('Success!', 
-                'Na-approve na ang candidate.', 'success');
+                if (data.status === 'success') {
+                    const cell = document.getElementById('action-cell-' + id);
+                    // Embed the full applicant record (incl. address/govt IDs) as a
+                    // data attribute so openHireModal can read it directly later.
+                    const applicantJson = JSON.stringify(data.applicant).replace(/'/g, '&#39;');
+
+                    cell.innerHTML = `
+                        <button type="button" data-applicant='${applicantJson}' onclick="openHireModal(this)" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
+                            Hire
+                        </button>
+                        <button type="button" onclick="rejectApplicant(${id})" 
+                                class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs cursor-pointer">Reject</button>
+                    `;
+
+                    Swal.fire('Success!', 'Na-approve na ang candidate.', 'success');
+                } else {
+                    Swal.fire('Error', data.message || 'Something went wrong.', 'error');
+                }
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                Swal.fire('Error', 'error');
             }
-        } catch (error) {
-            console.error("Error parsing JSON:", error);
-            Swal.fire('Error', 'error');
         }
     }
-}
-    // --- 3. VALIDATION FUNCTION ---
+
+    // --- 4. REJECT ACTION ---
+    async function rejectApplicant(id) {
+        const result = await Swal.fire({
+            title: 'Reject Candidate?',
+            text: "This will permanently delete the applicant's record, including their resume file. This cannot be undone.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Yes, Reject & Delete'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch('admin_applicants.php?action=admin_reject&id=' + id);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    if (row) row.remove();
+                    Swal.fire('Rejected', 'The applicant record has been removed.', 'success');
+                } else {
+                    Swal.fire('Error', data.message || 'Something went wrong.', 'error');
+                }
+            } catch (error) {
+                console.error("Error rejecting applicant:", error);
+                Swal.fire('Error', 'error');
+            }
+        }
+    }
+
+    // --- 5. VALIDATION FUNCTION ---
+    // Address/GSIS/SSS/PhilHealth/Pag-IBIG are now readonly here — they were
+    // already validated when the applicant submitted them via client.php.
+    // Only the admin-editable fields (work email, password) need checking.
     function validateForm(formData) {
         const email = formData.get('employee_gmail');
-        const phone = formData.get('phone');
-        const fullName = formData.get('full_name').trim();
         const password = formData.get('employee_password');
-        const govtIdPattern = /^\d{2}-\d{7}-\d{1}$/;
-        const philHealthPattern = /^\d{2}-\d{9}-\d{1}$/;
-        const pagibigPattern = /^\d{4}-\d{4}-\d{4}$/;
 
-        if (!fullName.includes(' ')) {
-            Swal.fire('Error', 'Full name must include a space.', 'warning');
-            return false;
-        }
         if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email)) {
             Swal.fire('Invalid Email', 'Please enter a valid email format.', 'warning');
             return false;
         }
-        if (!/^09\d{9}$/.test(phone)) {
-            Swal.fire('Invalid Phone', 'Phone number must be 11 digits and start with 09.', 'warning');
-            return false;
-        }
-        // Regex breakdown:
-// (?=.*[a-z])      - Must contain at least one lowercase letter
-// (?=.*[A-Z])      - Must contain at least one uppercase letter
-// (?=.*\d)         - Must contain at least one number
-// (?=.*[@$!%*?&])  - Must contain at least one special character
-// [A-Za-z\d@$!%*?&]{8,} - Must be at least 8 characters long
-const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-if (!strongPasswordRegex.test(password)) {
-    Swal.fire(
-        'Weak Password', 
-        'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&).', 
-        'warning'
-    );
-    return false;
-}
-        if (!govtIdPattern.test(formData.get('gsis_id')) ) {
-            Swal.fire('Invalid GSIS ID', 'Format: XX-XXXXXXX-X', 'warning');
-            return false;
-        }
-        if(!govtIdPattern.test(formData.get('sss_id'))){
-            Swal.fire('Invalid SSS ID', 'Format: XX-XXXXXXX-X', 'warning');
-            return false;
-        }
-        if (!philHealthPattern.test(formData.get('philhealth_id'))) {
-            Swal.fire('Invalid PhilHealth ID', 'Format: XX-XXXXXXXXX-X', 'warning');
-            return false;
-        }
-        if (!pagibigPattern.test(formData.get('pagibig_id'))) {
-            Swal.fire('Invalid Pag-IBIG MID', 'Format: XXXX-XXXX-XXXX', 'warning');
+        // Regex breakdown:
+        // (?=.*[a-z])      - Must contain at least one lowercase letter
+        // (?=.*[A-Z])      - Must contain at least one uppercase letter
+        // (?=.*\d)         - Must contain at least one number
+        // (?=.*[@$!%*?&])  - Must contain at least one special character
+        // [A-Za-z\d@$!%*?&]{8,} - Must be at least 8 characters long
+        const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+        if (!strongPasswordRegex.test(password)) {
+            Swal.fire(
+                'Weak Password',
+                'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&).',
+                'warning'
+            );
             return false;
         }
         return true;
     }
 
-    // --- 4. INITIALIZATION ---
-   // --- 4. INITIALIZATION ---
-document.addEventListener("DOMContentLoaded", function() {
-    
-    // Hire Form Handler
-    const hireForm = document.getElementById('confirmHireForm');// Siguraduhin na may id="hireForm" ang iyong <form>
-    
-    if (hireForm) {
-        hireForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Pipigilan ang pag-reload ng page
-            
-            let formData = new FormData(this);
-         // I-set ang action sa loob ng FormData
+    // --- 6. INITIALIZATION ---
+    document.addEventListener("DOMContentLoaded", function() {
 
-            // I-validate ang form bago mag-fetch
-            if (!validateForm(formData)) return;
+        // Hire Form Handler
+        const hireForm = document.getElementById('confirmHireForm');
 
-            // Ipadala sa server
-            fetch('admin_applicants.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-    // I-check kung ok ang response
-    if (!response.ok) {
-        throw new Error('Server responded with status: ' + response.status);
-    }
-    return response.text(); // I-convert muna sa text para makita kung may error sa PHP
-})
-.then(text => {
-    try {
-        const data = JSON.parse(text);
-        if (data.status === 'success') {
-            Swal.fire('Success', data.message, 'success');
-            
-            // Hanapin ang row ng applicant gamit ang ID at tanggalin ito
-            const candidateId = document.getElementById('hire_candidate_id').value;
-            const rowToRemove = document.querySelector(`tr[data-id="${candidateId}"]`); // Kailangan mong lagyan ng data-id ang tr mo
-            if (rowToRemove) {
-                rowToRemove.remove();
-            }
-            
-            closeHireModal();
-        } else {
-            Swal.fire('Error', data.message, 'error');
+        if (hireForm) {
+            hireForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                let formData = new FormData(this);
+
+                if (!validateForm(formData)) return;
+
+                fetch('admin_applicants.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server responded with status: ' + response.status);
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.status === 'success') {
+                            Swal.fire('Success', data.message, 'success');
+
+                            const candidateId = document.getElementById('hire_candidate_id').value;
+                            const rowToRemove = document.querySelector(`tr[data-id="${candidateId}"]`);
+                            if (rowToRemove) {
+                                rowToRemove.remove();
+                            }
+
+                            closeHireModal();
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    } catch (e) {
+                        console.error('Raw response:', text);
+                        Swal.fire('Error', 'Invalid JSON response.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'error');
+                });
+            });
         }
-    } catch (e) {
-        console.error('Raw response:', text);
-        Swal.fire('Error', 'Invalid JSON response.', 'error');
-    }
-})
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire('Error', 'error');
-            });
-        });
-    }
 
-    // Logout Handler
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Terminate administrative dashboard runtime?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc2626',
-                confirmButtonText: 'Yes, Sign Out'
-            }).then((result) => {
-                if (result.isConfirmed) window.location.href = 'logout.php';
+        // Logout Handler
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "Terminate administrative dashboard runtime?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'Yes, Sign Out'
+                }).then((result) => {
+                    if (result.isConfirmed) window.location.href = 'logout.php';
+                });
             });
-        });
-    }
-});
-</script>
+        }
+    });
+    </script>
 </body>
 </html>

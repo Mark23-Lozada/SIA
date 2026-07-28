@@ -1,5 +1,5 @@
 <?php
-// 1. DATABASE CONNECTION (Palitan ang 'pos' kung iba ang pangalan ng database mo)
+// 1. DATABASE CONNECTION (Palitan ang 'hrms_db' kung iba ang pangalan ng database mo)
 $hostname = "localhost";
 $username = "root";
 $password = "";
@@ -9,61 +9,70 @@ $conn = mysqli_connect($hostname, $username, $password, $database);
 
 // 2. PHP INSERT LOGIC (Dito tinatanggap at ipinapasok sa database)
 if (isset($_GET['action']) && $_GET['action'] == 'apply') {
+    // Linisin ang anumang naunang buffer para puro JSON lang ang lumabas
+    if (ob_get_length()) ob_clean();
     header('Content-Type: application/json');
-    
-    if (!$conn) {
-        echo json_encode(["status" => "error", "message" => "Database connection failed: " . mysqli_connect_error()]);
-        exit;
-    }
 
-    // Kunin at i-sanitize muna ang mga inputs bago gamitin sa queries
-    $full_name = mysqli_real_escape_string($conn, $_POST['full_name']);
-    $email     = mysqli_real_escape_string($conn, $_POST['email']);
-    $phone     = mysqli_real_escape_string($conn, $_POST['phone']);
-
-    // --- DUPLICATE CHECK SA APPLICANTS AT EMPLOYEES ---
-    // Sinusuri kung ang pangalan o email ay nag-e-exist na sa applicants O sa employees
-    $dup_query = "SELECT 'applicants' AS source FROM applicants WHERE LOWER(full_name) = LOWER('$full_name') OR LOWER(email) = LOWER('$email')
-                  UNION 
-                  SELECT 'employees' AS source FROM employees WHERE LOWER(full_name) = LOWER('$full_name') OR LOWER(email) = LOWER('$email')";
-    
-    $dup_result = mysqli_query($conn, $dup_query);
-
-    if ($dup_result && mysqli_num_rows($dup_result) > 0) {
-        $row = mysqli_fetch_assoc($dup_result);
-        $existing_source = $row['source'];
-        
-        echo json_encode([
-            "status" => "error", 
-            "message" => "An applicant or employee with this name, email, resume or phone number already exists in our $existing_source records."
-        ]);
-        exit;
-    }
-    // ------------------------------------------
-    
-    // File Upload handling para sa resume
-    $target_dir = "../UPLOADS/";
-    if (!is_dir($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
-
-    $file_extension = pathinfo($_FILES["resume"]["name"], PATHINFO_EXTENSION);
-    $new_filename   = time() . '_' . preg_replace('/[^A-Za-z0-9\-]/', '', $full_name) . '.' . $file_extension;
-    $target_file    = $target_dir . $new_filename;
-
-    if (move_uploaded_file($_FILES["resume"]["tmp_name"], $target_file)) {
-        
-        // Ginamit ang mga eksaktong columns mula sa database table mo
-        $query = "INSERT INTO applicants (full_name, email, phone, resume_path, status, interview_date, created_at) 
-                  VALUES ('$full_name', '$email', '$phone', '$target_file', 'Pending', NULL, NOW())";
-        
-        if (mysqli_query($conn, $query)) {
-            echo json_encode(["status" => "success", "message" => "Application submitted successfully!"]);
-        } else {
-            echo json_encode(["status" => "error", "message" => "SQL Error: " . mysqli_error($conn)]);
+    try {
+        if (!$conn) {
+            echo json_encode(["status" => "error", "message" => "Database connection failed: " . mysqli_connect_error()]);
+            exit;
         }
-    } else {
-        echo json_encode(["status" => "error", "message" => "Failed to upload resume file. Check folder permissions."]);
+
+        $full_name     = $_POST['full_name'] ?? '';
+        $email         = $_POST['email'] ?? '';
+        $phone         = $_POST['phone'] ?? '';
+        $address       = $_POST['address'] ?? '';
+        $gsis_id       = $_POST['gsis_id'] ?? '';
+        $sss_id        = $_POST['sss_id'] ?? '';
+        $philhealth_id = $_POST['philhealth_id'] ?? '';
+        $pagibig_id    = $_POST['pagibig_id'] ?? '';
+        $department    = $_POST['department'] ?? '';
+
+        // File Upload handling para sa resume
+        $target_dir = "../UPLOADS/";
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0777, true);
+        }
+
+        if (!isset($_FILES["resume"]) || $_FILES["resume"]["error"] != 0) {
+            echo json_encode(["status" => "error", "message" => "Please upload a valid resume file."]);
+            exit;
+        }
+
+        $file_extension = pathinfo($_FILES["resume"]["name"], PATHINFO_EXTENSION);
+        $new_filename   = time() . '_' . preg_replace('/[^A-Za-z0-9\-]/', '', $full_name) . '.' . $file_extension;
+        $target_file    = $target_dir . $new_filename;
+
+        if (move_uploaded_file($_FILES["resume"]["tmp_name"], $target_file)) {
+
+            $query = "INSERT INTO applicants 
+                        (full_name, email, phone, address, gsis_id, sss_id, philhealth_id, pagibig_id, department, resume_path, status, created_at) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())";
+            
+            $stmt = mysqli_prepare($conn, $query);
+            if (!$stmt) {
+                echo json_encode(["status" => "error", "message" => "Prepare failed: " . mysqli_error($conn)]);
+                exit;
+            }
+
+            mysqli_stmt_bind_param(
+                $stmt, "ssssssssss",
+                $full_name, $email, $phone, $address,
+                $gsis_id, $sss_id, $philhealth_id, $pagibig_id, $department,
+                $target_file
+            );
+
+            if (mysqli_stmt_execute($stmt)) {
+                echo json_encode(["status" => "success", "message" => "Application submitted successfully!"]);
+            } else {
+                echo json_encode(["status" => "error", "message" => "SQL Execution Error: " . mysqli_stmt_error($stmt)]);
+            }
+        } else {
+            echo json_encode(["status" => "error", "message" => "Failed to move uploaded resume file. Check folder permissions."]);
+        }
+    } catch (Exception $e) {
+        echo json_encode(["status" => "error", "message" => "Server Exception: " . $e->getMessage()]);
     }
     exit;
 }
@@ -144,6 +153,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
     </main>
 
     <script>
+        let cachedActiveJobs = [];
+
         document.addEventListener("DOMContentLoaded", function() {
             fetchActiveHiringPools();
         });
@@ -151,11 +162,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
         function fetchActiveHiringPools() {
             const listContainer = document.getElementById("job-checklist");
 
+            // Pinatilihin ito sa recruitment.php kung doon kinukuha ang listahan ng bakante
             fetch("recruitment.php?action=fetch")
                 .then(res => res.json())
                 .then(data => {
                     listContainer.innerHTML = "";
                     let activeJobs = data.filter(job => job.status === "Active" && parseInt(job.openings) > 0);
+                    cachedActiveJobs = activeJobs;
 
                     if (activeJobs.length === 0) {
                         listContainer.innerHTML = `
@@ -189,6 +202,35 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                 });
         }
 
+        function populateDepartmentOptions() {
+            const select = document.getElementById('department');
+
+            const renderOptions = (jobs) => {
+                if (!jobs.length) {
+                    select.innerHTML = `<option value="" disabled selected>No open positions available</option>`;
+                    return;
+                }
+                select.innerHTML = `<option value="" disabled selected>Select a department</option>` +
+                    jobs.map(job => `<option value="${job.department}">${job.department} (${job.openings} slot${job.openings > 1 ? 's' : ''} left)</option>`).join('');
+            };
+
+            if (cachedActiveJobs.length) {
+                renderOptions(cachedActiveJobs);
+            } else {
+                // Fallback in case the modal opened before the initial fetch resolved
+                fetch("recruitment.php?action=fetch")
+                    .then(res => res.json())
+                    .then(data => {
+                        const activeJobs = data.filter(job => job.status === "Active" && parseInt(job.openings) > 0);
+                        cachedActiveJobs = activeJobs;
+                        renderOptions(activeJobs);
+                    })
+                    .catch(() => {
+                        select.innerHTML = `<option value="" disabled selected>Unable to load positions</option>`;
+                    });
+            }
+        }
+
         window.openApplicationModal = function() {
             Swal.fire({
                 html: `
@@ -196,6 +238,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
                             <input type="text" id="full_name" name="full_name" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Department You're Applying For</label>
+                            <select id="department" name="department" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all bg-white">
+                                <option value="" disabled selected>Loading open positions...</option>
+                            </select>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -208,7 +257,34 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                                 <input type="text" id="phone" name="phone" placeholder="e.g., 09123456789" maxlength="11" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                             </div>
                         </div>
-                        
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Home Address</label>
+                            <textarea id="address" name="address" required rows="2" placeholder="Enter your complete address" class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all resize-none"></textarea>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                            <h4 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Statutory & Government Identification</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">GSIS ID</label>
+                                    <input type="text" id="gsis_id" name="gsis_id" required placeholder="XX-XXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">SSS ID</label>
+                                    <input type="text" id="sss_id" name="sss_id" required placeholder="XX-XXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">PhilHealth ID</label>
+                                    <input type="text" id="philhealth_id" name="philhealth_id" required placeholder="XX-XXXXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Pag-IBIG MID</label>
+                                    <input type="text" id="pagibig_id" name="pagibig_id" required placeholder="XXXX-XXXX-XXXX" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Upload Profile Resume (PDF/Docs)</label>
                             <div id="dropzone" class="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center bg-slate-50 hover:bg-slate-100/70 hover:border-orange-400 cursor-pointer transition-all flex flex-col items-center justify-center gap-1 group">
@@ -230,6 +306,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                     cancelButton: 'w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold rounded-xl border-0 cursor-pointer transition-all text-xs'
                 },
                 didOpen: () => {
+                    populateDepartmentOptions();
+
                     const dropzone = document.getElementById('dropzone');
                     const fileInput = document.getElementById('resume');
                     const dropText = dropzone.querySelector('.drop-text');
@@ -255,11 +333,48 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                 },
                 preConfirm: () => {
                     const name = document.getElementById('full_name').value.trim();
+                    const department = document.getElementById('department').value;
                     const email = document.getElementById('email').value.trim();
                     const phone = document.getElementById('phone').value.trim();
+                    const address = document.getElementById('address').value.trim();
+                    const gsisId = document.getElementById('gsis_id').value.trim();
+                    const sssId = document.getElementById('sss_id').value.trim();
+                    const philhealthId = document.getElementById('philhealth_id').value.trim();
+                    const pagibigId = document.getElementById('pagibig_id').value.trim();
                     const file = document.getElementById('resume').files[0];
 
-                    if(!name || !email || !phone) { Swal.showValidationMessage('Please write up your baseline fields.'); return false; }
+                    const govtIdPattern = /^\d{2}-\d{7}-\d{1}$/;
+                    const philHealthPattern = /^\d{2}-\d{9}-\d{1}$/;
+                    const pagibigPattern = /^\d{4}-\d{4}-\d{4}$/;
+
+                    if (!name || !email || !phone || !address) {
+                        Swal.showValidationMessage('Please write up your baseline fields.');
+                        return false;
+                    }
+                    if (!department) {
+                        Swal.showValidationMessage('Please select a department to apply for.');
+                        return false;
+                    }
+                    if (!/^09\d{9}$/.test(phone)) {
+                        Swal.showValidationMessage('Phone number must be 11 digits and start with 09.');
+                        return false;
+                    }
+                    if (!govtIdPattern.test(gsisId)) {
+                        Swal.showValidationMessage('GSIS ID format should be XX-XXXXXXX-X.');
+                        return false;
+                    }
+                    if (!govtIdPattern.test(sssId)) {
+                        Swal.showValidationMessage('SSS ID format should be XX-XXXXXXX-X.');
+                        return false;
+                    }
+                    if (!philHealthPattern.test(philhealthId)) {
+                        Swal.showValidationMessage('PhilHealth ID format should be XX-XXXXXXXXX-X.');
+                        return false;
+                    }
+                    if (!pagibigPattern.test(pagibigId)) {
+                        Swal.showValidationMessage('Pag-IBIG MID format should be XXXX-XXXX-XXXX.');
+                        return false;
+                    }
                     if(!file) { Swal.showValidationMessage('Please submit or link your resume file asset.'); return false; }
 
                     return new FormData(document.getElementById('clientForm'));
@@ -268,6 +383,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                 if (result.isConfirmed && result.value) {
                     Swal.fire({ title: 'Processing profile...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+                    // DITO: Tinatapon na sa sarili niyang file (`client.php?action=apply`)
                     fetch("client.php?action=apply", {
                         method: "POST",
                         body: result.value
@@ -283,6 +399,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                                 buttonsStyling: false
                             });
                         } else {
+                            // Ipapakita nito ang eksaktong error galing sa database para alam mo agad kung bakit ayaw pumunta doon
                             Swal.fire({ icon: 'error', title: 'Registration Failed', text: data.message });
                         }
                     })

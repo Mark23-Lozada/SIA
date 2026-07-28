@@ -151,11 +151,11 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
                         <thead>
                             <tr class="border-b border-slate-200 bg-slate-50/70 text-xs font-bold uppercase tracking-wider text-slate-500">
                                 <th class="p-4">Applicant Profile</th>
-<th class="p-4">Contact Info</th>
-<th class="p-4">Resume</th>
-<th class="p-4">Pipeline Status</th>
-<th class="p-4">Assigned Initial Schedule</th>
-<th class="p-4 text-right">Routing Actions</th>
+                                <th class="p-4">Contact Info</th>
+                                <th class="p-4">Resume</th>
+                                <th class="p-4">Pipeline Status</th>
+                                <th class="p-4">Assigned Initial Schedule</th>
+                                <th class="p-4 text-right">Routing Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200 text-sm">
@@ -172,44 +172,50 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
                                         <div class="text-[11px] text-slate-400 mt-0.5"><?= htmlspecialchars($row['phone']) ?></div>
                                     </td>
                                     <td class="p-4">
-    <?php if (!empty($row['resume_path'])): ?>
-        <a href="<?= htmlspecialchars($row['resume_path']) ?>"
-           target="_blank"
-           class="inline-flex items-center gap-2 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold no-underline">
-            <i class="bi bi-file-earmark-pdf-fill"></i>
-            Resume
-        </a>
-    <?php else: ?>
-        <span class="text-slate-400 text-xs">No Resume</span>
-    <?php endif; ?>
-</td>
+                                        <?php if (!empty($row['resume_path'])): ?>
+                                            <a href="<?= htmlspecialchars($row['resume_path']) ?>"
+                                            target="_blank"
+                                            class="inline-flex items-center gap-2 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold no-underline">
+                                                <i class="bi bi-file-earmark-pdf-fill"></i>
+                                                Resume
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-slate-400 text-xs">No Resume</span>
+                                        <?php endif; ?>
+                                    </td>
                                    <td class="p-4 text-right space-x-1">
-    <?php if($row['status'] == 'Pending'): ?>
-        <button onclick="openHRModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['full_name']) ?>')" class="...">Set HR Interview</button>
-    
-    <?php elseif($row['status'] == 'HR Interview Set' || $row['status'] == 'Interview Set'): ?>
-        <a href="applicant.php?action=approve_hr&id=<?= $row['id'] ?>" ...>Approve</a>
-        
-    <?php elseif($row['status'] == 'HR Approved'): ?>
-        <button onclick="openFinalModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['full_name']) ?>')" class="...">Set Final Interview</button>
-    <?php endif; ?>
-    
-    <a href="applicant.php?action=reject&id=<?= $row['id'] ?>" ...>Reject</a>
-</td>
+                                        <?php if($row['status'] == 'Pending'): ?>
+                                            <p onclick="openHRModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['full_name']) ?>')" class="...">Set HR Interview</p>
+                                        
+                                        <?php elseif($row['status'] == 'HR Interview Set' || $row['status'] == 'Interview Set'): ?>
+                                            <a href="applicant.php?action=approve_hr&id=<?= $row['id'] ?>" ...>Approve</a>
+                                            
+                                        <?php elseif($row['status'] == 'HR Approved'): ?>
+                                            <p onclick="openFinalModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['full_name']) ?>')" class="...">Set Final Interview</p>
+                                        <?php endif; ?>
+                                        
+                                        <p href="applicant.php?action=reject&id=<?= $row['id'] ?>" ...>Reject</p>
+                                    </td>
                                     <td class="p-4 text-xs text-slate-600 font-medium">
                                         <?= $row['interview_date'] ? date('M d, Y - h:i A', strtotime($row['interview_date'])) : '—' ?>
                                     </td>
                                     <td class="p-4 text-right space-x-1">
+                                        <?php 
+                                            $isTimeArrived = !empty($row['interview_date']) && strtotime($row['interview_date']) <= time();
+                                        ?>
                                         <?php if($row['status'] == 'Pending'): ?>
                                             <button onclick="openHRModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['full_name']) ?>')" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg text-xs transition-all shadow-sm">
                                                 Set HR Interview
                                             </button>
                                         <?php elseif($row['status'] == 'HR Interview Set'): ?>
-                                            <a href="applicant.php?action=approve_hr&id=<?= $row['id'] ?>" onclick="return confirm('Approve this applicant after interview?')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-xs transition-all shadow-sm no-underline inline-block">
+                                            <button <?= $isTimeArrived ? 'onclick="openHRModal(' . $row['id'] . ', \'' . htmlspecialchars($row['full_name'], ENT_QUOTES) . '\')"' : 'disabled' ?>
+                                                class="px-3 py-1.5 font-semibold rounded-lg text-xs transition-all shadow-sm <?= $isTimeArrived ? 'bg-orange-500 hover:bg-orange-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60' ?>"
+                                                href="applicant.php?action=approve_hr&id=<?= $row['id'] ?>" onclick="return confirm('Approve this applicant after interview?')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-xs transition-all shadow-sm no-underline inline-block">
                                                 Approve
-                                            </a>
+                                        </button>
                                         <?php elseif($row['status'] == 'HR Approved'): ?>
-                                            <button onclick="openFinalModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['full_name']) ?>')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-all shadow-sm">
+                                            <button <?= $isTimeArrived ? 'onclick="openHRModal(' . $row['id'] . ', \'' . htmlspecialchars($row['full_name'], ENT_QUOTES) . '\')"' : 'disabled' ?>
+                                                class="px-3 py-1.5 font-semibold rounded-lg text-xs transition-all shadow-sm <?= $isTimeArrived ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60' ?>">
                                                 Set Final Interview
                                             </button>
                                         <?php endif; ?>
