@@ -1,696 +1,430 @@
 <?php
 session_start();
 
-// 1. Authentication Check
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'admin') {
+if (!isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
 }
 
-// Anti-back/Cache control
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-
-// Database Connection
-$conn = new mysqli("localhost", "root", "", "pos");
-if ($conn->connect_error) {
-    die("Database Connection Failed: " . $conn->connect_error);
+$current_role = strtolower($_SESSION['role']);
+if ($current_role !== 'admin' && $current_role !== 'hr') {
+    header("Location: login.php"); 
+    exit();
 }
 
-// ==========================================
-// BACKEND ACTION HANDLERS
-// ==========================================
-// ACTION: REGISTER HR ACCOUNT
-if (isset($_POST['action']) && $_POST['action'] == 'register_hr') {
-    $hr_check = $conn->query("SELECT COUNT(*) as total FROM hr_accounts");
-    if ($hr_check->fetch_assoc()['total'] >= 1) {
-        echo "<script>alert('An HR Account is already registered.'); window.location.href='admin_applicants.php';</script>";
+$host = "localhost";
+$user = "root"; 
+$pass = ""; 
+$dbname = "pos";
+
+$current_page = basename($_SERVER['PHP_SELF']);
+
+// 1. FETCH APPLICANTS
+if (isset($_GET['action']) && $_GET['action'] === 'fetch_applicants') {
+    header('Content-Type: application/json');
+    $conn = new mysqli($host, $user, $pass, $dbname);
+    if ($conn->connect_error) {
+        echo json_encode([]);
         exit;
     }
-    $hashed_pass = password_hash($_POST['hr_password'], PASSWORD_BCRYPT);
-    $stmt = $conn->prepare("INSERT INTO hr_accounts (gmail, password, role) VALUES (?, ?, ?)");
-    $role = 'hr';
-    $stmt->bind_param("sss", $_POST['hr_gmail'], $hashed_pass, $role);
-    $stmt->execute();
-    echo "<script>alert('HR Account registered successfully!'); window.location.href='admin_applicants.php';</script>";
-    exit;
-}
 
-// ACTION: APPROVE
-if (isset($_GET['action']) && $_GET['action'] == 'approve' && isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-
-    $stmt = $conn->prepare("UPDATE applicants SET status = 'Approved' WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $update = $stmt->execute();
-
-    header('Content-Type: application/json');
-
-    if ($update) {
-        $fetch = $conn->prepare("SELECT * FROM applicants WHERE id = ?");
-        $fetch->bind_param("i", $id);
-        $fetch->execute();
-        $applicant = $fetch->get_result()->fetch_assoc();
-
-        echo json_encode(['status' => 'success', 'applicant' => $applicant]);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => $stmt->error]);
-    }
-    exit;
-}
-
-// ACTION: REJECT (permanently delete the applicant record)
-if (isset($_GET['action']) && $_GET['action'] == 'admin_reject' && isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-    header('Content-Type: application/json');
-
-    $fetch = $conn->prepare("SELECT resume_path FROM applicants WHERE id = ?");
-    $fetch->bind_param("i", $id);
-    $fetch->execute();
-    $applicant = $fetch->get_result()->fetch_assoc();
-
-    $stmt = $conn->prepare("DELETE FROM applicants WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $deleted = $stmt->execute();
-
-    if ($deleted) {
-        if ($applicant && !empty($applicant['resume_path']) && file_exists($applicant['resume_path'])) {
-            @unlink($applicant['resume_path']);
+    $query = "SELECT * FROM applicants ORDER BY id DESC";
+    $result = $conn->query($query);
+    $applicants = [];
+    
+    if ($result) {
+        while($row = $result->fetch_assoc()) {
+            $row['id'] = isset($row['id']) ? intval($row['id']) : 0;
+            
+            // SIGURADUHING PENDING SA SIMULA ANG BAGONG DATA O KUNG WALANG STATUS
+            $status_check = strtolower(trim($row['status'] ?? ''));
+            if ($status_check === '' || ($status_check !== 'pending' && $status_check !== 'for final interview' && $status_check !== 'contract')) {
+                $row['status'] = 'Pending';
+            }
+            
+            $applicants[] = $row;
         }
-        echo json_encode(['status' => 'success']);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => $stmt->error]);
     }
+    
+    echo json_encode($applicants);
+    $conn->close();
     exit;
 }
 
-// ACTION: CONFIRM HIRE & REGISTER EMPLOYEE
-if (isset($_POST['action']) && $_POST['action'] == 'confirm_hire') {
+// 2. APPROVE APPLICANT (Mula Pending papuntang For Final Interview)
+if (isset($_GET['action']) && $_GET['action'] === 'approve_applicant' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    $app_id = intval($_POST['applicant_id']);
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
-    // Server-side validations for dates and contract duration limits
-    $today = date('Y-m-d');
-    $date_hired = $_POST['date_hired'];
-    $contract_start = $_POST['contract_start_date'];
-    $duration_years = floatval($_POST['contract_duration_years']);
-
-    if ($date_hired < $today || $contract_start < $today) {
-        echo json_encode(['status' => 'error', 'message' => 'Bawal po mag-set ng past date para sa Date Hired o Contract Start Date.']);
-        exit;
-    }
-
-    if ($duration_years <= 0 || $duration_years > 10) {
-        echo json_encode(['status' => 'error', 'message' => 'Ang contract duration ay dapat nasa pagitan ng 0.5 hanggang 10 taon lamang.']);
-        exit;
-    }
-
-    // 1. Check for duplicates across critical fields
-    $check = $conn->prepare("SELECT id FROM employees WHERE employee_gmail = ? OR email = ? OR phone = ? OR gsis_id = ? OR philhealth_id = ? OR pagibig_id = ? OR sss_id = ?");
-    $check->bind_param("sssssss",
-        $_POST['employee_gmail'],
-        $_POST['email'],
-        $_POST['phone'],
-        $_POST['gsis_id'],
-        $_POST['philhealth_id'],
-        $_POST['pagibig_id'],
-        $_POST['sss_id']
-    );
-    $check->execute();
-
-    if ($check->get_result()->num_rows > 0) {
-        echo json_encode(['status' => 'error', 'message' => 'Duplicate credentials found.']);
-        exit;
-    }
-
-    // 2. Insert into employees including validated contract fields
-    $insert_sql = "INSERT INTO employees (
-        company_name, company_address, contact_number, company_email, 
-        employee_id, full_name, address, phone, email, date_of_birth, 
-        civil_status, nationality, gender, position_title, department, 
-        employment_type, immediate_supervisor, date_hired, contract_start_date, 
-        contract_end_date, contract_duration_years, work_location, employee_gmail, gsis_id, sss_id, 
-        philhealth_id, pagibig_id, employee_password
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
-    $stmt = $conn->prepare($insert_sql);
-    $hashed_password = password_hash($_POST['employee_password'], PASSWORD_BCRYPT);
-    
-    // Hardcoded company information constants
-    $company_name = 'Pannakoda';
-    $company_address = 'Bagong Bayan Dasmarinas Cavite';
-    $company_contact = '0987000';
-    $company_email = 'Pannakoda@gmail.com';
-
-    $stmt->bind_param("ssssssssssssssssssssssssssss",
-        $company_name, $company_address, $company_contact, $company_email,
-        $_POST['employee_id_val'], $_POST['full_name'], $_POST['address'], $_POST['phone'], $_POST['email'], $_POST['date_of_birth'],
-        $_POST['civil_status'], $_POST['nationality'], $_POST['gender'], $_POST['position_title'], $_POST['department'],
-        $_POST['employment_type'], $_POST['immediate_supervisor'], $_POST['date_hired'], $_POST['contract_start_date'],
-        $_POST['contract_end_date'], $_POST['contract_duration_years'], $_POST['work_location'], $_POST['employee_gmail'], $_POST['gsis_id'], $_POST['sss_id'],
-        $_POST['philhealth_id'], $_POST['pagibig_id'], $hashed_password
-    );
-
-    if ($stmt->execute()) {
-        $status_stmt = $conn->prepare("UPDATE applicants SET status = 'Hired' WHERE id = ?");
-        $status_stmt->bind_param("i", $app_id);
-        $status_stmt->execute();
-
-        echo json_encode(['status' => 'success', 'message' => 'Employee added successfully.']);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => $stmt->error]);
+    if ($id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+        $stmt = $conn->prepare("UPDATE applicants SET status = 'For Final Interview' WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+        echo json_encode(['success' => true]);
     }
     exit;
 }
 
-// Data Fetching: Filter out 'Hired' applicants
-$admin_pipeline = $conn->query("
-    SELECT * FROM applicants 
-    WHERE status IN ('Final Interview Set', 'Approved') 
-    AND status != 'Hired' 
-    ORDER BY id DESC
-");
+// 3. PROCEED TO CONTRACT (Mula For Final Interview papuntang Contract)
+if (isset($_GET['action']) && $_GET['action'] === 'proceed_contract' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
-// Fetch existing employees to check for already-registered status highlighting
-$employees_result = $conn->query("SELECT email FROM employees");
-$hired_emails = [];
-while ($emp = $employees_result->fetch_assoc()) {
-    $hired_emails[] = $emp['email'];
+    if ($id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+        $stmt = $conn->prepare("UPDATE applicants SET status = 'Contract' WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+        echo json_encode(['success' => true]);
+    }
+    exit;
+}
+
+// 4. PROCEED TO ONBOARDING (Kopyahin sa employees at i-delete sa applicants)
+if (isset($_GET['action']) && $_GET['action'] === 'proceed_onboarding' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+    if ($id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+        if ($conn->connect_error) {
+            echo json_encode(['success' => false, 'message' => 'DB Connection failed.']);
+            exit;
+        }
+
+        $stmt = $conn->prepare("SELECT * FROM applicants WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            $full_name = $row['full_name'] ?? '';
+            $email = $row['email'] ?? '';
+            $phone = $row['phone'] ?? '';
+            $address = $row['address'] ?? '';
+            $department = $row['department'] ?? 'Unassigned';
+            $position = $row['position_applied'] ?? ($row['position'] ?? 'Staff');
+            
+            $employee_id = "EMP-" . date("Y") . "-" . str_pad($id, 4, "0", STR_PAD_LEFT);
+            $status = "onboarding"; 
+            $date_hired = date("Y-m-d");
+            
+            $company_name = "Pannakoda";
+            $company_address = "Bagong Bayan Dasmarinas Cavite";
+            $contact_number = $phone ?: "09000000000";
+            $company_email = "Pannakoda@gmail.com";
+            $employment_type = "Probationary";
+            $contract_duration_years = 1.0;
+            $work_location = "Main Office";
+            $employee_gmail = $email;
+            $gsis_id = $row['gsis_id'] ?? 'N/A';
+            $sss_id = $row['sss_id'] ?? 'N/A';
+            $philhealth_id = $row['philhealth_id'] ?? 'N/A';
+            $pagibig_id = $row['pagibig_id'] ?? 'N/A';
+
+            $insert_stmt = $conn->prepare("
+                INSERT INTO employees (
+                    company_name, company_address, contact_number, company_email,
+                    employee_id, full_name, address, phone, email,
+                    position_title, department, employment_type, date_hired,
+                    contract_duration_years, work_location, employee_gmail,
+                    gsis_id, sss_id, philhealth_id, pagibig_id, status, position
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            $insert_stmt->bind_param(
+                "sssssssssssssdssssssss", 
+                $company_name, $company_address, $contact_number, $company_email,
+                $employee_id, $full_name, $address, $phone, $email,
+                $position, $department, $employment_type, $date_hired,
+                $contract_duration_years, $work_location, $employee_gmail,
+                $gsis_id, $sss_id, $philhealth_id, $pagibig_id, $status, $position
+            );
+            
+            if ($insert_stmt->execute()) {
+                $insert_stmt->close();
+
+                // DIREKTANG TANGGALIN SA APPLICANTS KASI NAKAPASOK NA SA ONBOARDING
+                $del_stmt = $conn->prepare("DELETE FROM applicants WHERE id = ?");
+                $del_stmt->bind_param("i", $id);
+                $del_stmt->execute();
+                $del_stmt->close();
+
+                echo json_encode(['success' => true, 'message' => 'Successfully transferred to onboarding and removed from applicants!']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Insert error: ' . $insert_stmt->error]);
+                $insert_stmt->close();
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Applicant not found.']);
+        }
+        $stmt->close();
+        $conn->close();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
+    }
+    exit;
+}
+
+// 5. DELETE APPLICANT
+if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+    if ($id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+        $stmt = $conn->prepare("DELETE FROM applicants WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+        echo json_encode(['success' => true]);
+    }
+    exit;
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Control Board - Administration</title>
-    <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Applicant Management</title>
+  <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
+  <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
+  <script src="../LIBRARIES/tailwind.js"></script> 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
-<body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
-
-    <div class="flex h-screen w-full overflow-hidden">
-       <?php include 'sidebar.php'; ?>
-
-        <div class="flex-1 h-screen overflow-y-auto p-8 bg-zinc-100 min-w-0">
-            <div class="max-w-6xl mx-auto">
-
-                <div class="mb-8">
-                    <h1 class="text-3xl font-black text-zinc-800 tracking-tight">Final Decision Terminal</h1>
-                    <p class="text-sm text-zinc-500">Review applicants forwarded by the HR Screening Desk. Complete corporate onboarding details upon hiring.</p>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <tbody class="text-sm text-zinc-700 divide-y divide-zinc-200">
-                            <?php if($admin_pipeline->num_rows == 0): ?>
-                                <tr>
-                                    <td colspan="5" class="p-12 text-center text-zinc-400 font-medium">No candidates are currently scheduled for executive decision review.</td>
-                                </tr>
-                            <?php endif; ?>
-
-                            <?php while($row = $admin_pipeline->fetch_assoc()): 
-                                $is_already_registered = in_array($row['email'], $hired_emails);
-                            ?>
-                                <tr class="hover:bg-zinc-50/50 transition-colors <?= $is_already_registered ? 'bg-emerald-50/60 font-semibold' : '' ?>" data-id="<?= $row['id'] ?>">
-                                    <td class="p-4">
-                                        <div class="font-bold text-zinc-900"><?= htmlspecialchars($row['full_name']) ?></div>
-                                        <?php if ($is_already_registered): ?>
-                                            <span class="text-[10px] uppercase font-bold tracking-tight px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded mt-1 inline-block">Already Registered</span>
-                                        <?php else: ?>
-                                            <span class="text-[10px] uppercase font-bold tracking-tight px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded mt-1 inline-block">Board Review Status</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="p-4">
-                                        <div class="font-medium text-zinc-800"><?= htmlspecialchars($row['email']) ?></div>
-                                        <div class="text-xs text-zinc-400 mt-0.5"><?= htmlspecialchars($row['phone']) ?></div>
-                                    </td>
-                                    <td class="p-4">
-                                        <?php if (!empty($row['resume_path'])): ?>
-                                            <a href="<?= htmlspecialchars($row['resume_path']) ?>" target="_blank" class="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold no-underline">
-                                                <i class="bi bi-file-earmark-pdf-fill"></i> View Resume
-                                            </a>
-                                        <?php else: ?>
-                                            <span class="text-zinc-400 text-xs">No Resume</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="p-4 text-zinc-600 font-semibold">
-                                        <i class="bi bi-calendar-event text-red-500 mr-1.5"></i>
-                                        <?= date('M d, Y - h:i A', strtotime($row['final_interview_date'])) ?>
-                                    </td>
-                                    <td class="p-4 space-x-2" id="action-cell-<?= $row['id'] ?>">
-                                        <?php if ($row['status'] === 'Final Interview Set'): ?>
-                                            <button type="button" onclick="approveApplicant(<?= $row['id'] ?>)"
-                                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
-                                                Approve
-                                            </button>
-                                        <?php elseif ($row['status'] === 'Approved'): ?>
-                                            <button type="button" data-applicant='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8") ?>' onclick="openHireModal(this)" 
-                                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
-                                                Hire
-                                            </button>
-                                        <?php endif; ?>
-                                        <button type="button" onclick="rejectApplicant(<?= $row['id'] ?>)" 
-                                                class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs cursor-pointer">Reject</button>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-            </div>
+<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+  <div class="flex h-screen w-full overflow-hidden">
+    <?php include 'sidebar.php'; ?>
+    <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Applicant Management</h1>
+          <p class="text-sm text-gray-500">Manage interviews, review contracts, and transfer newly hired applicants.</p>
         </div>
-    </div>
-
-    <!-- Hire Modal with Contract Duration and Date Constraints (No Past Dates & Max 10 Years) -->
-    <div id="hireModal" class="hidden fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-4xl p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center gap-2 mb-2 text-emerald-600">
-                <i class="bi bi-check-circle-fill text-xl"></i>
-                <h3 class="text-lg font-bold text-zinc-900">Official Employee Onboarding Terminal</h3>
-            </div>
-
-            <form id="confirmHireForm" method="POST" class="space-y-4">
-                <input type="hidden" name="action" value="confirm_hire">
-                <input type="hidden" name="applicant_id" id="hire_candidate_id"> 
-                
-                <!-- Company Details Section -->
-                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Company Details</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Company Name</label>
-                            <input type="text" name="company_name" value="Pannakoda" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Company Address</label>
-                            <input type="text" name="company_address" value="Bagong Bayan Dasmarinas Cavite" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Contact Number</label>
-                            <input type="text" name="company_contact_number" value="0987000" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Company Email</label>
-                            <input type="email" name="company_email" value="Pannakoda@gmail.com" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Personal Information Section -->
-                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Employee Information</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Employee ID</label>
-                            <input type="text" name="employee_id_val" required placeholder="e.g. EMP-001" class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Full Name</label>
-                            <input type="text" name="full_name" id="modal_full_name" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Date of Birth</label>
-                            <input type="date" name="date_of_birth" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Civil Status</label>
-                            <select name="civil_status" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
-                                <option value="Single">Single</option>
-                                <option value="Married">Married</option>
-                                <option value="Divorced">Divorced</option>
-                                <option value="Widowed">Widowed</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Nationality</label>
-                            <input type="text" name="nationality" value="Filipino" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Gender</label>
-                            <select name="gender" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Contact Number (Phone)</label>
-                            <input type="text" name="phone" id="modal_phone" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Personal Email Address</label>
-                            <input type="email" name="email" id="modal_personal_email" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Home Address</label>
-                        <textarea name="address" id="modal_address" readonly required rows="2" class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none resize-none"></textarea>
-                    </div>
-                </div>
-
-                <!-- Job Details & Assignments (With Min/Max validations) -->
-                <div class="bg-orange-50/70 border border-orange-100 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-orange-800 uppercase tracking-wide mb-3">Employment & Contract Duration Configuration</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Position / Job Title</label>
-                            <input type="text" name="position_title" required placeholder="ex Staff" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Department</label>
-                            <input type="text" name="department" id="modal_department" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Employment Type</label>
-                            <select name="employment_type" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                                <option value="Regular">Regular</option>
-                                <option value="Probationary">Probationary</option>
-                                <option value="Contractual">Contractual</option>
-                                <option value="Part-Time">Part-Time</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Immediate Supervisor</label>
-                            <input type="text" name="immediate_supervisor" required placeholder="Supervisor Name" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Work Location</label>
-                            <input type="text" name="work_location" required placeholder="Office/Remote Location" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Auto-Generated Work Email</label>
-                            <input type="email" name="employee_gmail" id="modal_employee_gmail" required readonly class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-600">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Date Hired</label>
-                            <input type="date" name="date_hired" id="date_hired" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Contract Duration (Years, max 10)</label>
-                            <input type="number" step="0.5" min="0.5" max="10" name="contract_duration_years" id="contract_duration_years" required placeholder="e.g. 1 - 10" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Contract Start Date</label>
-                            <input type="date" name="contract_start_date" id="contract_start_date" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Contract End Date</label>
-                            <input type="date" name="contract_end_date" id="contract_end_date" readonly class="w-full text-sm bg-zinc-100 border border-orange-200 rounded-xl px-4 py-2 text-zinc-600">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Employee Password</label>
-                            <input type="text" name="employee_password" required placeholder="Secure password" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Statutory IDs -->
-                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Statutory & Government Identification</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">GSIS ID</label>
-                            <input type="text" name="gsis_id" id="modal_gsis_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">SSS ID</label>
-                            <input type="text" name="sss_id" id="modal_sss_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">PhilHealth ID</label>
-                            <input type="text" name="philhealth_id" id="modal_philhealth_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Pag-IBIG MID</label>
-                            <input type="text" name="pagibig_id" id="modal_pagibig_id" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeHireModal()" class="px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold rounded-xl text-xs transition-all">Cancel</button>
-                    <button type="submit" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all">Confirm Board Deployment</button>
-                </div>
-            </form>
+      </div>
+      <div class="mb-4 flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div class="relative flex-1 max-w-md">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><i class="bi bi-search"></i></span>
+          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2 rounded-xl text-sm border-gray-200" placeholder="Search applicants...">
         </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div class="table-responsive bg-white rounded-xl overflow-hidden">
+          <table id="applicantsTable" class="table table-hover align-middle mb-0 text-sm">
+            <thead class="table-dark">
+              <tr>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Applicant ID</th>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Email</th>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Position Applied</th>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Status</th>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="applicantsBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <script src="../LIBRARIES/tailwind.js"></script>
-    <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
-    <script>
-    // Auto-generate employee work email with @pannakoda.com domain
-    function generateEmployeeEmail(fullName) {
-        const parts = fullName.trim().split(/\s+/);
-        const clean = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  <!-- CONTRACT MODAL -->
+  <div class="modal fade" id="contractModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-2xl border-0 shadow-lg">
+        <div class="modal-header bg-dark text-white rounded-t-2xl">
+          <h5 class="modal-title font-bold text-base"><i class="bi bi-file-earmark-text-fill text-warning me-2"></i> Employment Contract Agreement</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-6 bg-light">
+          <div class="bg-white p-6 rounded-xl border shadow-sm">
+            <h4 class="font-bold text-gray-800 text-center mb-3">OFFER OF EMPLOYMENT & CONTRACT TERMS</h4>
+            <div class="row g-2 mb-3 text-sm bg-gray-50 p-3 rounded-lg border">
+              <div class="col-md-6"><strong>Applicant Name:</strong> <span id="modalApplicantName" class="text-primary font-semibold"></span></div>
+              <div class="col-md-6"><strong>Email:</strong> <span id="modalApplicantEmail" class="text-muted"></span></div>
+              <div class="col-md-6"><strong>Position:</strong> <span id="modalApplicantPosition" class="text-dark font-semibold"></span></div>
+              <div class="col-md-6"><strong>Stage:</strong> <span class="badge bg-primary">Contract Verification</span></div>
+            </div>
+            <div class="text-sm text-gray-700 space-y-3 mb-4 max-h-52 overflow-y-auto p-4 border rounded bg-white shadow-inner">
+              <p><strong>1. Position & Commencement:</strong> Employment commences immediately upon completion of onboarding requirements.</p>
+              <p><strong>2. Compensation & Allowances:</strong> Standard corporate compensation and benefits apply.</p>
+            </div>
+            <div class="form-check bg-amber-50 border border-amber-200 p-3 rounded-xl">
+              <input class="form-check-input mt-1" type="checkbox" id="agreeContractCheck" onchange="toggleOnboardingButton()">
+              <label class="form-check-label text-xs font-semibold text-amber-900 cursor-pointer" for="agreeContractCheck">
+                I verify that the applicant has reviewed and agreed to the terms of this contract.
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-white border-0">
+          <input type="hidden" id="modalApplicantId">
+          <button type="button" class="btn btn-secondary btn-sm rounded-lg" data-bs-dismiss="modal">Close</button>
+          <button type="button" id="proceedOnboardingBtn" class="btn btn-success btn-sm rounded-lg px-4" disabled onclick="confirmProceedOnboarding()">
+            <i class="bi bi-person-check-fill me-1"></i> Proceed to Onboarding
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        if (parts.length < 2) {
-            return clean(parts[0]) + '@pannakoda.com';
-        }
+  <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
+  <script>
+    let allApplicants = [];
+    let activeContractModal = null;
+    const phpEndpoint = "<?php echo $current_page; ?>";
 
-        const lastName = parts[parts.length - 1];      
-        const firstName = parts.slice(0, -1).join('');  
-
-        return `${clean(lastName)}.${clean(firstName)}@pannakoda.com`;
+    async function loadApplicants() {
+      try {
+        const response = await fetch(`${phpEndpoint}?action=fetch_applicants`);
+        const text = await response.text();
+        allApplicants = JSON.parse(text);
+        renderTable();
+      } catch (err) {
+        console.error("Failed to load applicants:", err);
+      }
     }
 
-    // Set min date constraint dynamically on inputs to prevent past dates
-    document.addEventListener('DOMContentLoaded', function() {
-        const todayStr = new Date().toISOString().split('T')[0];
+    function renderTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const tbody = document.getElementById('applicantsBody');
+      tbody.innerHTML = '';
+
+      const filtered = allApplicants.filter(app => {
+        const idStr = String(app.id || '').toLowerCase();
+        const name = String(app.full_name || '').toLowerCase();
+        const email = String(app.email || '').toLowerCase();
+        const position = String(app.position_applied || app.position || '').toLowerCase();
+        return idStr.includes(query) || name.includes(query) || email.includes(query) || position.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No applicant records found.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(app => {
+        let statusBadge = '';
+        let actionButtons = '';
+        const rawStatus = (app.status || 'pending').trim().toLowerCase();
+        const safeName = (app.full_name || '').replace(/'/g, "\\'");
+        const safeEmail = (app.email || '').replace(/'/g, "\\'");
+        const safePosition = (app.position_applied || app.position || 'Staff').replace(/'/g, "\\'");
+
+        // TAMANG DALOY NG MGA ACTION BUTTONS BATAY SA STATUS
+        if (rawStatus === 'pending') {
+          statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Pending Review</span>';
+          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-check-lg"></i> Approve Final Interview</button>`;
+        } else if (rawStatus === 'for final interview') {
+          statusBadge = '<span class="bg-indigo-50 text-indigo-700 border-indigo-200 px-2.5 py-1 rounded-md text-xs font-semibold border">For Final Interview</span>';
+          actionButtons = `<button onclick="proceedContract(${app.id}, '${safeName}')" class="btn btn-sm btn-primary py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-file-earmark-text"></i> Proceed to Contract</button>`;
+        } else if (rawStatus === 'contract') {
+          statusBadge = '<span class="bg-blue-50 text-blue-700 border-blue-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Contract Stage</span>';
+          actionButtons = `<button onclick="openContractModal(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}')" class="btn btn-sm btn-outline-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-pencil-square"></i> Review Contract</button>`;
+        } else {
+          statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Pending Review</span>';
+          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-check-lg"></i> Approve Final Interview</button>`;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono font-bold text-gray-700">#${app.id}</td>
+          <td class="py-3 px-4 font-semibold text-gray-800">${app.full_name || ''}</td>
+          <td class="py-3 px-4 text-gray-600">${app.email || ''}</td>
+          <td class="py-3 px-4 text-gray-600">${app.position_applied || app.position || 'Staff'}</td>
+          <td class="py-3 px-4">${statusBadge}</td>
+          <td class="py-3 px-4 text-center flex justify-center items-center gap-2">
+            ${actionButtons}
+            <button onclick="deleteApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs font-semibold rounded-lg"><i class="bi bi-trash3"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function approveApplicant(id, name) {
+      if (!(await Swal.fire({ title: 'Approve Final Interview?', text: `Mark ${name} as For Final Interview?`, icon: 'question', showCancelButton: true })).isConfirmed) return;
+      const fd = new FormData(); fd.append('id', id);
+      const res = await fetch(`${phpEndpoint}?action=approve_applicant`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        loadApplicants();
+      }
+    }
+
+    async function proceedContract(id, name) {
+      if (!(await Swal.fire({ title: 'Proceed to Contract?', text: `Move ${name} to contract stage?`, icon: 'question', showCancelButton: true })).isConfirmed) return;
+      const fd = new FormData(); fd.append('id', id);
+      const res = await fetch(`${phpEndpoint}?action=proceed_contract`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        loadApplicants();
+      }
+    }
+
+    function openContractModal(id, name, email, position) {
+      document.getElementById('modalApplicantId').value = id;
+      document.getElementById('modalApplicantName').textContent = name;
+      document.getElementById('modalApplicantEmail').textContent = email;
+      document.getElementById('modalApplicantPosition').textContent = position;
+      document.getElementById('agreeContractCheck').checked = false;
+      document.getElementById('proceedOnboardingBtn').disabled = true;
+      activeContractModal = new bootstrap.Modal(document.getElementById('contractModal'));
+      activeContractModal.show();
+    }
+
+    function toggleOnboardingButton() {
+      document.getElementById('proceedOnboardingBtn').disabled = !document.getElementById('agreeContractCheck').checked;
+    }
+
+    async function confirmProceedOnboarding() {
+      const applicantId = document.getElementById('modalApplicantId').value;
+      if (!(await Swal.fire({ title: 'Proceed to Onboarding?', text: "Transfer this applicant and delete from table?", icon: 'warning', showCancelButton: true })).isConfirmed) return;
+      
+      const fd = new FormData(); 
+      fd.append('id', applicantId);
+      
+      try {
+        const res = await fetch(`${phpEndpoint}?action=proceed_onboarding`, { method: 'POST', body: fd });
+        const data = await res.json();
         
-        const dateHiredInput = document.getElementById('date_hired');
-        const contractStartInput = document.getElementById('contract_start_date');
-        
-        if (dateHiredInput) dateHiredInput.setAttribute('min', todayStr);
-        if (contractStartInput) contractStartInput.setAttribute('min', todayStr);
+        if (data.success) {
+          if (activeContractModal) {
+            activeContractModal.hide();
+          }
+          
+          // INSTANT NA TANGGALIN SA TABLE VIEW KASI NALIPAT NA SA EMPLOYEES
+          allApplicants = allApplicants.filter(app => String(app.id) !== String(applicantId));
+          renderTable();
 
-        const durationInput = document.getElementById('contract_duration_years');
-        if (durationInput) {
-            durationInput.addEventListener('input', function() {
-                if (parseFloat(this.value) > 10) {
-                    this.value = 10;
-                } else if (parseFloat(this.value) < 0.5) {
-                    this.value = 0.5;
-                }
-                calculateEndDate();
-            });
+          Swal.fire({ title: 'Success!', text: data.message, icon: 'success', timer: 1200, showConfirmButton: false });
+        } else {
+          Swal.fire('Error!', data.message || 'Failed.', 'error');
         }
-
-        if (contractStartInput) {
-            contractStartInput.addEventListener('change', calculateEndDate);
-        }
-    });
-
-    function calculateEndDate() {
-        const startDateInput = document.getElementById('contract_start_date');
-        const durationInput = document.getElementById('contract_duration_years');
-        const endDateInput = document.getElementById('contract_end_date');
-
-        if (startDateInput.value && durationInput.value) {
-            const startDate = new Date(startDateInput.value);
-            const years = parseFloat(durationInput.value);
-            
-            if (!isNaN(years) && !isNaN(startDate.getTime())) {
-                const totalDays = Math.round(years * 365);
-                startDate.setDate(startDate.getDate() + totalDays);
-                
-                const yyyy = startDate.getFullYear();
-                const mm = String(startDate.getMonth() + 1).padStart(2, '0');
-                const dd = String(startDate.getDate()).padStart(2, '0');
-                
-                endDateInput.value = `${yyyy}-${mm}-${dd}`;
-            }
-        }
+      } catch (e) {
+        console.error("Error:", e);
+        Swal.fire('Error', 'May nangyaring problema sa koneksyon.', 'error');
+      }
     }
 
-    function openHireModal(btn) {
-        const data = JSON.parse(btn.dataset.applicant);
-
-        document.getElementById('hire_candidate_id').value = data.id;
-
-        const readonlyFields = {
-            modal_full_name: 'full_name',
-            modal_personal_email: 'email',
-            modal_phone: 'phone',
-            modal_address: 'address',
-            modal_gsis_id: 'gsis_id',
-            modal_sss_id: 'sss_id',
-            modal_philhealth_id: 'philhealth_id',
-            modal_pagibig_id: 'pagibig_id',
-            modal_department: 'department'
-        };
-
-        for (const [elementId, key] of Object.entries(readonlyFields)) {
-            document.getElementById(elementId).value = data[key] || '';
-        }
-
-        // Set default values to current date
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date_hired').value = today;
-        document.getElementById('contract_start_date').value = today;
-        document.getElementById('contract_duration_years').value = '1';
-        
-        calculateEndDate();
-
-        document.getElementById('modal_employee_gmail').value = generateEmployeeEmail(data.full_name);
-        document.getElementById('hireModal').classList.remove('hidden');
+    async function deleteApplicant(id, name) {
+      if (!(await Swal.fire({ title: 'Delete?', text: `Delete ${name}?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' })).isConfirmed) return;
+      const fd = new FormData(); fd.append('id', id);
+      const res = await fetch(`${phpEndpoint}?action=delete_applicant`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) loadApplicants();
     }
 
-    function closeHireModal() {
-        document.getElementById('hireModal').classList.add('hidden');
-    }
-
-    async function approveApplicant(id) {
-        const result = await Swal.fire({
-            title: 'Approve Candidate?',
-            text: "Are you sure you want to approve?",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#2563eb',
-            confirmButtonText: 'Yes, Approve'
-        });
-
-        if (result.isConfirmed) {
-            try {
-                const response = await fetch('admin_applicants.php?action=approve&id=' + id);
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    const cell = document.getElementById('action-cell-' + id);
-                    const applicantJson = JSON.stringify(data.applicant).replace(/'/g, '&#39;');
-
-                    cell.innerHTML = `
-                        <button type="button" data-applicant='${applicantJson}' onclick="openHireModal(this)" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
-                            Hire
-                        </button>
-                        <button type="button" onclick="rejectApplicant(${id})" 
-                                class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs cursor-pointer">Reject</button>
-                    `;
-
-                    Swal.fire('Success!', 'Na-approve na ang candidate.', 'success');
-                } else {
-                    Swal.fire('Error', data.message || 'Something went wrong.', 'error');
-                }
-            } catch (error) {
-                console.error("Error parsing JSON:", error);
-                Swal.fire('Error', 'error');
-            }
-        }
-    }
-
-    async function rejectApplicant(id) {
-        const result = await Swal.fire({
-            title: 'Reject Candidate?',
-            text: "This will permanently delete the applicant's record, including their resume file. This cannot be undone.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            confirmButtonText: 'Yes, Reject & Delete'
-        });
-
-        if (result.isConfirmed) {
-            try {
-                const response = await fetch('admin_applicants.php?action=admin_reject&id=' + id);
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    const row = document.querySelector(`tr[data-id="${id}"]`);
-                    if (row) row.remove();
-                    Swal.fire('Rejected', 'The applicant record has been removed.', 'success');
-                } else {
-                    Swal.fire('Error', data.message || 'Something went wrong.', 'error');
-                }
-            } catch (error) {
-                console.error("Error rejecting applicant:", error);
-                Swal.fire('Error', 'error');
-            }
-        }
-    }
-
-    function validateForm(formData) {
-        const password = formData.get('employee_password');
-        const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-        if (!strongPasswordRegex.test(password)) {
-            Swal.fire(
-                'Weak Password',
-                'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&).',
-                'warning'
-            );
-            return false;
-        }
-
-        const today = new Date().toISOString().split('T')[0];
-        const dateHired = formData.get('date_hired');
-        const contractStart = formData.get('contract_start_date');
-        const durationYears = parseFloat(formData.get('contract_duration_years'));
-
-        if (dateHired < today || contractStart < today) {
-            Swal.fire('Invalid Date', 'Bawal mag-set ng past date para sa Date Hired o Contract Start Date.', 'warning');
-            return false;
-        }
-
-        if (isNaN(durationYears) || durationYears <= 0 || durationYears > 10) {
-            Swal.fire('Invalid Duration', 'Ang contract duration ay dapat mula 0.5 hanggang 10 taon lamang.', 'warning');
-            return false;
-        }
-
-        return true;
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const hireForm = document.getElementById('confirmHireForm');
-
-        if (hireForm) {
-            hireForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                let formData = new FormData(this);
-
-                if (!validateForm(formData)) return;
-
-                fetch('admin_applicants.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Server responded with status: ' + response.status);
-                    }
-                    return response.text();
-                })
-                .then(text => {
-                    try {
-                        const data = JSON.parse(text);
-                        if (data.status === 'success') {
-                            Swal.fire('Success', data.message, 'success');
-
-                            const candidateId = document.getElementById('hire_candidate_id').value;
-                            const rowToRemove = document.querySelector(`tr[data-id="${candidateId}"]`);
-                            if (rowToRemove) {
-                                rowToRemove.remove();
-                            }
-
-                            closeHireModal();
-                        } else {
-                            Swal.fire('Error', data.message, 'error');
-                        }
-                    } catch (e) {
-                        console.error('Raw response:', text);
-                        Swal.fire('Error', 'Invalid JSON response.', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire('Error', 'error');
-                });
-            });
-        }
-    });
-    </script>
+    document.getElementById('searchInput').addEventListener('input', renderTable);
+    window.addEventListener('DOMContentLoaded', loadApplicants);
+  </script>
 </body>
 </html>
