@@ -20,10 +20,7 @@ $dbname = "pos";
 $conn = new mysqli($host, $user, $pass, $dbname);
 
 // 1. HANDLE ONBOARDING SUBMISSION / UPDATE VIA POST
-// 1. HANDLE ONBOARDING SUBMISSION / UPDATE VIA POST
-// 1. HANDLE ONBOARDING SUBMISSION / UPDATE VIA POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'complete_onboarding') {
-    // Linisin ang buffer para walang masamang HTML/warning sa JSON response
     if (ob_get_length()) ob_clean();
     header('Content-Type: application/json');
 
@@ -63,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         $employee_gmail = $cleanName . '@pannakoda.com';
 
-        // Gamitin ang eksaktong column names mula sa desc employees table mo:
         $update_sql = "UPDATE employees SET 
             employee_id = '$employee_id', 
             employee_password = '$password_hash', 
