@@ -12,7 +12,7 @@ $current_role = strtolower($_SESSION['role']);
 
 // 3. Harangin kung HINDI siya admin at HINDI rin hr
 if ($current_role !== 'admin' && $current_role !== 'hr') {
-    header("Location: login.php"); // Pwedeng palitan ng unauthorized.php
+    header("Location: login.php"); 
     exit();
 }
 
@@ -38,14 +38,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
     while($row = $result->fetch_assoc()) {
         $row['id'] = isset($row['id']) ? intval($row['id']) : 0;
         
-        // Fallback para sa Display ID kung walang nakalaang employee_id column
+        // Fallback para sa Display ID gamit ang bagong employee_id column mula sa database
         $row['display_emp_id'] = isset($row['employee_id']) && !empty($row['employee_id']) ? $row['employee_id'] : $row['id'];
         
         if (!isset($row['department']) || empty($row['department'])) {
             $row['department'] = 'Unassigned'; 
         }
 
-        if (strcasecmp($row['department'], 'Manager') === 0) {
+        if (strcasecmp($row['department'], 'Manager') === 0 || (isset($row['position_title']) && stripos($row['position_title'], 'Manager') !== false)) {
             $row['role'] = 'Manager';
         } else {
             $row['role'] = 'Staff'; 
@@ -59,7 +59,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
     exit;
 }
 
-// 2. DELETE EMPLOYEE ENDPOINT (KORREKSYON: Binabago para magbura sa 'employees' table)
+// 2. DELETE EMPLOYEE ENDPOINT
 if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     
@@ -72,7 +72,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             exit;
         }
 
-        // Dito tinatarget ang tamang table ('employees') gamit ang primary key 'id'
         $stmt = $conn->prepare("DELETE FROM employees WHERE id = ?");
         $stmt->bind_param("i", $id);
         
@@ -152,6 +151,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           <table id="personalTable" class="table table-hover align-middle mb-0 text-sm">
             <thead class="table-dark">
               <tr>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Employee ID</th>
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Full Name</th>
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Role</th>
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Department</th>
@@ -206,11 +206,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
 
   <script>
-    // Magre-refresh ang buong pahina tuwing 30 segundo
-    setInterval(function() {
-        location.reload();
-    }, 30000); 
-
     let allEmployees = [];
     let bsModalInstance = null;
 
@@ -242,7 +237,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       payrollBody.innerHTML = '';
 
       if (filtered.length === 0) {
-        const emptyTrPersonal = `<tr><td colspan="4" class="text-center py-8 text-gray-400 italic">No operational records matched.</td></tr>`;
+        const emptyTrPersonal = `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">No operational records matched.</td></tr>`;
         const emptyTrPayroll = `<tr><td colspan="8" class="text-center py-8 text-gray-400 italic">No operational records matched.</td></tr>`;
         personalBody.innerHTML = emptyTrPersonal;
         payrollBody.innerHTML = emptyTrPayroll;
@@ -257,6 +252,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         const trPersonal = document.createElement('tr');
         trPersonal.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
         trPersonal.innerHTML = `
+          <td class="py-3 px-4 font-mono font-bold text-gray-700">${emp.display_emp_id || '-'}</td>
           <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
           <td class="py-3 px-4"><span class="${roleClass} px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role}</span></td>
           <td class="py-3 px-4 text-gray-600">${emp.department}</td>
@@ -289,99 +285,80 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       });
     }
 
-    // SWEETALERT & NAVIGATION MODULE
     document.addEventListener("DOMContentLoaded", function () {
-        const currentPath = window.location.pathname;
-        const navLinks = document.querySelectorAll(".sidebar-link");
-        
-        navLinks.forEach(link => {
-            const linkPath = link.getAttribute("href");
-            if (linkPath && currentPath.endsWith(linkPath)) {
-                link.classList.remove("text-white/80", "hover:bg-white/10", "hover:text-white", "text-inherit");
-                link.classList.add("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+          logoutBtn.addEventListener('click', function(e) {
+              e.preventDefault(); 
+              Swal.fire({
+                  title: 'Log out?',
+                  text: "Are you sure you want to Log out",
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonColor: '#FF8C00', 
+                  cancelButtonColor: '#d33',
+                  confirmButtonText: 'Yes',
+                  cancelButtonText: 'Cancel'
+              }).then((result) => {
+                  if (result.isConfirmed) {
+                      window.location.href = "logout.php"; 
+                  }
+              });
+          });
+      }
+    });
+
+    function triggerDelete(dbId, name) {
+        Swal.fire({
+            title: 'Delete Data',
+            text: `Are you sure you want to delete this data "${name}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'Cancel'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const formData = new FormData();
+                    formData.append('id', dbId);
+
+                    const response = await fetch(`${window.location.pathname}?action=delete_employee`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const resultData = await response.json();
+                    if (resultData.success) {
+                        Swal.fire('Deleted!', resultData.message, 'success');
+                        allEmployees = allEmployees.filter(emp => emp.id != dbId);
+                        renderTables();
+                    } else {
+                        Swal.fire('Error!', resultData.message || "Failed.", 'error');
+                    }
+                } catch (err) {
+                    console.error("Error:", err);
+                }
             }
         });
+    }
 
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function(e) {
-                e.preventDefault(); 
-                Swal.fire({
-                    title: 'Log out?',
-                    text: "Are you sure you want to Log out",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#FF8C00', 
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Yes',
-                    cancelButtonText: 'Cancel',
-                    background: '#ffffff',
-                    color: '#212121'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = "logout.php"; 
-                    }
-                });
-            });
-        }
-    });
-
-    // 3. IMPROVED DELETE HANDLER WITH SWEETALERT2
-function triggerDelete(dbId, name) {
-    Swal.fire({
-        title: 'Delete Data',
-        text: `Are you sure you want to delete this data "${name}"?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes',
-        cancelButtonText: 'Cancel'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            try {
-                const formData = new FormData();
-                formData.append('id', dbId);
-
-                const response = await fetch(`${window.location.pathname}?action=delete_employee`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const resultData = await response.json();
-                if (resultData.success) {
-                    Swal.fire('Deleted!', resultData.message, 'success');
-                    allEmployees = allEmployees.filter(emp => emp.id != dbId);
-                    renderTables();
-                } else {
-                    Swal.fire('Error!', resultData.message || "Failed.", 'error');
-                }
-            } catch (err) {
-                console.error("Error:", err);
-            }
-        }
-    });
-}
-
-    // 4. PAYSLIP MODAL MODULE (Updated with Philippine MWE Standards & Kinsenas/Monthly Breakdown)
     function triggerPayslip(dbId) {
         const emp = allEmployees.find(e => e.id == dbId);
         if (!emp) return;
 
-        // Monthly Base & Standard Allowances
         const monthlyBase = emp.role === 'Manager' ? 20000 : 15000;
-        const monthlyAllowance = 1000; // Halimbawa ng Rice/Meal allowance
+        const monthlyAllowance = 1000; 
         const monthlyGross = monthlyBase + monthlyAllowance;
 
-        // Mandatory Contributions & Tax (Monthly Breakdown)
         const monthlySSS = emp.role === 'Manager' ? 900 : 675;
         const monthlyPhilHealth = emp.role === 'Manager' ? 400 : 300;
         const monthlyPagibig = 200;
-        const monthlyTax = 0.00; // MWE / Tax Exempt threshold compliance
+        const monthlyTax = 0.00; 
         const monthlyDeductions = monthlySSS + monthlyPhilHealth + monthlyPagibig + monthlyTax;
         const monthlyNet = monthlyGross - monthlyDeductions;
 
-        // Kinsenas (Hati sa dalawa: 1st Cut-off / 2nd Cut-off)
         const kinsenasBase = monthlyBase / 2;
         const kinsenasAllowance = monthlyAllowance / 2;
         const kinsenasGross = kinsenasBase + kinsenasAllowance;
@@ -395,7 +372,6 @@ function triggerDelete(dbId, name) {
 
         const f = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        // Dynamic Period Determination
         const now = new Date();
         const day = now.getDate();
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -403,37 +379,31 @@ function triggerDelete(dbId, name) {
         const cutOffPeriod = day <= 15 ? `1st Cut-off (1–15, ${currentMonthYear})` : `2nd Cut-off (16–31, ${currentMonthYear})`;
         const payDateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-        // Baguhin ang bahaging ito sa loob ng function na triggerPayslip() (mula sa line 454 onwards)
-
         document.getElementById('printArea').innerHTML = `
             <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs">
-              <!-- Company Header (Inalis ang Logo, pinalitan ang address) -->
               <div class="text-center border-b pb-4 mb-4">
-                <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">PannaKoda Stores Inc.</h3>
-                <p class="text-[11px] text-gray-500 font-medium">Zone 1, Dasmariñas, Cavite, Philippines</p>
-                <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000</p>
+                <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
+                <p class="text-[11px] text-gray-500 font-medium">${emp.company_address || 'Zone 1, Dasmariñas, Cavite, Philippines'}</p>
+                <p class="text-[11px] text-gray-400 font-mono">Contact: ${emp.contact_number || '0987000'} | Email: ${emp.company_email || 'Pannakoda@gmail.com'}</p>
                 <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
                   PAYSLIP STATEMENT | ${cutOffPeriod}
                 </div>
               </div>
               
-              <!-- Employee & Payroll Information Grid -->
               <div class="grid grid-cols-2 gap-4 mb-4 border-b pb-4 bg-slate-50/60 p-3 rounded-lg">
-                 <div>
+                   <div>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-gray-800">${emp.display_emp_id}</span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-gray-800">${emp.full_name}</span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Department:</span> <span class="font-semibold text-gray-800">${emp.department}</span></p>
-                 </div>
-                 <div>
+                   </div>
+                   <div>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800">${emp.role}</span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800">${payDateStr}</span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-emerald-600">MWE Exempt (₱0.00 Tax)</span></p>
-                 </div>
+                   </div>
               </div>
 
-              <!-- Earnings & Deductions Breakdown Tables -->
               <div class="grid grid-cols-2 gap-6 items-start mb-4">
-                <!-- Earnings Section -->
                 <div>
                   <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings Breakdown</h6>
                   <div class="space-y-1">
@@ -452,7 +422,6 @@ function triggerDelete(dbId, name) {
                   </div>
                 </div>
 
-                <!-- Deductions Section -->
                 <div>
                   <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Deductions Breakdown</h6>
                   <div class="space-y-1">
@@ -480,7 +449,6 @@ function triggerDelete(dbId, name) {
                 </div>
               </div>
 
-              <!-- Summary Reference Box -->
               <div class="bg-slate-100 p-2.5 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-600 border border-slate-200">
                 <div><span class="font-semibold">Monthly Base Reference:</span> ₱${f(monthlyBase)}</div>
                 <div><span class="font-semibold">Monthly Gross Reference:</span> ₱${f(monthlyGross)}</div>
@@ -488,7 +456,6 @@ function triggerDelete(dbId, name) {
                 <div><span class="font-semibold">Monthly Net Reference:</span> ₱${f(monthlyNet)}</div>
               </div>
 
-              <!-- Net Pay Display Banner -->
               <div class="bg-[#212121] text-white p-3.5 rounded-xl flex justify-between items-center shadow-inner">
                 <div>
                   <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
@@ -506,7 +473,6 @@ function triggerDelete(dbId, name) {
         bsModalInstance.show();
     }
 
-    // 5. INTERFACE TAB SWITCHING
     document.getElementById('tabPersonal').addEventListener('click', function() {
       this.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold";
       document.getElementById('tabPayroll').className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-600 hover:text-gray-900";

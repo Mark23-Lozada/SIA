@@ -40,7 +40,6 @@ if (isset($_POST['action']) && $_POST['action'] == 'register_hr') {
 if (isset($_GET['action']) && $_GET['action'] == 'approve' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
 
-    // Use a prepared statement instead of interpolating $id directly
     $stmt = $conn->prepare("UPDATE applicants SET status = 'Approved' WHERE id = ?");
     $stmt->bind_param("i", $id);
     $update = $stmt->execute();
@@ -48,8 +47,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'approve' && isset($_GET['id'])
     header('Content-Type: application/json');
 
     if ($update) {
-        // Fetch the full record so the JS can populate the Hire modal
-        // with the applicant's submitted address/government IDs.
         $fetch = $conn->prepare("SELECT * FROM applicants WHERE id = ?");
         $fetch->bind_param("i", $id);
         $fetch->execute();
@@ -67,7 +64,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'admin_reject' && isset($_GET['
     $id = intval($_GET['id']);
     header('Content-Type: application/json');
 
-    // Look up the resume path first so we can clean up the uploaded file too
     $fetch = $conn->prepare("SELECT resume_path FROM applicants WHERE id = ?");
     $fetch->bind_param("i", $id);
     $fetch->execute();
@@ -93,7 +89,23 @@ if (isset($_POST['action']) && $_POST['action'] == 'confirm_hire') {
     header('Content-Type: application/json');
     $app_id = intval($_POST['applicant_id']);
 
-    // 1. Check for duplicates
+    // Server-side validations for dates and contract duration limits
+    $today = date('Y-m-d');
+    $date_hired = $_POST['date_hired'];
+    $contract_start = $_POST['contract_start_date'];
+    $duration_years = floatval($_POST['contract_duration_years']);
+
+    if ($date_hired < $today || $contract_start < $today) {
+        echo json_encode(['status' => 'error', 'message' => 'Bawal po mag-set ng past date para sa Date Hired o Contract Start Date.']);
+        exit;
+    }
+
+    if ($duration_years <= 0 || $duration_years > 10) {
+        echo json_encode(['status' => 'error', 'message' => 'Ang contract duration ay dapat nasa pagitan ng 0.5 hanggang 10 taon lamang.']);
+        exit;
+    }
+
+    // 1. Check for duplicates across critical fields
     $check = $conn->prepare("SELECT id FROM employees WHERE employee_gmail = ? OR email = ? OR phone = ? OR gsis_id = ? OR philhealth_id = ? OR pagibig_id = ? OR sss_id = ?");
     $check->bind_param("sssssss",
         $_POST['employee_gmail'],
@@ -111,18 +123,35 @@ if (isset($_POST['action']) && $_POST['action'] == 'confirm_hire') {
         exit;
     }
 
-    // 2. Insert into employees
-    $insert_sql = "INSERT INTO employees (full_name, email, phone, employee_gmail, address, gsis_id, sss_id, philhealth_id, pagibig_id, department, employee_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // 2. Insert into employees including validated contract fields
+    $insert_sql = "INSERT INTO employees (
+        company_name, company_address, contact_number, company_email, 
+        employee_id, full_name, address, phone, email, date_of_birth, 
+        civil_status, nationality, gender, position_title, department, 
+        employment_type, immediate_supervisor, date_hired, contract_start_date, 
+        contract_end_date, contract_duration_years, work_location, employee_gmail, gsis_id, sss_id, 
+        philhealth_id, pagibig_id, employee_password
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
     $stmt = $conn->prepare($insert_sql);
     $hashed_password = password_hash($_POST['employee_password'], PASSWORD_BCRYPT);
-    $stmt->bind_param("sssssssssss",
-        $_POST['full_name'], $_POST['email'], $_POST['phone'], $_POST['employee_gmail'],
-        $_POST['address'], $_POST['gsis_id'], $_POST['sss_id'], $_POST['philhealth_id'],
-        $_POST['pagibig_id'], $_POST['department'], $hashed_password
+    
+    // Hardcoded company information constants
+    $company_name = 'Pannakoda';
+    $company_address = 'Bagong Bayan Dasmarinas Cavite';
+    $company_contact = '0987000';
+    $company_email = 'Pannakoda@gmail.com';
+
+    $stmt->bind_param("ssssssssssssssssssssssssssss",
+        $company_name, $company_address, $company_contact, $company_email,
+        $_POST['employee_id_val'], $_POST['full_name'], $_POST['address'], $_POST['phone'], $_POST['email'], $_POST['date_of_birth'],
+        $_POST['civil_status'], $_POST['nationality'], $_POST['gender'], $_POST['position_title'], $_POST['department'],
+        $_POST['employment_type'], $_POST['immediate_supervisor'], $_POST['date_hired'], $_POST['contract_start_date'],
+        $_POST['contract_end_date'], $_POST['contract_duration_years'], $_POST['work_location'], $_POST['employee_gmail'], $_POST['gsis_id'], $_POST['sss_id'],
+        $_POST['philhealth_id'], $_POST['pagibig_id'], $hashed_password
     );
 
     if ($stmt->execute()) {
-        // 3. IMPORTANT: Update status to 'Hired' so it disappears from the pending list
         $status_stmt = $conn->prepare("UPDATE applicants SET status = 'Hired' WHERE id = ?");
         $status_stmt->bind_param("i", $app_id);
         $status_stmt->execute();
@@ -141,6 +170,13 @@ $admin_pipeline = $conn->query("
     AND status != 'Hired' 
     ORDER BY id DESC
 ");
+
+// Fetch existing employees to check for already-registered status highlighting
+$employees_result = $conn->query("SELECT email FROM employees");
+$hired_emails = [];
+while ($emp = $employees_result->fetch_assoc()) {
+    $hired_emails[] = $emp['email'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -149,16 +185,11 @@ $admin_pipeline = $conn->query("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Executive Control Board - Administration</title>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
-
 </head>
 <body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
 
     <div class="flex h-screen w-full overflow-hidden">
-
-
-
-     <?php include 'sidebar.php'; ?>
-
+       <?php include 'sidebar.php'; ?>
 
         <div class="flex-1 h-screen overflow-y-auto p-8 bg-zinc-100 min-w-0">
             <div class="max-w-6xl mx-auto">
@@ -170,7 +201,6 @@ $admin_pipeline = $conn->query("
 
                 <div class="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
                     <table class="w-full text-left border-collapse">
-
                         <tbody class="text-sm text-zinc-700 divide-y divide-zinc-200">
                             <?php if($admin_pipeline->num_rows == 0): ?>
                                 <tr>
@@ -178,11 +208,17 @@ $admin_pipeline = $conn->query("
                                 </tr>
                             <?php endif; ?>
 
-                            <?php while($row = $admin_pipeline->fetch_assoc()): ?>
-                                <tr class="hover:bg-zinc-50/50 transition-colors" data-id="<?= $row['id'] ?>">
+                            <?php while($row = $admin_pipeline->fetch_assoc()): 
+                                $is_already_registered = in_array($row['email'], $hired_emails);
+                            ?>
+                                <tr class="hover:bg-zinc-50/50 transition-colors <?= $is_already_registered ? 'bg-emerald-50/60 font-semibold' : '' ?>" data-id="<?= $row['id'] ?>">
                                     <td class="p-4">
                                         <div class="font-bold text-zinc-900"><?= htmlspecialchars($row['full_name']) ?></div>
-                                        <span class="text-[10px] uppercase font-bold tracking-tight px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded mt-1 inline-block">Board Review Status</span>
+                                        <?php if ($is_already_registered): ?>
+                                            <span class="text-[10px] uppercase font-bold tracking-tight px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded mt-1 inline-block">Already Registered</span>
+                                        <?php else: ?>
+                                            <span class="text-[10px] uppercase font-bold tracking-tight px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded mt-1 inline-block">Board Review Status</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="p-4">
                                         <div class="font-medium text-zinc-800"><?= htmlspecialchars($row['email']) ?></div>
@@ -201,21 +237,21 @@ $admin_pipeline = $conn->query("
                                         <i class="bi bi-calendar-event text-red-500 mr-1.5"></i>
                                         <?= date('M d, Y - h:i A', strtotime($row['final_interview_date'])) ?>
                                     </td>
-                            <td class="p-4 space-x-2" id="action-cell-<?= $row['id'] ?>">
-    <?php if ($row['status'] === 'Final Interview Set'): ?>
-        <button type="button" onclick="approveApplicant(<?= $row['id'] ?>)"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
-            Approve
-        </button>
-    <?php elseif ($row['status'] === 'Approved'): ?>
-        <button type="button" data-applicant='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8") ?>' onclick="openHireModal(this)" 
-                class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
-            Hire
-        </button>
-    <?php endif; ?>
-    <button type="button" onclick="rejectApplicant(<?= $row['id'] ?>)" 
-            class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs cursor-pointer">Reject</button>
-</td>
+                                    <td class="p-4 space-x-2" id="action-cell-<?= $row['id'] ?>">
+                                        <?php if ($row['status'] === 'Final Interview Set'): ?>
+                                            <button type="button" onclick="approveApplicant(<?= $row['id'] ?>)"
+                                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
+                                                Approve
+                                            </button>
+                                        <?php elseif ($row['status'] === 'Approved'): ?>
+                                            <button type="button" data-applicant='<?= htmlspecialchars(json_encode($row), ENT_QUOTES, "UTF-8") ?>' onclick="openHireModal(this)" 
+                                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
+                                                Hire
+                                            </button>
+                                        <?php endif; ?>
+                                        <button type="button" onclick="rejectApplicant(<?= $row['id'] ?>)" 
+                                                class="bg-zinc-200 hover:bg-zinc-300 px-3 py-1 rounded text-xs cursor-pointer">Reject</button>
+                                    </td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>
@@ -226,69 +262,156 @@ $admin_pipeline = $conn->query("
         </div>
     </div>
 
-    <div id="hrModal" class="hidden fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-md p-6">
-            <div class="flex items-center gap-2 mb-4 text-blue-600">
-                <i class="bi bi-person-plus-fill text-xl"></i>
-                <h3 class="text-lg font-bold text-zinc-900">Create HR Admin Account</h3>
-            </div>
-            <form id="registerHrForm" method="POST">
-                <input type="hidden" name="action" value="register_hr">
-                <div>
-                    <label class="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">HR Gmail Address</label>
-                    <input type="email" name="hr_gmail" required placeholder="example@gmail.com" class="w-full text-sm border border-zinc-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-600 text-zinc-800">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Account Password</label>
-                    <input type="password" name="hr_password" required placeholder="Enter secure password" class="w-full text-sm border border-zinc-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-600 text-zinc-800">
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeHrModal()" class="px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold rounded-xl text-xs transition-all">Cancel</button>
-                    <button type="submit" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md transition-all">Register & Log In</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    <!-- Hire Modal with Contract Duration and Date Constraints (No Past Dates & Max 10 Years) -->
     <div id="hireModal" class="hidden fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-2xl p-6 my-8">
+        <div class="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-4xl p-6 my-8 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center gap-2 mb-2 text-emerald-600">
                 <i class="bi bi-check-circle-fill text-xl"></i>
                 <h3 class="text-lg font-bold text-zinc-900">Official Employee Onboarding Terminal</h3>
             </div>
 
-           <form id="confirmHireForm" method="POST" class="space-y-4">
-    <input type="hidden" name="action" value="confirm_hire">
-    <input type="hidden" name="applicant_id" id="hire_candidate_id"> 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Full Name</label>
-                        <input type="text" name="full_name" id="modal_full_name" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Phone Number</label>
-                        <input type="text" name="phone" id="modal_phone" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Personal Email Address</label>
-                        <input type="email" name="email" id="modal_personal_email" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">Assign Employee Work Email</label>
-                        <input type="email" name="employee_gmail" id="modal_employee_gmail" required placeholder="e.g. delacruz.juan@gmail.com" class="w-full text-sm border border-zinc-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-600 text-zinc-800">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Home Address</label>
-                    <textarea name="address" id="modal_address" readonly required rows="2" class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none resize-none"></textarea>
-                </div>
-
+            <form id="confirmHireForm" method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="confirm_hire">
+                <input type="hidden" name="applicant_id" id="hire_candidate_id"> 
+                
+                <!-- Company Details Section -->
                 <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Statutory & Government Identification <span class="normal-case font-medium text-zinc-400">(as submitted by applicant)</span></h4>
+                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Company Details</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Company Name</label>
+                            <input type="text" name="company_name" value="Pannakoda" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Company Address</label>
+                            <input type="text" name="company_address" value="Bagong Bayan Dasmarinas Cavite" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Contact Number</label>
+                            <input type="text" name="company_contact_number" value="0987000" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Company Email</label>
+                            <input type="email" name="company_email" value="Pannakoda@gmail.com" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Information Section -->
+                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Employee Information</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Employee ID</label>
+                            <input type="text" name="employee_id_val" required placeholder="e.g. EMP-001" class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Full Name</label>
+                            <input type="text" name="full_name" id="modal_full_name" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Date of Birth</label>
+                            <input type="date" name="date_of_birth" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Civil Status</label>
+                            <select name="civil_status" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
+                                <option value="Single">Single</option>
+                                <option value="Married">Married</option>
+                                <option value="Divorced">Divorced</option>
+                                <option value="Widowed">Widowed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Nationality</label>
+                            <input type="text" name="nationality" value="Filipino" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Gender</label>
+                            <select name="gender" required class="w-full text-sm bg-white border border-zinc-200 rounded-xl px-4 py-2 text-zinc-800">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Contact Number (Phone)</label>
+                            <input type="text" name="phone" id="modal_phone" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Personal Email Address</label>
+                            <input type="email" name="email" id="modal_personal_email" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Home Address</label>
+                        <textarea name="address" id="modal_address" readonly required rows="2" class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Job Details & Assignments (With Min/Max validations) -->
+                <div class="bg-orange-50/70 border border-orange-100 rounded-xl p-4">
+                    <h4 class="text-xs font-bold text-orange-800 uppercase tracking-wide mb-3">Employment & Contract Duration Configuration</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Position / Job Title</label>
+                            <input type="text" name="position_title" required placeholder="ex Staff" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Department</label>
+                            <input type="text" name="department" id="modal_department" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-500 outline-none select-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Employment Type</label>
+                            <select name="employment_type" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                                <option value="Regular">Regular</option>
+                                <option value="Probationary">Probationary</option>
+                                <option value="Contractual">Contractual</option>
+                                <option value="Part-Time">Part-Time</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Immediate Supervisor</label>
+                            <input type="text" name="immediate_supervisor" required placeholder="Supervisor Name" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Work Location</label>
+                            <input type="text" name="work_location" required placeholder="Office/Remote Location" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Auto-Generated Work Email</label>
+                            <input type="email" name="employee_gmail" id="modal_employee_gmail" required readonly class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-600">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Date Hired</label>
+                            <input type="date" name="date_hired" id="date_hired" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Contract Duration (Years, max 10)</label>
+                            <input type="number" step="0.5" min="0.5" max="10" name="contract_duration_years" id="contract_duration_years" required placeholder="e.g. 1 - 10" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Contract Start Date</label>
+                            <input type="date" name="contract_start_date" id="contract_start_date" required class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Contract End Date</label>
+                            <input type="date" name="contract_end_date" id="contract_end_date" readonly class="w-full text-sm bg-zinc-100 border border-orange-200 rounded-xl px-4 py-2 text-zinc-600">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Employee Password</label>
+                            <input type="text" name="employee_password" required placeholder="Secure password" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-zinc-800">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statutory IDs -->
+                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+                    <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide mb-3">Statutory & Government Identification</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[10px] font-bold text-zinc-400 uppercase mb-1">GSIS ID</label>
@@ -309,20 +432,6 @@ $admin_pipeline = $conn->query("
                     </div>
                 </div>
 
-                <div class="bg-orange-50/70 border border-orange-100 rounded-xl p-4">
-                    <h4 class="text-xs font-bold text-orange-800 uppercase tracking-wide mb-3">Corporate Configuration</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Department Applied For</label>
-                            <input type="text" name="department" id="modal_department" readonly required class="w-full text-sm bg-zinc-100 border border-zinc-200 rounded-xl px-4 py-2.5 text-zinc-500 outline-none select-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-orange-700 uppercase mb-1">Set Employee Password</label>
-                            <input type="text" name="employee_password" required placeholder="Type custom account password" class="w-full text-sm bg-white border border-orange-200 rounded-xl px-4 py-2.5 text-zinc-800">
-                        </div>
-                    </div>
-                </div>
-
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" onclick="closeHireModal()" class="px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold rounded-xl text-xs transition-all">Cancel</button>
                     <button type="submit" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all">Confirm Board Deployment</button>
@@ -330,36 +439,79 @@ $admin_pipeline = $conn->query("
             </form>
         </div>
     </div>
- <script src="../LIBRARIES/tailwind.js"></script>
+
+    <script src="../LIBRARIES/tailwind.js"></script>
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
-   <script>
-    // --- 1. HELPER: Generate suggested employee email from full name ---
-    // Format: lastname.firstname@gmail.com
+    <script>
+    // Auto-generate employee work email with @pannakoda.com domain
     function generateEmployeeEmail(fullName) {
         const parts = fullName.trim().split(/\s+/);
         const clean = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         if (parts.length < 2) {
-            // Fallback: only one name segment available
-            return clean(parts[0]) + '@panacoda.com';
+            return clean(parts[0]) + '@pannakoda.com';
         }
 
-        const lastName = parts[parts.length - 1];       // last word = last name
-        const firstName = parts.slice(0, -1).join('');  // everything before = first name(s)
+        const lastName = parts[parts.length - 1];      
+        const firstName = parts.slice(0, -1).join('');  
 
-        return `${clean(lastName)}.${clean(firstName)}@panacoda.com`;
+        return `${clean(lastName)}.${clean(firstName)}@pannakoda.com`;
     }
 
-    // --- 2. MODAL FUNCTIONS ---
-    // Takes the button element clicked, and reads the applicant's full
-    // record from its data-applicant attribute (JSON), so we don't have
-    // to hand-escape every field into onclick="" args.
+    // Set min date constraint dynamically on inputs to prevent past dates
+    document.addEventListener('DOMContentLoaded', function() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const dateHiredInput = document.getElementById('date_hired');
+        const contractStartInput = document.getElementById('contract_start_date');
+        
+        if (dateHiredInput) dateHiredInput.setAttribute('min', todayStr);
+        if (contractStartInput) contractStartInput.setAttribute('min', todayStr);
+
+        const durationInput = document.getElementById('contract_duration_years');
+        if (durationInput) {
+            durationInput.addEventListener('input', function() {
+                if (parseFloat(this.value) > 10) {
+                    this.value = 10;
+                } else if (parseFloat(this.value) < 0.5) {
+                    this.value = 0.5;
+                }
+                calculateEndDate();
+            });
+        }
+
+        if (contractStartInput) {
+            contractStartInput.addEventListener('change', calculateEndDate);
+        }
+    });
+
+    function calculateEndDate() {
+        const startDateInput = document.getElementById('contract_start_date');
+        const durationInput = document.getElementById('contract_duration_years');
+        const endDateInput = document.getElementById('contract_end_date');
+
+        if (startDateInput.value && durationInput.value) {
+            const startDate = new Date(startDateInput.value);
+            const years = parseFloat(durationInput.value);
+            
+            if (!isNaN(years) && !isNaN(startDate.getTime())) {
+                const totalDays = Math.round(years * 365);
+                startDate.setDate(startDate.getDate() + totalDays);
+                
+                const yyyy = startDate.getFullYear();
+                const mm = String(startDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(startDate.getDate()).padStart(2, '0');
+                
+                endDateInput.value = `${yyyy}-${mm}-${dd}`;
+            }
+        }
+    }
+
     function openHireModal(btn) {
         const data = JSON.parse(btn.dataset.applicant);
 
         document.getElementById('hire_candidate_id').value = data.id;
 
-        // Maps modal field id -> applicant record key
         const readonlyFields = {
             modal_full_name: 'full_name',
             modal_personal_email: 'email',
@@ -376,9 +528,15 @@ $admin_pipeline = $conn->query("
             document.getElementById(elementId).value = data[key] || '';
         }
 
-        // Auto-suggest the employee work email (admin can still edit it)
-        document.getElementById('modal_employee_gmail').value = generateEmployeeEmail(data.full_name);
+        // Set default values to current date
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date_hired').value = today;
+        document.getElementById('contract_start_date').value = today;
+        document.getElementById('contract_duration_years').value = '1';
+        
+        calculateEndDate();
 
+        document.getElementById('modal_employee_gmail').value = generateEmployeeEmail(data.full_name);
         document.getElementById('hireModal').classList.remove('hidden');
     }
 
@@ -386,11 +544,6 @@ $admin_pipeline = $conn->query("
         document.getElementById('hireModal').classList.add('hidden');
     }
 
-    function closeHrModal() {
-        document.getElementById('hrModal').classList.add('hidden');
-    }
-
-    // --- 3. APPROVE ACTION ---
     async function approveApplicant(id) {
         const result = await Swal.fire({
             title: 'Approve Candidate?',
@@ -408,8 +561,6 @@ $admin_pipeline = $conn->query("
 
                 if (data.status === 'success') {
                     const cell = document.getElementById('action-cell-' + id);
-                    // Embed the full applicant record (incl. address/govt IDs) as a
-                    // data attribute so openHireModal can read it directly later.
                     const applicantJson = JSON.stringify(data.applicant).replace(/'/g, '&#39;');
 
                     cell.innerHTML = `
@@ -432,7 +583,6 @@ $admin_pipeline = $conn->query("
         }
     }
 
-    // --- 4. REJECT ACTION ---
     async function rejectApplicant(id) {
         const result = await Swal.fire({
             title: 'Reject Candidate?',
@@ -462,25 +612,8 @@ $admin_pipeline = $conn->query("
         }
     }
 
-    // --- 5. VALIDATION FUNCTION ---
-    // Address/GSIS/SSS/PhilHealth/Pag-IBIG are now readonly here — they were
-    // already validated when the applicant submitted them via client.php.
-    // Only the admin-editable fields (work email, password) need checking.
     function validateForm(formData) {
-        const email = formData.get('employee_gmail');
         const password = formData.get('employee_password');
-
-        if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email)) {
-            Swal.fire('Invalid Email', 'Please enter a valid email format.', 'warning');
-            return false;
-        }
-
-        // Regex breakdown:
-        // (?=.*[a-z])      - Must contain at least one lowercase letter
-        // (?=.*[A-Z])      - Must contain at least one uppercase letter
-        // (?=.*\d)         - Must contain at least one number
-        // (?=.*[@$!%*?&])  - Must contain at least one special character
-        // [A-Za-z\d@$!%*?&]{8,} - Must be at least 8 characters long
         const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
         if (!strongPasswordRegex.test(password)) {
@@ -491,19 +624,31 @@ $admin_pipeline = $conn->query("
             );
             return false;
         }
+
+        const today = new Date().toISOString().split('T')[0];
+        const dateHired = formData.get('date_hired');
+        const contractStart = formData.get('contract_start_date');
+        const durationYears = parseFloat(formData.get('contract_duration_years'));
+
+        if (dateHired < today || contractStart < today) {
+            Swal.fire('Invalid Date', 'Bawal mag-set ng past date para sa Date Hired o Contract Start Date.', 'warning');
+            return false;
+        }
+
+        if (isNaN(durationYears) || durationYears <= 0 || durationYears > 10) {
+            Swal.fire('Invalid Duration', 'Ang contract duration ay dapat mula 0.5 hanggang 10 taon lamang.', 'warning');
+            return false;
+        }
+
         return true;
     }
 
-    // --- 6. INITIALIZATION ---
     document.addEventListener("DOMContentLoaded", function() {
-
-        // Hire Form Handler
         const hireForm = document.getElementById('confirmHireForm');
 
         if (hireForm) {
             hireForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-
                 let formData = new FormData(this);
 
                 if (!validateForm(formData)) return;
@@ -542,23 +687,6 @@ $admin_pipeline = $conn->query("
                 .catch(error => {
                     console.error('Error:', error);
                     Swal.fire('Error', 'error');
-                });
-            });
-        }
-
-        // Logout Handler
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function() {
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "Terminate administrative dashboard runtime?",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#dc2626',
-                    confirmButtonText: 'Yes, Sign Out'
-                }).then((result) => {
-                    if (result.isConfirmed) window.location.href = 'logout.php';
                 });
             });
         }

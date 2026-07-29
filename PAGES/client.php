@@ -29,6 +29,23 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
         $pagibig_id    = $_POST['pagibig_id'] ?? '';
         $department    = $_POST['department'] ?? '';
 
+        // --- DUPLICATE CHECK: Suriin kung existing na ang email o pangalan sa database ---
+        $check_query = "SELECT id FROM applicants WHERE email = ? OR full_name = ? LIMIT 1";
+        $check_stmt = mysqli_prepare($conn, $check_query);
+        if ($check_stmt) {
+            mysqli_stmt_bind_param($check_stmt, "ss", $email, $full_name);
+            mysqli_stmt_execute($check_stmt);
+            mysqli_stmt_store_result($check_stmt);
+            
+            if (mysqli_stmt_num_rows($check_stmt) > 0) {
+                echo json_encode(["status" => "error", "message" => "Duplicate data: Some Data is already registered."]);
+                mysqli_stmt_close($check_stmt);
+                exit;
+            }
+            mysqli_stmt_close($check_stmt);
+        }
+        // -------------------------------------------------------------------------------
+
         // File Upload handling para sa resume
         $target_dir = "../UPLOADS/";
         if (!is_dir($target_dir)) {
@@ -231,13 +248,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
             }
         }
 
-        window.openApplicationModal = function() {
+    window.openApplicationModal = function(formDataValues = {}) {
             Swal.fire({
                 html: `
                     <form id="clientForm" enctype="multipart/form-data" class="space-y-4 text-left font-sans px-1">
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
-                            <input type="text" id="full_name" name="full_name" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                            <input type="text" id="full_name" name="full_name" value="${formDataValues.full_name || ''}" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                         </div>
 
                         <div>
@@ -250,17 +267,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
-                                <input type="email" id="email" name="email" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                <input type="email" id="email" name="email" value="${formDataValues.email || ''}" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Phone Number</label>
-                                <input type="text" id="phone" name="phone" placeholder="e.g., 09123456789" maxlength="11" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                <input type="text" id="phone" name="phone" value="${formDataValues.phone || ''}" placeholder="e.g., 09123456789" maxlength="11" required class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Home Address</label>
-                            <textarea id="address" name="address" required rows="2" placeholder="Enter your complete address" class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all resize-none"></textarea>
+                            <textarea id="address" name="address" required rows="2" placeholder="Enter your complete address" class="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all resize-none">${formDataValues.address || ''}</textarea>
                         </div>
 
                         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -268,19 +285,19 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">GSIS ID</label>
-                                    <input type="text" id="gsis_id" name="gsis_id" required placeholder="XX-XXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                    <input type="text" id="gsis_id" name="gsis_id" value="${formDataValues.gsis_id || ''}" required placeholder="XX-XXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">SSS ID</label>
-                                    <input type="text" id="sss_id" name="sss_id" required placeholder="XX-XXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                    <input type="text" id="sss_id" name="sss_id" value="${formDataValues.sss_id || ''}" required placeholder="XX-XXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">PhilHealth ID</label>
-                                    <input type="text" id="philhealth_id" name="philhealth_id" required placeholder="XX-XXXXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                    <input type="text" id="philhealth_id" name="philhealth_id" value="${formDataValues.philhealth_id || ''}" required placeholder="XX-XXXXXXXXX-X" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Pag-IBIG MID</label>
-                                    <input type="text" id="pagibig_id" name="pagibig_id" required placeholder="XXXX-XXXX-XXXX" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
+                                    <input type="text" id="pagibig_id" name="pagibig_id" value="${formDataValues.pagibig_id || ''}" required placeholder="XXXX-XXXX-XXXX" class="w-full text-sm px-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-500 font-medium text-slate-700 transition-all">
                                 </div>
                             </div>
                         </div>
@@ -291,7 +308,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                                 <i class="bi bi-cloud-arrow-up-fill text-2xl text-slate-400 group-hover:text-orange-500 transition-colors"></i>
                                 <p class="text-xs font-bold text-slate-600 drop-text">Drag file here or click to browse</p>
                                 <p class="text-[10px] text-slate-400">Accepts PDF, DOC, DOCX files</p>
-                                <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" required class="hidden">
+                                <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" class="hidden">
                             </div>
                         </div>
                     </form>
@@ -307,6 +324,14 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                 },
                 didOpen: () => {
                     populateDepartmentOptions();
+                    
+                    // Kung may pre-selected department galing sa previous attempt
+                    if (formDataValues.department) {
+                        setTimeout(() => {
+                            const deptSelect = document.getElementById('department');
+                            if (deptSelect) deptSelect.value = formDataValues.department;
+                        }, 300);
+                    }
 
                     const dropzone = document.getElementById('dropzone');
                     const fileInput = document.getElementById('resume');
@@ -375,18 +400,35 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                         Swal.showValidationMessage('Pag-IBIG MID format should be XXXX-XXXX-XXXX.');
                         return false;
                     }
-                    if(!file) { Swal.showValidationMessage('Please submit or link your resume file asset.'); return false; }
+                    if(!file) { 
+                        Swal.showValidationMessage('Please submit or link your resume file asset.'); 
+                        return false; 
+                    }
 
                     return new FormData(document.getElementById('clientForm'));
                 }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
+                    const rawFormData = result.value;
+                    
+                    // Kunin ang current values para maisuksok pabalik kung sakaling mag-error
+                    const currentValues = {
+                        full_name: rawFormData.get('full_name'),
+                        email: rawFormData.get('email'),
+                        phone: rawFormData.get('phone'),
+                        address: rawFormData.get('address'),
+                        gsis_id: rawFormData.get('gsis_id'),
+                        sss_id: rawFormData.get('sss_id'),
+                        philhealth_id: rawFormData.get('philhealth_id'),
+                        pagibig_id: rawFormData.get('pagibig_id'),
+                        department: rawFormData.get('department')
+                    };
+
                     Swal.fire({ title: 'Processing profile...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-                    // DITO: Tinatapon na sa sarili niyang file (`client.php?action=apply`)
                     fetch("client.php?action=apply", {
                         method: "POST",
-                        body: result.value
+                        body: rawFormData
                     })
                     .then(res => res.json())
                     .then(data => {
@@ -399,13 +441,31 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                                 buttonsStyling: false
                             });
                         } else {
-                            // Ipapakita nito ang eksaktong error galing sa database para alam mo agad kung bakit ayaw pumunta doon
-                            Swal.fire({ icon: 'error', title: 'Registration Failed', text: data.message });
+                            // DITO: Kapag nag-error (tulad ng duplicate data), ibabalik ulit ang modal kasama ang mga tinype niya
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Registration Failed',
+                                text: data.message,
+                                confirmButtonText: 'Try Again',
+                                customClass: { confirmButton: 'bg-orange-500 text-white px-5 py-2.5 rounded-xl font-bold border-0' },
+                                buttonsStyling: false
+                            }).then(() => {
+                                openApplicationModal(currentValues); // Binubuksan ulit ang modal at nase-save ang input
+                            });
                         }
                     })
                     .catch(err => {
                         console.error(err);
-                        Swal.fire({ icon: 'error', title: 'Connection Fault', text: 'Server data node cannot be reached.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Connection Fault',
+                            text: 'Server data node cannot be reached.',
+                            confirmButtonText: 'Back',
+                            customClass: { confirmButton: 'bg-orange-500 text-white px-5 py-2.5 rounded-xl font-bold border-0' },
+                            buttonsStyling: false
+                        }).then(() => {
+                            openApplicationModal(currentValues);
+                        });
                     });
                 }
             });
