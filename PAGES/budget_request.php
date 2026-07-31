@@ -1,9 +1,6 @@
 <?php
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-<<<<<<< HEAD
-fufugit gi
-=======
->>>>>>> f080ed2a92c51341c103beebdebe85d9452768e7
+git 
 ?>
 <!DOCTYPE html>
 <html lang="en">
