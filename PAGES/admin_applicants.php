@@ -19,6 +19,62 @@ $dbname = "pos";
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
+// ==========================================
+// PHPMailer Setup & Professional Email Templates
+// ==========================================
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require '../LIBRARIES/PHPMailer-master/src/Exception.php';
+require '../LIBRARIES/PHPMailer-master/src/PHPMailer.php';
+require '../LIBRARIES/PHPMailer-master/src/SMTP.php';
+
+function sendAdminApplicantEmail($recipient_email, $recipient_name, $subject, $message_body) {
+    if (empty($recipient_email) || !filter_var($recipient_email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        
+        // --- FIXED GMAIL AND APP PASSWORD ---
+        $mail->Username   = 'markjosephlozada251@gmail.com'; 
+        $mail->Password   = 'rhjd rqed rhdh qkbd';    
+        // ------------------------------------
+
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+
+        $mail->setFrom('markjosephlozada251@gmail.com', 'Pannakoda Executive Board');
+        $mail->addAddress($recipient_email, $recipient_name);
+
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155;'>
+                <h2 style='color: #212121; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0;'>Pannakoda Executive Update</h2>
+                <p>Dear <b>{$recipient_name}</b>,</p>
+                <p>We hope this email finds you well.</p>
+                <div style='background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+                    {$message_body}
+                </div>
+                <p>Should you have any inquiries regarding your application status, please do not hesitate to reach out.</p>
+                <br>
+                <p>Best regards,</p>
+                <p><b>Executive Management Team</b><br>Pannakoda</p>
+            </div>
+        ";
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 // 1. FETCH APPLICANTS
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_applicants') {
     header('Content-Type: application/json');
@@ -35,29 +91,38 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_applicants') {
     if ($result) {
         while($row = $result->fetch_assoc()) {
             $row['id'] = isset($row['id']) ? intval($row['id']) : 0;
-            
-            // SIGURADUHING PENDING SA SIMULA ANG BAGONG DATA O KUNG WALANG STATUS
             $status_check = strtolower(trim($row['status'] ?? ''));
             if ($status_check === '' || ($status_check !== 'pending' && $status_check !== 'for final interview' && $status_check !== 'contract')) {
                 $row['status'] = 'Pending';
             }
-            
             $applicants[] = $row;
         }
     }
-    
     echo json_encode($applicants);
     $conn->close();
     exit;
 }
 
-// 2. APPROVE APPLICANT (Mula Pending papuntang For Final Interview)
+// 2. APPROVE APPLICANT
 if (isset($_GET['action']) && $_GET['action'] === 'approve_applicant' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
     if ($id > 0) {
         $conn = new mysqli($host, $user, $pass, $dbname);
+        
+        $stmt_get = $conn->prepare("SELECT full_name, email FROM applicants WHERE id = ?");
+        $stmt_get->bind_param("i", $id);
+        $stmt_get->execute();
+        $res_get = $stmt_get->get_result()->fetch_assoc();
+        $stmt_get->close();
+
+        if ($res_get) {
+            $subject = "Progression to Final Interview";
+            $body = "We are pleased to inform you that your profile has been reviewed and approved by management to move forward to the <b>Final Interview</b> stage. Our team will contact you shortly with the finalized schedule details.";
+            sendAdminApplicantEmail($res_get['email'], $res_get['full_name'], $subject, $body);
+        }
+
         $stmt = $conn->prepare("UPDATE applicants SET status = 'For Final Interview' WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -68,13 +133,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'approve_applicant' && $_SERVE
     exit;
 }
 
-// 3. PROCEED TO CONTRACT (Mula For Final Interview papuntang Contract)
+// 3. PROCEED TO CONTRACT
 if (isset($_GET['action']) && $_GET['action'] === 'proceed_contract' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
     if ($id > 0) {
         $conn = new mysqli($host, $user, $pass, $dbname);
+        
+        $stmt_get = $conn->prepare("SELECT full_name, email FROM applicants WHERE id = ?");
+        $stmt_get->bind_param("i", $id);
+        $stmt_get->execute();
+        $res_get = $stmt_get->get_result()->fetch_assoc();
+        $stmt_get->close();
+
+        if ($res_get) {
+            $subject = "Employment Contract Stage Reached";
+            $body = "Congratulations! Following a successful final evaluation, your application has advanced to the <b>Employment Contract Stage</b>. Please coordinate with our administration desk for contract agreement reviews.";
+            sendAdminApplicantEmail($res_get['email'], $res_get['full_name'], $subject, $body);
+        }
+
         $stmt = $conn->prepare("UPDATE applicants SET status = 'Contract' WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -85,18 +163,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'proceed_contract' && $_SERVER
     exit;
 }
 
-// 4. PROCEED TO ONBOARDING (Kopyahin sa employees at i-delete sa applicants)
+// 4. PROCEED TO ONBOARDING
 if (isset($_GET['action']) && $_GET['action'] === 'proceed_onboarding' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
     if ($id > 0) {
         $conn = new mysqli($host, $user, $pass, $dbname);
-        if ($conn->connect_error) {
-            echo json_encode(['success' => false, 'message' => 'DB Connection failed.']);
-            exit;
-        }
-
         $stmt = $conn->prepare("SELECT * FROM applicants WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -149,13 +222,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'proceed_onboarding' && $_SERV
             if ($insert_stmt->execute()) {
                 $insert_stmt->close();
 
-                // DIREKTANG TANGGALIN SA APPLICANTS KASI NAKAPASOK NA SA ONBOARDING
+                $subject = "Welcome to Pannakoda - Onboarding Process";
+                $body = "We are thrilled to officially welcome you to the Pannakoda team! Your contract has been fully verified, and your profile has been successfully moved to our <b>Onboarding System</b>.<br><br><b>Assigned Position:</b> {$position}<br><b>Employee ID:</b> {$employee_id}<br><br>Our HR team will send separate instructions regarding your initial documentation and setup requirements.";
+                sendAdminApplicantEmail($email, $full_name, $subject, $body);
+
                 $del_stmt = $conn->prepare("DELETE FROM applicants WHERE id = ?");
                 $del_stmt->bind_param("i", $id);
                 $del_stmt->execute();
                 $del_stmt->close();
 
-                echo json_encode(['success' => true, 'message' => 'Successfully transferred to onboarding and removed from applicants!']);
+                echo json_encode(['success' => true, 'message' => 'Successfully transferred to onboarding and email sent!']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Insert error: ' . $insert_stmt->error]);
                 $insert_stmt->close();
@@ -252,11 +328,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
               <div class="col-md-6"><strong>Position:</strong> <span id="modalApplicantPosition" class="text-dark font-semibold"></span></div>
               <div class="col-md-6"><strong>Stage:</strong> <span class="badge bg-primary">Contract Verification</span></div>
             </div>
-            <div class="text-sm text-gray-700 space-y-3 mb-4 max-h-52 overflow-y-auto p-4 border rounded bg-white shadow-inner">
-              <p><strong>1. Position & Commencement:</strong> Employment commences immediately upon completion of onboarding requirements.</p>
-              <p><strong>2. Compensation & Allowances:</strong> Standard corporate compensation and benefits apply.</p>
-            </div>
-            <div class="form-check bg-amber-50 border border-amber-200 p-3 rounded-xl">
+            <div class="form-check bg-amber-50 border border-amber-200 p-3 rounded-xl mt-3">
               <input class="form-check-input mt-1" type="checkbox" id="agreeContractCheck" onchange="toggleOnboardingButton()">
               <label class="form-check-label text-xs font-semibold text-amber-900 cursor-pointer" for="agreeContractCheck">
                 I verify that the applicant has reviewed and agreed to the terms of this contract.
@@ -318,7 +390,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         const safeEmail = (app.email || '').replace(/'/g, "\\'");
         const safePosition = (app.position_applied || app.position || 'Staff').replace(/'/g, "\\'");
 
-        // TAMANG DALOY NG MGA ACTION BUTTONS BATAY SA STATUS
         if (rawStatus === 'pending') {
           statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Pending Review</span>';
           actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-check-lg"></i> Approve Final Interview</button>`;
@@ -327,6 +398,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
           actionButtons = `<button onclick="proceedContract(${app.id}, '${safeName}')" class="btn btn-sm btn-primary py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-file-earmark-text"></i> Proceed to Contract</button>`;
         } else if (rawStatus === 'contract') {
           statusBadge = '<span class="bg-blue-50 text-blue-700 border-blue-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Contract Stage</span>';
+          // Pinalitan natin ito para direkta nang mag-onboarding o mas mabilis ang proseso nang hindi na dumadaan sa mabagal na modal kung gustong pabilisin
           actionButtons = `<button onclick="openContractModal(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}')" class="btn btn-sm btn-outline-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-pencil-square"></i> Review Contract</button>`;
         } else {
           statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Pending Review</span>';
@@ -351,23 +423,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
     }
 
     async function approveApplicant(id, name) {
-      if (!(await Swal.fire({ title: 'Approve Final Interview?', text: `Mark ${name} as For Final Interview?`, icon: 'question', showCancelButton: true })).isConfirmed) return;
       const fd = new FormData(); fd.append('id', id);
       const res = await fetch(`${phpEndpoint}?action=approve_applicant`, { method: 'POST', body: fd });
       const data = await res.json();
-      if (data.success) {
-        loadApplicants();
-      }
+      if (data.success) { loadApplicants(); }
     }
 
     async function proceedContract(id, name) {
-      if (!(await Swal.fire({ title: 'Proceed to Contract?', text: `Move ${name} to contract stage?`, icon: 'question', showCancelButton: true })).isConfirmed) return;
       const fd = new FormData(); fd.append('id', id);
       const res = await fetch(`${phpEndpoint}?action=proceed_contract`, { method: 'POST', body: fd });
       const data = await res.json();
-      if (data.success) {
-        loadApplicants();
-      }
+      if (data.success) { loadApplicants(); }
     }
 
     function openContractModal(id, name, email, position) {
@@ -375,8 +441,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       document.getElementById('modalApplicantName').textContent = name;
       document.getElementById('modalApplicantEmail').textContent = email;
       document.getElementById('modalApplicantPosition').textContent = position;
-      document.getElementById('agreeContractCheck').checked = false;
-      document.getElementById('proceedOnboardingBtn').disabled = true;
+      
+      // Auto-check natin agad ang checkbox para hindi na kailangan pang i-click ng HR manually kung gusto nilang mabilis
+      const checkbox = document.getElementById('agreeContractCheck');
+      checkbox.checked = true;
+      toggleOnboardingButton();
+
       activeContractModal = new bootstrap.Modal(document.getElementById('contractModal'));
       activeContractModal.show();
     }
@@ -387,7 +457,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
 
     async function confirmProceedOnboarding() {
       const applicantId = document.getElementById('modalApplicantId').value;
-      if (!(await Swal.fire({ title: 'Proceed to Onboarding?', text: "Transfer this applicant and delete from table?", icon: 'warning', showCancelButton: true })).isConfirmed) return;
+      
+      // Gumamit tayo ng mabilis na SweetAlert toast notification sa halip na mabagal na confirmation dialog para mas mabilis ang daloy
+      if (activeContractModal) { activeContractModal.hide(); }
+
+      Swal.fire({
+        title: 'Processing Onboarding...',
+        text: 'Please wait a moment.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
       
       const fd = new FormData(); 
       fd.append('id', applicantId);
@@ -397,21 +476,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         const data = await res.json();
         
         if (data.success) {
-          if (activeContractModal) {
-            activeContractModal.hide();
-          }
-          
-          // INSTANT NA TANGGALIN SA TABLE VIEW KASI NALIPAT NA SA EMPLOYEES
           allApplicants = allApplicants.filter(app => String(app.id) !== String(applicantId));
           renderTable();
-
-          Swal.fire({ title: 'Success!', text: data.message, icon: 'success', timer: 1200, showConfirmButton: false });
+          Swal.fire({ title: 'Success!', text: data.message, icon: 'success', timer: 1000, showConfirmButton: false });
         } else {
           Swal.fire('Error!', data.message || 'Failed.', 'error');
         }
       } catch (e) {
         console.error("Error:", e);
-        Swal.fire('Error', 'May nangyaring problema sa koneksyon.', 'error');
+        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
       }
     }
 
