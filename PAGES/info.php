@@ -191,11 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 z-10">
-                    <button onclick="openPayslipModal()" class="px-4 py-2.5 bg-[#FF8C00] hover:bg-orange-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2">
-                        <i class="bi bi-receipt text-sm"></i> View Payslip
-                    </button>
-                </div>
+               
             </div>
 
             <!-- Credentials Grid Details -->
