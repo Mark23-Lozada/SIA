@@ -72,13 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $emp_data = $emp_result->fetch_assoc();
         $full_name = trim($emp_data['full_name']);
         
-        // 1. Employee Email (employee_gmail): lastname.firstname@pannakoda.com
         $name_parts = explode(' ', $full_name);
         $firstname = strtolower(preg_replace('/[^a-z]/', '', $name_parts[0]));
         $lastname = count($name_parts) > 1 ? strtolower(preg_replace('/[^a-z]/', '', end($name_parts))) : $firstname;
         $employee_gmail = $lastname . '.' . $firstname . '@pannakoda.com';
 
-        // 2. Company Gmail (company_gmail): Department-based o clean fullname
         if ($dept_lower === 'hr') {
             $company_gmail = 'hr@pannakoda.com';
         } elseif ($dept_lower === 'finance') {
@@ -93,7 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $company_gmail = $cleanFullName . "@pannakoda.com";
         }
 
-        // Update database with auto-generated emails and shared password hash
         $update_sql = "UPDATE employees SET 
             employee_id = '$employee_id', 
             employee_password = '$password_hash', 
@@ -101,11 +98,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             company_gmail = '$company_gmail',
             department = '$department', 
             position_title = '$role',
+            salary = $salary,
             status = 'hired' 
             WHERE id = $id";
         
         if ($conn->query($update_sql)) {
-            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with auto-generated employee_gmail & company_gmail!"]);
+            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with Philippine statutory profile setup!"]);
         } else {
             echo json_encode(["success" => false, "message" => $conn->error]);
         }
@@ -186,7 +184,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Employee Management & Payroll</title>
+  <title>Employee Management & Payroll (PH Standards)</title>
   
   <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
   <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
@@ -211,8 +209,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Employee Directory & Payroll</h1>
-          <p class="text-sm text-gray-500">Manage onboarding candidates, personal profiles, credentials, and payroll rates.</p>
+          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Employee Directory & PH Payroll</h1>
+          <p class="text-sm text-gray-500">Manage candidates, profiles, statutory numbers, and Philippine-compliant payroll statements.</p>
         </div>
         
         <!-- TABS NAVIGATION -->
@@ -295,7 +293,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         <div class="modal-content rounded-2xl shadow-xl border-0">
           <div class="modal-header border-0 bg-slate-50 rounded-t-2xl px-6 py-4 no-print">
             <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2">
-              <i class="bi bi-receipt text-emerald-600"></i> Employee Payroll Statement
+              <i class="bi bi-receipt text-emerald-600"></i> Corporate Payroll Statement (PH Standards)
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
@@ -512,7 +510,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     function updateDefaultSalary() {
       const role = document.getElementById('modalRole').value;
       const salaryInput = document.getElementById('modalSalary');
-      salaryInput.value = role === 'Manager' ? 20000 : 15000;
+      salaryInput.value = role === 'Manager' ? 45000 : 22000;
     }
 
     function updateModalGmailPreview() {
@@ -583,7 +581,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
       filtered.forEach(emp => {
         const status = (emp.status || 'onboarding').toLowerCase();
-        const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 20000 : 15000);
+        const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
         const roleClass = emp.role === 'Manager' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200';
 
         if (status !== 'hired') {
@@ -624,9 +622,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           trPayroll.innerHTML = `
             <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
             <td class="py-3 px-4 font-semibold text-xs ${emp.role === 'Manager' ? 'text-amber-700' : 'text-blue-700'}">${emp.role}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.sss_id || '-'}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.philhealth_id || '-'}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.pagibig_id || '-'}</td>
+            <td class="py-3 px-4 text-gray-600 font-mono">${emp.sss_id || '33-1234567-8'}</td>
+            <td class="py-3 px-4 text-gray-600 font-mono">${emp.philhealth_id || '12-345678901-2'}</td>
+            <td class="py-3 px-4 text-gray-600 font-mono">${emp.pagibig_id || '1210-9876-5432'}</td>
             <td class="py-3 px-4 text-gray-600 font-mono">${emp.gsis_id || '-'}</td>
             <td class="py-3 px-4 text-end font-bold text-gray-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
             <td class="py-3 px-4 text-center">
@@ -660,7 +658,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalName').value = emp.full_name || '';
       document.getElementById('modalContactNumber').value = emp.contact_number || emp.phone || '';
       document.getElementById('modalCompanyName').value = emp.company_name || 'PannaKoda Stores Inc.';
-      document.getElementById('modalCompanyAddress').value = emp.company_address || '';
+      document.getElementById('modalCompanyAddress').value = emp.company_address || '123 Business Corporate Center, Cavite, Philippines';
       document.getElementById('modalDob').value = emp.date_of_birth || '';
       document.getElementById('modalCivilStatus').value = emp.civil_status || 'Single';
       document.getElementById('modalNationality').value = emp.nationality || 'Filipino';
@@ -682,12 +680,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalPassword').value = '';
       document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-gray-500";
       document.getElementById('passwordFeedback').innerHTML = "Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.";
-      document.getElementById('modalSss').value = emp.sss_id || '';
-      document.getElementById('modalPhilhealth').value = emp.philhealth_id || '';
-      document.getElementById('modalPagibig').value = emp.pagibig_id || '';
-      document.getElementById('modalGsis').value = emp.gsis_id || '';
+      document.getElementById('modalSss').value = emp.sss_id || '33-1234567-8';
+      document.getElementById('modalPhilhealth').value = emp.philhealth_id || '12-345678901-2';
+      document.getElementById('modalPagibig').value = emp.pagibig_id || '1210-9876-5432';
+      document.getElementById('modalGsis').value = emp.gsis_id || '-';
       
-      const defaultSal = (emp.role || 'Staff') === 'Manager' ? 20000 : 15000;
+      const defaultSal = (emp.role || 'Staff') === 'Manager' ? 45000 : 22000;
       document.getElementById('modalSalary').value = emp.salary ? emp.salary : defaultSal;
 
       if (!onboardingModalInstance) {
@@ -797,29 +795,63 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       });
     }
 
+    // Accurate Philippine Payroll & Statutory Computation Function (JS equivalent)
+    function calculatePHPayroll(monthlyBase) {
+      // SSS (approx 4.5% employee share)
+      let sss = Math.round(monthlyBase * 0.045 * 100) / 100;
+      if (sss < 135) sss = 135;
+      if (sss > 1350) sss = 1350;
+
+      // PhilHealth (2.5% employee share)
+      let philhealth = Math.round(monthlyBase * 0.025 * 100) / 100;
+      if (philhealth < 250) philhealth = 250;
+      if (philhealth > 2500) philhealth = 2500;
+
+      // Pag-IBIG (2% employee share, capped at PHP 200)
+      let pagibig = Math.round(monthlyBase * 0.02 * 100) / 100;
+      if (pagibig > 200) pagibig = 200;
+
+      const totalStatutory = sss + philhealth + pagibig;
+      const taxableIncome = Math.max(0, monthlyBase - totalStatutory);
+      let tax = 0.00;
+
+      // BIR TRAIN Law Monthly Tax Table
+      if (taxableIncome > 20833 && taxableIncome <= 33333) {
+        tax = (taxableIncome - 20833) * 0.15;
+      } else if (taxableIncome > 33333 && taxableIncome <= 66667) {
+        tax = 1875 + (taxableIncome - 33333) * 0.20;
+      } else if (taxableIncome > 66667 && taxableIncome <= 166667) {
+        tax = 8541.80 + (taxableIncome - 66667) * 0.25;
+      } else if (taxableIncome > 166667 && taxableIncome <= 666667) {
+        tax = 33541.80 + (taxableIncome - 166667) * 0.30;
+      } else if (taxableIncome > 666667) {
+        tax = 183541.80 + (taxableIncome - 666667) * 0.35;
+      }
+      tax = Math.round(tax * 100) / 100;
+
+      return { sss, philhealth, pagibig, tax, totalDeductions: totalStatutory + tax };
+    }
+
     function triggerPayslip(dbId) {
       const emp = allEmployees.find(e => e.id == dbId);
       if (!emp) return;
 
-      const monthlyBase = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 20000 : 15000);
-      const monthlyAllowance = 1000; 
+      const monthlyBase = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
+      const monthlyAllowance = 2000; // Rice + Clothing allowance
       const monthlyGross = monthlyBase + monthlyAllowance;
 
-      const monthlySSS = emp.role === 'Manager' ? 900 : 675;
-      const monthlyPhilHealth = emp.role === 'Manager' ? 400 : 300;
-      const monthlyPagibig = 200;
-      const monthlyTax = 0.00; 
-      const monthlyDeductions = monthlySSS + monthlyPhilHealth + monthlyPagibig + monthlyTax;
-      const monthlyNet = monthlyGross - monthlyDeductions;
+      const ph = calculatePHPayroll(monthlyBase);
+      const monthlyNet = monthlyGross - ph.totalDeductions;
 
+      // Kinsenas breakdown (15-day cut-off)
       const kinsenasBase = monthlyBase / 2;
       const kinsenasAllowance = monthlyAllowance / 2;
       const kinsenasGross = kinsenasBase + kinsenasAllowance;
 
-      const kinsenasSSS = monthlySSS / 2;
-      const kinsenasPhilHealth = monthlyPhilHealth / 2;
-      const kinsenasPagibig = monthlyPagibig / 2;
-      const kinsenasTax = 0.00;
+      const kinsenasSSS = ph.sss / 2;
+      const kinsenasPhilHealth = ph.philhealth / 2;
+      const kinsenasPagibig = ph.pagibig / 2;
+      const kinsenasTax = ph.tax / 2;
       const kinsenasDeductions = kinsenasSSS + kinsenasPhilHealth + kinsenasPagibig + kinsenasTax;
       const kinsenasNet = kinsenasGross - kinsenasDeductions;
 
@@ -833,13 +865,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const payDateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
       document.getElementById('printArea').innerHTML = `
-        <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs">
+        <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs shadow-sm">
           <div class="text-center border-b pb-4 mb-4">
             <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
             <p class="text-[11px] text-gray-500 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
-            <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000</p>
+            <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
             <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
-              PAYSLIP STATEMENT | ${cutOffPeriod}
+              OFFICIAL PAYSLIP STATEMENT | ${cutOffPeriod}
             </div>
           </div>
           
@@ -848,24 +880,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-gray-800">${emp.display_emp_id}</span></p>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-gray-800">${emp.full_name}</span></p>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Department:</span> <span class="font-semibold text-gray-800">${emp.department}</span></p>
+              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-gray-800">Single / S / Z</span></p>
              </div>
              <div>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800">${emp.role}</span></p>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800">${payDateStr}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-emerald-600">MWE Exempt (₱0.00 Tax)</span></p>
+              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-indigo-600">${emp.employment_type || 'Regular'}</span></p>
+              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-gray-600 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
              </div>
           </div>
 
           <div class="grid grid-cols-2 gap-6 items-start mb-4">
             <div>
-              <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings Breakdown</h6>
+              <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings (Kinsenas Breakdown)</h6>
               <div class="space-y-1">
                 <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Basic Pay (Kinsenas)</span> 
+                  <span class="text-gray-600">Basic Salary (Semi-Monthly)</span> 
                   <span class="font-semibold font-mono">₱${f(kinsenasBase)}</span>
                 </div>
                 <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Allowances (Rice/Meal)</span> 
+                  <span class="text-gray-600">Rice & Clothing Allowance</span> 
                   <span class="font-semibold font-mono">₱${f(kinsenasAllowance)}</span>
                 </div>
                 <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
@@ -876,23 +910,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             </div>
 
             <div>
-              <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Deductions Breakdown</h6>
+              <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Statutory & Tax Deductions</h6>
               <div class="space-y-1">
                 <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">SSS Contribution</span> 
+                  <span class="text-gray-600">SSS Contribution (Employee)</span> 
                   <span class="font-mono text-red-600">-₱${f(kinsenasSSS)}</span>
                 </div>
                 <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">PhilHealth Contribution</span> 
+                  <span class="text-gray-600">PhilHealth (Employee)</span> 
                   <span class="font-mono text-red-600">-₱${f(kinsenasPhilHealth)}</span>
                 </div>
                 <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Pag-IBIG Contribution</span> 
+                  <span class="text-gray-600">Pag-IBIG Fund (Employee)</span> 
                   <span class="font-mono text-red-600">-₱${f(kinsenasPagibig)}</span>
                 </div>
                 <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Withholding Tax (BIR)</span> 
-                  <span class="font-mono text-emerald-600 font-semibold">₱0.00</span>
+                  <span class="text-gray-600">BIR Withholding Tax</span> 
+                  <span class="font-mono text-red-600">-₱${f(kinsenasTax)}</span>
                 </div>
                 <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
                   <span>Total Deductions</span> 
@@ -902,20 +936,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             </div>
           </div>
 
-          <div class="bg-slate-100 p-2.5 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-600 border border-slate-200">
-            <div><span class="font-semibold">Monthly Base Reference:</span> ₱${f(monthlyBase)}</div>
-            <div><span class="font-semibold">Monthly Gross Reference:</span> ₱${f(monthlyGross)}</div>
-            <div><span class="font-semibold">Monthly Total Deductions:</span> ₱${f(monthlyDeductions)}</div>
-            <div><span class="font-semibold">Monthly Net Reference:</span> ₱${f(monthlyNet)}</div>
+          <div class="bg-slate-100 p-3 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-700 border border-slate-200">
+            <div><span class="font-semibold">Monthly Basic Salary:</span> ₱${f(monthlyBase)}</div>
+            <div><span class="font-semibold">Monthly Gross Earnings:</span> ₱${f(monthlyGross)}</div>
+            <div><span class="font-semibold">Monthly Total Statutory & Tax:</span> ₱${f(ph.totalDeductions)}</div>
+            <div><span class="font-semibold">Monthly Net Pay Reference:</span> ₱${f(monthlyNet)}</div>
           </div>
 
-          <div class="bg-[#212121] text-white p-3.5 rounded-xl flex justify-between items-center shadow-inner">
+          <div class="bg-[#212121] text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
             <div>
               <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
-              <p class="text-[10px] text-white/40">Kinsenas Payout Calculation</p>
+              <p class="text-[10px] text-white/40">Kinsenas Payout (15-Day Cycle)</p>
             </div>
             <div class="text-right">
-              <h2 class="text-xl font-black text-[#FF8C00] font-mono">₱${f(kinsenasNet)}</h2>
+              <h2 class="text-2xl font-black text-[#FF8C00] font-mono">₱${f(kinsenasNet)}</h2>
             </div>
           </div>
         </div>

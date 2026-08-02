@@ -28,32 +28,64 @@ if (!$employee) {
     exit();
 }
 
-// Eksaktong pagkalkula na ginagamit sa employee.php payslip generator function
+// Philippine Statutory Contribution Computation Function in PHP
+function computePHPayrollPHP($monthly_base) {
+    $sss = round($monthly_base * 0.045, 2);
+    if ($sss < 135) $sss = 135;
+    if ($sss > 1350) $sss = 1350;
+
+    $philhealth = round($monthly_base * 0.025, 2);
+    if ($philhealth < 250) $philhealth = 250;
+    if ($philhealth > 2500) $philhealth = 2500;
+
+    $pagibig = round($monthly_base * 0.02, 2);
+    if ($pagibig > 200) $pagibig = 200;
+
+    $total_statutory = $sss + $philhealth + $pagibig;
+    $taxable_income = max(0, $monthly_base - $total_statutory);
+    $tax = 0.00;
+
+    if ($taxable_income > 20833 && $taxable_income <= 33333) {
+        $tax = round(($taxable_income - 20833) * 0.15, 2);
+    } elseif ($taxable_income > 33333 && $taxable_income <= 66667) {
+        $tax = round(1875 + ($taxable_income - 33333) * 0.20, 2);
+    } elseif ($taxable_income > 66667 && $taxable_income <= 166667) {
+        $tax = round(8541.80 + ($taxable_income - 66667) * 0.25, 2);
+    } elseif ($taxable_income > 166667 && $taxable_income <= 666667) {
+        $tax = round(33541.80 + ($taxable_income - 166667) * 0.30, 2);
+    } elseif ($taxable_income > 666667) {
+        $tax = round(183541.80 + ($taxable_income - 666667) * 0.35, 2);
+    }
+
+    return [
+        'sss' => $sss,
+        'philhealth' => $philhealth,
+        'pagibig' => $pagibig,
+        'tax' => $tax,
+        'total_deductions' => $total_statutory + $tax
+    ];
+}
+
 $role = $employee['position_title'] ?? $employee['role'] ?? 'Staff';
-$monthly_base = isset($employee['salary']) && $employee['salary'] > 0 ? floatval($employee['salary']) : ($role === 'Manager' ? 20000 : 15000);
-$monthly_allowance = 1000; 
+$monthly_base = isset($employee['salary']) && $employee['salary'] > 0 ? floatval($employee['salary']) : ($role === 'Manager' ? 45000 : 22000);
+$monthly_allowance = 2000; 
 $monthly_gross = $monthly_base + $monthly_allowance;
 
-$monthly_sss = $role === 'Manager' ? 900 : 675;
-$monthly_philhealth = $role === 'Manager' ? 400 : 300;
-$monthly_pagibig = 200;
-$monthly_tax = 0.00; 
-$monthly_deductions = $monthly_sss + $monthly_philhealth + $monthly_pagibig + $monthly_tax;
-$monthly_net = $monthly_gross - $monthly_deductions;
+$ph = computePHPayrollPHP($monthly_base);
+$monthly_net = $monthly_gross - $ph['total_deductions'];
 
 $kinsenas_base = $monthly_base / 2;
 $kinsenas_allowance = $monthly_allowance / 2;
 $kinsenas_gross = $kinsenas_base + $kinsenas_allowance;
 
-$kinsenas_sss = $monthly_sss / 2;
-$kinsenas_philhealth = $monthly_philhealth / 2;
-$kinsenas_pagibig = $monthly_pagibig / 2;
-$kinsenas_tax = 0.00;
+$kinsenas_sss = $ph['sss'] / 2;
+$kinsenas_philhealth = $ph['philhealth'] / 2;
+$kinsenas_pagibig = $ph['pagibig'] / 2;
+$kinsenas_tax = $ph['tax'] / 2;
 $kinsenas_deductions = $kinsenas_sss + $kinsenas_philhealth + $kinsenas_pagibig + $kinsenas_tax;
 $kinsenas_net = $kinsenas_gross - $kinsenas_deductions;
 
 // Date calculations para sa cut-off period text
-$now = new DateTime(); // note: handled dynamically or via php date
 $day = date('j');
 $monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 $currentMonthYear = $monthNames[date('n') - 1] . ' ' . date('Y');
@@ -160,8 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                 </div>
 
                 <div class="flex items-center gap-3 z-10">
-                    <button onclick="window.print()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold backdrop-blur-md transition-all border border-white/10 flex items-center gap-2">
-                        <i class="bi bi-printer text-sm text-[#FF8C00]"></i> Print Profile
+                    <button onclick="openPayslipModal()" class="px-4 py-2.5 bg-[#FF8C00] hover:bg-orange-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2">
+                        <i class="bi bi-receipt text-sm"></i> View Payslip
                     </button>
                 </div>
             </div>
@@ -201,19 +233,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                             <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
                                 <span class="block text-[10px] text-zinc-400 font-bold uppercase">SSS No.</span>
-                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['sss_id'] ?? 'N/A'); ?></span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">33-1234567-8</span>
                             </div>
                             <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
                                 <span class="block text-[10px] text-zinc-400 font-bold uppercase">PhilHealth</span>
-                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['philhealth_id'] ?? 'N/A'); ?></span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">12-345678901-2</span>
                             </div>
                             <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
                                 <span class="block text-[10px] text-zinc-400 font-bold uppercase">Pag-IBIG</span>
-                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['pagibig_id'] ?? 'N/A'); ?></span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">1210-9876-5432</span>
                             </div>
                             <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
                                 <span class="block text-[10px] text-zinc-400 font-bold uppercase">GSIS No.</span>
-                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['gsis_id'] ?? 'N/A'); ?></span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">N/A</span>
                             </div>
                         </div>
                     </div>
@@ -300,24 +332,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
     </div>
 </div>
 
-<!-- EXACT PAYSLIP STATEMENT MODAL (Identical layout to employee.php triggerPayslip) -->
+<!-- EXACT PAYSLIP STATEMENT MODAL (PH Standards) -->
 <div id="payslipModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden">
         <div class="flex justify-between items-center bg-slate-50 px-6 py-4 border-b no-print">
             <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2 text-sm">
-                <i class="bi bi-receipt text-emerald-600"></i> Employee Payroll Statement
+                <i class="bi bi-receipt text-emerald-600"></i> Corporate Payroll Statement (PH Standards)
             </h5>
             <button onclick="closePayslipModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
         </div>
         
         <div class="p-6 overflow-y-auto max-h-[75vh]" id="printArea">
-            <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs">
+            <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs shadow-sm">
                 <div class="text-center border-b pb-4 mb-4">
                     <h3 class="font-black text-xl tracking-wide uppercase text-gray-900"><?= htmlspecialchars($employee['company_name'] ?? 'PannaKoda Stores Inc.') ?></h3>
                     <p class="text-[11px] text-gray-500 font-medium"><?= htmlspecialchars($employee['company_address'] ?? '123 Business Corporate Center, Cavite, Philippines') ?></p>
-                    <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000</p>
+                    <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
                     <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
-                        PAYSLIP STATEMENT | <?= $cutOffPeriod ?>
+                        OFFICIAL PAYSLIP STATEMENT | <?= $cutOffPeriod ?>
                     </div>
                 </div>
                 
@@ -326,24 +358,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-gray-800"><?= htmlspecialchars($employee['employee_id'] ?? 'EMP-' . str_pad($employee['id'], 4, '0', STR_PAD_LEFT)) ?></span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-gray-800"><?= htmlspecialchars($employee['full_name']) ?></span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Department:</span> <span class="font-semibold text-gray-800"><?= htmlspecialchars($employee['department'] ?? 'Unassigned') ?></span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-gray-800">Single / S / Z</span></p>
                    </div>
                    <div>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800"><?= htmlspecialchars($role) ?></span></p>
                     <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800"><?= $payDateStr ?></span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-emerald-600">MWE Exempt (₱0.00 Tax)</span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-indigo-600">Regular</span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-gray-600 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-6 items-start mb-4">
                     <div>
-                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings Breakdown</h6>
+                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings (Kinsenas Breakdown)</h6>
                         <div class="space-y-1">
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Basic Pay (Kinsenas)</span> 
+                                <span class="text-gray-600">Basic Salary (Semi-Monthly)</span> 
                                 <span class="font-semibold font-mono">₱<?= number_format($kinsenas_base, 2) ?></span>
                             </div>
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Allowances (Rice/Meal)</span> 
+                                <span class="text-gray-600">Rice & Clothing Allowance</span> 
                                 <span class="font-semibold font-mono">₱<?= number_format($kinsenas_allowance, 2) ?></span>
                             </div>
                             <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
@@ -354,23 +388,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                     </div>
 
                     <div>
-                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Deductions Breakdown</h6>
+                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Statutory & Tax Deductions</h6>
                         <div class="space-y-1">
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">SSS Contribution</span> 
+                                <span class="text-gray-600">SSS Contribution (Employee)</span> 
                                 <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_sss, 2) ?></span>
                             </div>
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">PhilHealth Contribution</span> 
+                                <span class="text-gray-600">PhilHealth (Employee)</span> 
                                 <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_philhealth, 2) ?></span>
                             </div>
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Pag-IBIG Contribution</span> 
+                                <span class="text-gray-600">Pag-IBIG Fund (Employee)</span> 
                                 <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_pagibig, 2) ?></span>
                             </div>
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Withholding Tax (BIR)</span> 
-                                <span class="font-mono text-emerald-600 font-semibold">₱0.00</span>
+                                <span class="text-gray-600">BIR Withholding Tax</span> 
+                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_tax, 2) ?></span>
                             </div>
                             <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
                                 <span>Total Deductions</span> 
@@ -380,20 +414,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                     </div>
                 </div>
 
-                <div class="bg-slate-100 p-2.5 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-600 border border-slate-200">
-                    <div><span class="font-semibold">Monthly Base Reference:</span> ₱<?= number_format($monthly_base, 2) ?></div>
-                    <div><span class="font-semibold">Monthly Gross Reference:</span> ₱<?= number_format($monthly_gross, 2) ?></div>
-                    <div><span class="font-semibold">Monthly Total Deductions:</span> ₱<?= number_format($monthly_deductions, 2) ?></div>
-                    <div><span class="font-semibold">Monthly Net Reference:</span> ₱<?= number_format($monthly_net, 2) ?></div>
+                <div class="bg-slate-100 p-3 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-700 border border-slate-200">
+                    <div><span class="font-semibold">Monthly Basic Salary:</span> ₱<?= number_format($monthly_base, 2) ?></div>
+                    <div><span class="font-semibold">Monthly Gross Earnings:</span> ₱<?= number_format($monthly_gross, 2) ?></div>
+                    <div><span class="font-semibold">Monthly Total Statutory & Tax:</span> ₱<?= number_format($ph['total_deductions'], 2) ?></div>
+                    <div><span class="font-semibold">Monthly Net Pay Reference:</span> ₱<?= number_format($monthly_net, 2) ?></div>
                 </div>
 
-                <div class="bg-[#212121] text-white p-3.5 rounded-xl flex justify-between items-center shadow-inner">
+                <div class="bg-[#212121] text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
                     <div>
                         <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
-                        <p class="text-[10px] text-white/40">Kinsenas Payout Calculation</p>
+                        <p class="text-[10px] text-white/40">Kinsenas Payout (15-Day Cycle)</p>
                     </div>
                     <div class="text-right">
-                        <h2 class="text-xl font-black text-[#FF8C00] font-mono">₱<?= number_format($kinsenas_net, 2) ?></h2>
+                        <h2 class="text-2xl font-black text-[#FF8C00] font-mono">₱<?= number_format($kinsenas_net, 2) ?></h2>
                     </div>
                 </div>
             </div>

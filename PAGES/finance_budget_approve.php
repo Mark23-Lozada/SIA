@@ -1,6 +1,17 @@
 <!-- finance_budget_approve.php -->
 <?php
 session_start();
+
+if (!isset($_SESSION['role'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$current_role = strtolower($_SESSION['role']);
+if ($current_role !== 'admin' && $current_role !== 'finance') {
+    header("Location: login.php"); 
+    exit();
+}
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 require_once __DIR__ . '../../project-test1/BACKEND/db_inventory.php';
 
