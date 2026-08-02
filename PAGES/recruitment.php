@@ -32,20 +32,20 @@ $options = [
 try {
      $pdo = new PDO($dsn, $user, $pass, $options);
      
-     // --- AUTOMATIC DATABASE SEEDER ---
-     $check = $pdo->query("SELECT COUNT(*) FROM job_openings")->fetchColumn();
-     if ($check == 0) {
-         $default_depts = [
-             ['Manager', 1, 'Active'],
-             ['Cashier', 1, 'Active'],
-             ['Kitchen', 2, 'Active'],
-             ['Waiter', 2, 'Active']
-         ];
-         $seed_stmt = $pdo->prepare("INSERT INTO job_openings (department, openings, status) VALUES (?, ?, ?)");
-         foreach ($default_depts as $dept) {
-             $seed_stmt->execute($dept);
-         }
-     }
+    // --- AUTOMATIC DATABASE SEEDER ---
+$check = $pdo->query("SELECT COUNT(*) FROM job_openings")->fetchColumn();
+if ($check == 0) {
+    $default_depts = [
+        ['Manager', 1, 'Active'],
+        ['Finance', 1, 'Active'],
+        ['Staff', 2, 'Active'],
+        ['HR', 2, 'Active']
+    ];
+    $seed_stmt = $pdo->prepare("INSERT INTO job_openings (department, openings, status) VALUES (?, ?, ?)");
+    foreach ($default_depts as $dept) {
+        $seed_stmt->execute($dept);
+    }
+}
 } catch (\PDOException $e) {
      die("Database connection failed: " . $e->getMessage());
 }

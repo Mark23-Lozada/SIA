@@ -26,8 +26,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $id = intval($_POST['id']);
     $password_input = $_POST['password'] ?? '';
-    $department = $conn->real_escape_string($_POST['department']);
+    
+    $company_name = $conn->real_escape_string($_POST['company_name'] ?? '');
+    $company_address = $conn->real_escape_string($_POST['company_address'] ?? '');
+    $contact_number = $conn->real_escape_string($_POST['contact_number'] ?? '');
+    $date_of_birth = $conn->real_escape_string($_POST['date_of_birth'] ?? '');
+    $civil_status = $conn->real_escape_string($_POST['civil_status'] ?? '');
+    $nationality = $conn->real_escape_string($_POST['nationality'] ?? '');
+    $gender = $conn->real_escape_string($_POST['gender'] ?? '');
+    
+    $department = trim($_POST['department']);
+    $dept_lower = strtolower($department);
     $role = $conn->real_escape_string($_POST['role']);
+    
+    $employment_type = $conn->real_escape_string($_POST['employment_type'] ?? 'Regular');
+    $immediate_supervisor = $conn->real_escape_string($_POST['immediate_supervisor'] ?? '');
+    $date_hired = $conn->real_escape_string($_POST['date_hired'] ?? date('Y-m-d'));
+    $contract_start_date = $conn->real_escape_string($_POST['contract_start_date'] ?? '');
+    $contract_end_date = $conn->real_escape_string($_POST['contract_end_date'] ?? '');
+    $contract_duration_years = floatval($_POST['contract_duration_years'] ?? 1.0);
+    $work_location = $conn->real_escape_string($_POST['work_location'] ?? '');
     $salary = floatval($_POST['salary']);
 
     // Backend Strong Password Validation
@@ -52,33 +70,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if ($emp_result && $emp_result->num_rows > 0) {
         $emp_data = $emp_result->fetch_assoc();
-        $full_name = $conn->real_escape_string($emp_data['full_name']);
+        $full_name = trim($emp_data['full_name']);
+        
+        // 1. Employee Email (employee_gmail): lastname.firstname@pannakoda.com
+        $name_parts = explode(' ', $full_name);
+        $firstname = strtolower(preg_replace('/[^a-z]/', '', $name_parts[0]));
+        $lastname = count($name_parts) > 1 ? strtolower(preg_replace('/[^a-z]/', '', end($name_parts))) : $firstname;
+        $employee_gmail = $lastname . '.' . $firstname . '@pannakoda.com';
 
-        $cleanName = strtolower(preg_replace('/[^a-z]/', '', $full_name));
-        if (empty($cleanName)) {
-            $cleanName = 'employee' . $id;
+        // 2. Company Gmail (company_gmail): Department-based o clean fullname
+        if ($dept_lower === 'hr') {
+            $company_gmail = 'hr@pannakoda.com';
+        } elseif ($dept_lower === 'finance') {
+            $company_gmail = 'finance@pannakoda.com';
+        } elseif ($dept_lower === 'manager') {
+            $company_gmail = 'manager@pannakoda.com';
+        } else {
+            $cleanFullName = strtolower(preg_replace('/[^a-z]/', '', $full_name));
+            if (empty($cleanFullName)) {
+                $cleanFullName = "employee" . $id;
+            }
+            $company_gmail = $cleanFullName . "@pannakoda.com";
         }
-        $employee_gmail = $cleanName . '@pannakoda.com';
 
+        // Update database with auto-generated emails and shared password hash
         $update_sql = "UPDATE employees SET 
             employee_id = '$employee_id', 
             employee_password = '$password_hash', 
-            employee_gmail = '$employee_gmail', 
+            employee_gmail = '$employee_gmail',
+            company_gmail = '$company_gmail',
             department = '$department', 
             position_title = '$role',
-            position = '$role',
             status = 'hired' 
             WHERE id = $id";
         
         if ($conn->query($update_sql)) {
-            echo json_encode(["success" => true, "message" => "Employee successfully fully hired!"]);
+            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with auto-generated employee_gmail & company_gmail!"]);
         } else {
             echo json_encode(["success" => false, "message" => $conn->error]);
         }
-    } else {
-        echo json_encode(["success" => false, "message" => "Employee record not found in database."]);
     }
-    
     $conn->close();
     exit;
 }
@@ -281,7 +312,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
     <!-- ONBOARDING MODAL FORM -->
     <div class="modal fade" id="onboardingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-2xl shadow-xl border-0">
           <div class="modal-header border-0 bg-slate-50 rounded-t-2xl px-6 py-4">
             <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2">
@@ -290,50 +321,145 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form id="onboardingForm" onsubmit="submitOnboarding(event)">
-            <div class="modal-body p-6 space-y-4">
+            <div class="modal-body p-6 space-y-4 max-h-[75vh] overflow-y-auto">
               <input type="hidden" id="modalId">
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Full Name</label>
-                <input type="text" id="modalName" readonly class="form-control bg-gray-100 text-sm">
+              
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Full Name</label>
+                  <input type="text" id="modalName" readonly class="form-control bg-gray-100 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contact Number</label>
+                  <input type="text" id="modalContactNumber" class="form-control text-sm" placeholder="e.g. 09123456789">
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employee Gmail (@pannakoda.com)</label>
-                <input type="email" id="modalEmployeeGmail" readonly class="form-control bg-gray-100 text-sm text-indigo-600 font-medium">
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Name</label>
+                  <input type="text" id="modalCompanyName" class="form-control text-sm" value="PannaKoda Stores Inc.">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Address</label>
+                  <input type="text" id="modalCompanyAddress" class="form-control text-sm" placeholder="e.g. Dasmarinas Cavite">
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Personal Email</label>
-                <input type="email" id="modalEmail" readonly class="form-control bg-gray-100 text-sm">
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Date of Birth</label>
+                  <input type="date" id="modalDob" class="form-control text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Civil Status</label>
+                  <select id="modalCivilStatus" class="form-control text-sm">
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nationality</label>
+                  <input type="text" id="modalNationality" class="form-control text-sm" value="Filipino">
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Phone Number</label>
-                <input type="text" id="modalPhone" readonly class="form-control bg-gray-100 text-sm">
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Gender</label>
+                  <select id="modalGender" class="form-control text-sm">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Work Location</label>
+                  <input type="text" id="modalWorkLocation" class="form-control text-sm" value="Main Office">
+                </div>
               </div>
+
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Address</label>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Home Address</label>
                 <textarea id="modalAddress" readonly rows="2" class="form-control bg-gray-100 text-sm"></textarea>
               </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employee Gmail (Auto: last.firstname@...)</label>
+                  <input type="text" id="modalEmployeeGmail" readonly class="form-control bg-gray-100 text-sm text-indigo-600 font-medium">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Gmail (Auto: Dept/Name@...)</label>
+                  <input type="text" id="modalCompanyGmail" readonly class="form-control bg-gray-100 text-sm text-emerald-600 font-medium">
+                </div>
+              </div>
+
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Set Employee Password</label>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Set Password (Shared for Both Accounts)</label>
                 <input type="password" id="modalPassword" required class="form-control text-sm" placeholder="Ilagay ang strong password" oninput="validatePasswordStrength(this.value)">
                 <div id="passwordFeedback" class="text-[11px] mt-1 text-gray-500">
                   Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.
                 </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Department</label>
-                <input type="text" id="modalDepartment" required class="form-control text-sm" placeholder="e.g. IT, Operations, Management">
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Department</label>
+                  <input type="text" id="modalDepartment" required class="form-control text-sm" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Role / Position Tier</label>
+                  <select id="modalRole" class="form-control text-sm" onchange="updateDefaultSalary()">
+                    <option value="Staff">Staff</option>
+                    <option value="Manager">Manager</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employment Type</label>
+                  <select id="modalEmploymentType" class="form-control text-sm">
+                    <option value="Regular">Regular</option>
+                    <option value="Probationary">Probationary</option>
+                    <option value="Part-Time">Part-Time</option>
+                    <option value="Full-Time">Full-Time</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Role / Position Tier</label>
-                <select id="modalRole" class="form-control text-sm" onchange="updateDefaultSalary()">
-                  <option value="Staff">Staff</option>
-                  <option value="Manager">Manager</option>
-                </select>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Immediate Supervisor</label>
+                  <input type="text" id="modalSupervisor" class="form-control text-sm" placeholder="Supervisor Name">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Base Salary (PHP)</label>
+                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm" placeholder="Base salary">
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Base Salary (PHP)</label>
-                <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm" placeholder="Base salary based on payroll">
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Date Hired</label>
+                  <input type="date" id="modalDateHired" class="form-control text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contract Start Date</label>
+                  <input type="date" id="modalContractStart" class="form-control text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contract End Date</label>
+                  <input type="date" id="modalContractEnd" class="form-control text-sm">
+                </div>
               </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contract Duration (Years)</label>
+                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm" value="1.0">
+                </div>
+              </div>
+
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">SSS No.</label>
@@ -387,6 +513,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const role = document.getElementById('modalRole').value;
       const salaryInput = document.getElementById('modalSalary');
       salaryInput.value = role === 'Manager' ? 20000 : 15000;
+    }
+
+    function updateModalGmailPreview() {
+      const deptInput = document.getElementById('modalDepartment').value.trim().toLowerCase();
+      const employeeEmailField = document.getElementById('modalEmployeeGmail');
+      const companyEmailField = document.getElementById('modalCompanyGmail');
+      const empName = document.getElementById('modalName').value;
+      const empId = document.getElementById('modalId').value;
+
+      const nameParts = empName.trim().split(' ');
+      const firstname = nameParts[0] ? nameParts[0].toLowerCase().replace(/[^a-z]/g, '') : 'user';
+      const lastname = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase().replace(/[^a-z]/g, '') : firstname;
+      employeeEmailField.value = `${lastname}.${firstname}@pannakoda.com`;
+
+      if (deptInput === 'hr') {
+        companyEmailField.value = 'hr@pannakoda.com';
+      } else if (deptInput === 'finance') {
+        companyEmailField.value = 'finance@pannakoda.com';
+      } else if (deptInput === 'manager') {
+        companyEmailField.value = 'manager@pannakoda.com';
+      } else {
+        let cleanName = empName.toLowerCase().replace(/[^a-z]/g, '');
+        if (!cleanName) cleanName = 'employee' + empId;
+        companyEmailField.value = `${cleanName}@pannakoda.com`;
+      }
     }
 
     function validatePasswordStrength(password) {
@@ -507,19 +658,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
       document.getElementById('modalId').value = emp.id;
       document.getElementById('modalName').value = emp.full_name || '';
-      
-      let cleanName = (emp.full_name || '').toLowerCase().replace(/[^a-z]/g, '');
-      if (!cleanName) cleanName = 'employee' + emp.id;
-      document.getElementById('modalEmployeeGmail').value = `${cleanName}@pannakoda.com`;
+      document.getElementById('modalContactNumber').value = emp.contact_number || emp.phone || '';
+      document.getElementById('modalCompanyName').value = emp.company_name || 'PannaKoda Stores Inc.';
+      document.getElementById('modalCompanyAddress').value = emp.company_address || '';
+      document.getElementById('modalDob').value = emp.date_of_birth || '';
+      document.getElementById('modalCivilStatus').value = emp.civil_status || 'Single';
+      document.getElementById('modalNationality').value = emp.nationality || 'Filipino';
+      document.getElementById('modalGender').value = emp.gender || 'Male';
+      document.getElementById('modalWorkLocation').value = emp.work_location || 'Main Office';
+      document.getElementById('modalDepartment').value = emp.department || '';
 
-      document.getElementById('modalEmail').value = emp.email || '';
-      document.getElementById('modalPhone').value = emp.phone || '';
+      updateModalGmailPreview();
+
       document.getElementById('modalAddress').value = emp.address || '';
       document.getElementById('modalRole').value = emp.role || 'Staff';
+      document.getElementById('modalEmploymentType').value = emp.employment_type || 'Regular';
+      document.getElementById('modalSupervisor').value = emp.immediate_supervisor || '';
+      document.getElementById('modalDateHired').value = emp.date_hired || new Date().toISOString().split('T')[0];
+      document.getElementById('modalContractStart').value = emp.contract_start_date || '';
+      document.getElementById('modalContractEnd').value = emp.contract_end_date || '';
+      document.getElementById('modalContractDuration').value = emp.contract_duration_years || 1.0;
+
       document.getElementById('modalPassword').value = '';
       document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-gray-500";
       document.getElementById('passwordFeedback').innerHTML = "Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.";
-      document.getElementById('modalDepartment').value = emp.department || '';
       document.getElementById('modalSss').value = emp.sss_id || '';
       document.getElementById('modalPhilhealth').value = emp.philhealth_id || '';
       document.getElementById('modalPagibig').value = emp.pagibig_id || '';
@@ -538,17 +700,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       event.preventDefault();
       const id = document.getElementById('modalId').value;
       const password = document.getElementById('modalPassword').value;
-      const department = document.getElementById('modalDepartment').value;
-      const role = document.getElementById('modalRole').value;
-      const salary = document.getElementById('modalSalary').value;
-
+      
       const formData = new URLSearchParams();
       formData.append('action', 'complete_onboarding');
       formData.append('id', id);
       formData.append('password', password);
-      formData.append('department', department);
-      formData.append('role', role);
-      formData.append('salary', salary);
+      formData.append('company_name', document.getElementById('modalCompanyName').value);
+      formData.append('company_address', document.getElementById('modalCompanyAddress').value);
+      formData.append('contact_number', document.getElementById('modalContactNumber').value);
+      formData.append('date_of_birth', document.getElementById('modalDob').value);
+      formData.append('civil_status', document.getElementById('modalCivilStatus').value);
+      formData.append('nationality', document.getElementById('modalNationality').value);
+      formData.append('gender', document.getElementById('modalGender').value);
+      formData.append('department', document.getElementById('modalDepartment').value);
+      formData.append('role', document.getElementById('modalRole').value);
+      formData.append('employment_type', document.getElementById('modalEmploymentType').value);
+      formData.append('immediate_supervisor', document.getElementById('modalSupervisor').value);
+      formData.append('date_hired', document.getElementById('modalDateHired').value);
+      formData.append('contract_start_date', document.getElementById('modalContractStart').value);
+      formData.append('contract_end_date', document.getElementById('modalContractEnd').value);
+      formData.append('contract_duration_years', document.getElementById('modalContractDuration').value);
+      formData.append('work_location', document.getElementById('modalWorkLocation').value);
+      formData.append('salary', document.getElementById('modalSalary').value);
 
       try {
         const res = await fetch(window.location.pathname, {
@@ -662,8 +835,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('printArea').innerHTML = `
         <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs">
           <div class="text-center border-b pb-4 mb-4">
-            <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">PannaKoda Stores Inc.</h3>
-            <p class="text-[11px] text-gray-500 font-medium">123 Business Corporate Center, Cavite, Philippines</p>
+            <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
+            <p class="text-[11px] text-gray-500 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
             <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000</p>
             <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
               PAYSLIP STATEMENT | ${cutOffPeriod}

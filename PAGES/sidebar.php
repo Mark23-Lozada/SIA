@@ -1,31 +1,12 @@
 <?php
-// Siguraduhing may session bago basahin ang role
+// Siguraduhing may session bago basahin ang role nang walang pwedeng mangyaring redirect o pagkawala ng data
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$current_role = isset($_SESSION['role']) ? strtolower($_SESSION['role']) : '';
+$current_role = isset($_SESSION['role']) ? strtolower(trim($_SESSION['role'])) : '';
 $current_uri = $_SERVER['REQUEST_URI'];
 $exact_current_page = basename($_SERVER['PHP_SELF']); 
-
-// Function para sa awtomatikong pag-highlight ng active link
-if (!function_exists('renderSidebarLink')) {
-    function renderSidebarLink($targetUrl, $label, $iconClass, $exactCurrentPage) {
-        $targetFileName = basename($targetUrl);
-        $isActive = ($exactCurrentPage === $targetFileName);
-        
-        $linkClass = "sidebar-link flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all no-underline text-[13px] ";
-        if ($isActive) {
-            $linkClass .= "font-semibold bg-[#FF8C00] text-white shadow-md"; 
-        } else {
-            $linkClass .= "font-medium hover:bg-white/10 hover:text-white text-inherit";
-        }
-        
-        echo '<a href="' . $targetUrl . '" class="' . $linkClass . '">';
-        echo '<i class="' . $iconClass . ' text-sm flex-shrink-0"></i> <span class="whitespace-nowrap">' . $label . '</span>';
-        echo '</a>';
-    }
-}
 
 // Dynamic path handling
 $inFrontendFolder = (strpos($current_uri, 'FRONTEND') !== false);
@@ -66,40 +47,83 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
                 </a>";
       }
 
-      renderCompactLink($hrmsPrefix . 'dashboard.php', 'Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
-      renderCompactLink($hrmsPrefix . 'recruitment.php', 'Recruitment', 'bi-file-earmark-person-fill', $exact_current_page);
-      renderCompactLink($hrmsPrefix . 'Applicant.php', 'HR Applicants', 'bi-person-vcard', $exact_current_page);
-      renderCompactLink($hrmsPrefix . 'employee.php', 'Employees', 'bi bi-people-fill', $exact_current_page);
-      renderCompactLink($hrmsPrefix . 'leave.php', 'HR Leaves', 'bi bi-list-task', $exact_current_page);
-      renderCompactLink($hrmsPrefix . 'attendance.php', 'Attendance', 'bi bi-list-task', $exact_current_page);
+      // 1. ADMIN MENU[cite: 3]
+      if ($current_role === 'admin'): 
+    ?>
+        <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Admin Control</div>
+        <?php
+          renderCompactLink($hrmsPrefix . 'dashboard.php', 'Applicant Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
+          renderCompactLink($frontendPrefix . 'pos_dash.php', 'POS Dashboard', 'bi-speedometer2', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'admin_applicants.php', 'Admin Applicants Management', 'bi-person-badge', $exact_current_page);
+         renderCompactLink($hrmsPrefix . 'admin_leaves.php', 'Leave Management', 'bi bi-calendar-check', $exact_current_page);
+        renderCompactLink($hrmsPrefix . 'admin_budget_approve.php', 'Budget Approval', 'bi bi-cash-stack', $exact_current_page);
+          renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
+          renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
       
-      if ($current_role === 'admin'): ?>
-        <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Admin</div>
-        <?php
-          renderCompactLink($frontendPrefix . 'pos_dash.php', 'POS', 'bi-speedometer2', $exact_current_page);
-          renderCompactLink($hrmsPrefix . 'admin_applicants.php', 'Applicants Management', 'bi-person-badge', $exact_current_page);
-          renderCompactLink($hrmsPrefix . 'admin_leaves.php', 'Leave Management', 'bi-calendar-check', $exact_current_page);
         ?>
+    <?php 
+      endif; 
 
-        <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Inventory</div>
+      // 2. HR MENU[cite: 3]
+      if ($current_role === 'hr'): 
+    ?>
+        <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Human Resources</div>
         <?php
+          renderCompactLink($hrmsPrefix . 'dashboard.php', 'Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'recruitment.php', 'Recruitment', 'bi bi-file-earmark-person-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'Applicant.php', 'HR Applicants', 'bi bi-person-vcard', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'employee.php', 'Employees', 'bi bi-people-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'leave.php', 'HR Leaves', 'bi bi-list-task', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'attendance.php', 'Attendance', 'bi bi-clock-history', $exact_current_page);
+        ?>
+    <?php 
+      endif; 
+
+      // 3. MANAGER MENU[cite: 3]
+      if ($current_role === 'manager'): 
+    ?>
+        <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Inventory & Operations</div>
+        <?php
+       
           renderCompactLink($frontendPrefix . 'add_item.php', 'Add Item', 'bi bi-plus-circle-fill', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'items.php', 'Manage Items', 'bi-grid-3x3-gap-fill', $exact_current_page);
+          renderCompactLink($frontendPrefix . 'items.php', 'Manage Items', 'bi bi-grid-3x3-gap-fill', $exact_current_page);
           renderCompactLink($frontendPrefix . 'ingredients.php', 'Ingredients', 'bi bi-basket-fill', $exact_current_page);
           renderCompactLink($frontendPrefix . 'inventory.php', 'Refill', 'bi bi-arrow-repeat', $exact_current_page);
           renderCompactLink($frontendPrefix . 'recipe.php', 'Recipes', 'bi bi-journal-text', $exact_current_page);
           renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
           renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
           renderCompactLink($frontendPrefix . 'cooking.php', 'Cooking', 'bi bi-egg-fried', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'depart.php', 'Departs', 'bi-diagram-3-fill', $exact_current_page);
+          renderCompactLink($frontendPrefix . 'depart.php', 'Departs', 'bi bi-diagram-3-fill', $exact_current_page);
+         
+      
+
+      
         ?>
-      <?php endif; ?>
+    <?php 
+      endif; 
+
+      // 4. FINANCE MENU[cite: 3]
+      if ($current_role === 'finance'): 
+    ?>
+        <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Finance</div>
+        <?php
+
+          renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
+          renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'budget_list.php', 'Company Budget', 'bi bi-diagram-3-fill', $exact_current_page);
+                    renderCompactLink($hrmsPrefix . 'finance_budget_approve.php', 'Budget Approval', 'bi bi-cash-stack', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'transaction.php', 'Transaction', 'bi bi-diagram-3-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'tax.php', 'Tax Management', 'bi bi-diagram-3-fill', $exact_current_page);
+      
+        ?>
+    <?php endif; ?>
   </nav>
 
   <button type="button" id="sidebarLogoutBtn" class="w-full flex items-center gap-2 px-2 py-1.5 mt-2 rounded text-white/70 hover:bg-white/10 hover:text-white transition text-[11px] border border-white/20 flex-shrink-0">
     <i class="bi bi-box-arrow-right"></i> Log out
   </button>
 </div>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');

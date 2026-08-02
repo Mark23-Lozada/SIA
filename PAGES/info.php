@@ -1,176 +1,78 @@
 <?php
 session_start();
 
-// 1. I-check kung nakalogin.
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+if (!isset($_SESSION['user_id']) && !isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
 }
 
-// 2. ROLE CHECK: Kung HINDI Employee ang role, harangan
-if ($_SESSION['role'] !== 'Employee') {
-    header("Location: admin.php"); // Ibalik sa admin kung admin pala ang nakalogin
-    exit();
-}
-
-// 3. Pigilan ang Browser Caching
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
-
-
-
-// Set system time zone to Philippines
-date_default_timezone_set('Asia/Manila');
-
 $host = "localhost";
-$user = "root";
-$pass = "";
+$user = "root"; 
+$pass = ""; 
 $dbname = "pos";
 
 $conn = new mysqli($host, $user, $pass, $dbname);
 if ($conn->connect_error) {
-    die("Database Connection Failed: " . $conn->connect_error);
+    die("Connection Failed: " . $conn->connect_error);
 }
 
-if (!isset($_SESSION['role'])) {
-    header("Location: login.php");
+$user_id = $_SESSION['user_id'] ?? 0;
+$stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? LIMIT 1");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$employee = $result->fetch_assoc();
+
+if (!$employee) {
+    echo "Employee record not found.";
     exit();
 }
 
-$is_employee_role = ($_SESSION['role'] === 'Employee');
-$all_employees = [];
+// Eksaktong pagkalkula na ginagamit sa employee.php payslip generator function
+$role = $employee['position_title'] ?? $employee['role'] ?? 'Staff';
+$monthly_base = isset($employee['salary']) && $employee['salary'] > 0 ? floatval($employee['salary']) : ($role === 'Manager' ? 20000 : 15000);
+$monthly_allowance = 1000; 
+$monthly_gross = $monthly_base + $monthly_allowance;
 
-// Fetch profile records
-if ($is_employee_role) {
-    $emp_gmail = $_SESSION['employee_gmail'];
-    $stmt = $conn->prepare("SELECT * FROM employees WHERE employee_gmail = ? LIMIT 1");
-    $stmt->bind_param("s", $emp_gmail);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($row = $result->fetch_assoc()) {
-        $row['display_emp_id'] = "EMP-" . str_pad($row['id'], 4, "0", STR_PAD_LEFT);
-        $all_employees[] = $row;
-    }
-    $stmt->close();
-} else {
-    $res = $conn->query("SELECT * FROM employees ORDER BY id DESC");
-    while ($row = $res->fetch_assoc()) {
-        $row['display_emp_id'] = "EMP-" . str_pad($row['id'], 4, "0", STR_PAD_LEFT);
-        $all_employees[] = $row;
-    }
-}
+$monthly_sss = $role === 'Manager' ? 900 : 675;
+$monthly_philhealth = $role === 'Manager' ? 400 : 300;
+$monthly_pagibig = 200;
+$monthly_tax = 0.00; 
+$monthly_deductions = $monthly_sss + $monthly_philhealth + $monthly_pagibig + $monthly_tax;
+$monthly_net = $monthly_gross - $monthly_deductions;
 
-$notification_msg = "";
+$kinsenas_base = $monthly_base / 2;
+$kinsenas_allowance = $monthly_allowance / 2;
+$kinsenas_gross = $kinsenas_base + $kinsenas_allowance;
 
-// ================= ACTION HANDLER: LEAVE APPLICATION =================
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['apply_leave'])) {
-    $emp_id = intval($_POST['employee_id']);
+$kinsenas_sss = $monthly_sss / 2;
+$kinsenas_philhealth = $monthly_philhealth / 2;
+$kinsenas_pagibig = $monthly_pagibig / 2;
+$kinsenas_tax = 0.00;
+$kinsenas_deductions = $kinsenas_sss + $kinsenas_philhealth + $kinsenas_pagibig + $kinsenas_tax;
+$kinsenas_net = $kinsenas_gross - $kinsenas_deductions;
+
+// Date calculations para sa cut-off period text
+$now = new DateTime(); // note: handled dynamically or via php date
+$day = date('j');
+$monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+$currentMonthYear = $monthNames[date('n') - 1] . ' ' . date('Y');
+$cutOffPeriod = $day <= 15 ? "1st Cut-off (1–15, $currentMonthYear)" : "2nd Cut-off (16–31, $currentMonthYear)";
+$payDateStr = date('M j, Y');
+
+// Handle Leave Request Submission
+$leave_msg = "";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
     $leave_type = $_POST['leave_type'] ?? '';
     $reason = $_POST['reason'] ?? '';
-    
-    if (empty($leave_type) || empty($reason)) {
-        $_SESSION['system_msg'] = "Error: Fill up all fields.";
-    } else {
-        $leave_stmt = $conn->prepare("INSERT INTO leave_requests (employee_id, leave_type, reason, status) VALUES (?, ?, ?, 'Pending')");
-        if ($leave_stmt) {
-            $leave_stmt->bind_param("iss", $emp_id, $leave_type, $reason);
-            if ($leave_stmt->execute()) {
-                $_SESSION['system_msg'] = "Success: Leave application submitted.";
-            } else {
-                $_SESSION['system_msg'] = "Error: " . $leave_stmt->error;
-            }
-            $leave_stmt->close();
-        }
+    $status = 'Pending'; 
+
+    $l_stmt = $conn->prepare("INSERT INTO leave_requests (employee_id, leave_type, reason, status) VALUES (?, ?, ?, ?)");
+    $l_stmt->bind_param("isss", $user_id, $leave_type, $reason, $status);
+    if ($l_stmt->execute()) {
+        $leave_msg = "Leave request successfully submitted to HR screening!";
     }
-    header("Location: " . $_SERVER['PHP_SELF'] . "?page=leave-page");
-    exit();
-}
-
-// ================= ACTION HANDLER: BIOMETRICS (TIME IN / OUT) =================
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['time_in']) || isset($_POST['time_out']))) {
-    $emp_id = intval($_POST['employee_id']);
-    $current_time = date('H:i:s');
-    $current_date = date('Y-m-d');
-    $hour_min = date('H:i'); 
-
-    if (isset($_POST['time_in'])) {
-        // Evaluation Rules for Time In
-        if ($hour_min >= '07:00' && $hour_min <= '07:30') {
-            $status = "On Time";
-        } elseif ($hour_min > '07:30' && $hour_min < '14:00') {
-            $status = "Late";
-        } else {
-            $_SESSION['system_msg'] = "Error: Time In denied. System cutoff is at 2:00 PM.";
-            header("Location: " . $_SERVER['PHP_SELF'] . "?page=attendance-page");
-            exit();
-        }
-
-        // Check if already timed in today
-        $check = $conn->prepare("SELECT id FROM attendance WHERE employee_id = ? AND date = ?");
-        $check->bind_param("is", $emp_id, $current_date);
-        $check->execute();
-        if ($check->get_result()->num_rows > 0) {
-            $_SESSION['system_msg'] = "Error: You have already timed in for today.";
-        } else {
-            $att_stmt = $conn->prepare("INSERT INTO attendance (employee_id, date, time_in, status_in) VALUES (?, ?, ?, ?)");
-            $att_stmt->bind_param("isss", $emp_id, $current_date, $current_time, $status);
-            $att_stmt->execute();
-            $_SESSION['system_msg'] = "Success: Timed In as [$status] at $current_time";
-            $att_stmt->close();
-        }
-        $check->close();
-    } 
-    
-    if (isset($_POST['time_out'])) {
-        // Evaluation Rules for Time Out
-        if ($hour_min < '17:00') {
-            $status = "Early Out";
-        } elseif ($hour_min >= '17:00' && $hour_min <= '18:00') {
-            $status = "Normal";
-        } elseif ($hour_min > '18:00' && $hour_min < '19:00') {
-            $status = "Overtime";
-        } else {
-            // Kapag 7:00 PM onwards na pinindot or pinabayaan, automatic Overtime at mag-oout sa system
-            $status = "Overtime (Auto Out)";
-            $current_time = "19:00:00"; // I-force ang lock time sa 7:00 PM cutoff
-        }
-
-        // Check if time-in log exists for today
-        $check = $conn->prepare("SELECT id FROM attendance WHERE employee_id = ? AND date = ?");
-        $check->bind_param("is", $emp_id, $current_date);
-        $check->execute();
-        $res = $check->get_result();
-        
-        if ($res->num_rows == 0) {
-            $_SESSION['system_msg'] = "Error: Cannot Time Out without initial Time In log.";
-        } else {
-            $att_stmt = $conn->prepare("UPDATE attendance SET time_out = ?, status_out = ? WHERE employee_id = ? AND date = ?");
-            $att_stmt->bind_param("ssis", $current_time, $status, $emp_id, $current_date);
-            $att_stmt->execute();
-            $_SESSION['system_msg'] = "Success: Shift closed as [$status].";
-            $att_stmt->close();
-        }
-        $check->close();
-    }
-    
-
-    header("Location: " . $_SERVER['PHP_SELF'] . "?page=attendance-page");
-    exit();
-}
-
-$notification_msg = isset($_SESSION['system_msg']) ? $_SESSION['system_msg'] : "";
-unset($_SESSION['system_msg']);
-
-// Leave History Fetching
-$leave_history = [];
-if ($is_employee_role && !empty($all_employees)) {
-    $current_emp_id = $all_employees[0]['id'];
-    $hist_stmt = $conn->prepare("SELECT * FROM leave_requests WHERE employee_id = ? ORDER BY id DESC");
-    $hist_stmt->bind_param("i", $current_emp_id);
-    $hist_stmt->execute();
-    $leave_history = $hist_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $hist_stmt->close();
+    $l_stmt->close();
 }
 ?>
 <!DOCTYPE html>
@@ -178,588 +80,412 @@ if ($is_employee_role && !empty($all_employees)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Core Interface</title>
-    <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
+    <title>Employee Portal - PannaKoda</title>
     <script src="../LIBRARIES/tailwind.js"></script>
+    <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
     <style>
-        .page-section {
-            transition: opacity 0.2s ease-in-out;
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; background: white !important; color: black !important; }
+            .no-print { display: none !important; }
         }
-       @media print {
-    .no-print { display: none !important; }
-    .print-container { border: 1px solid #000 !important; box-shadow: none !important; }
-    body { background: white !important; }
-}
     </style>
 </head>
-<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+<body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
 
-    <div class="flex h-screen w-full overflow-hidden">
-
-        <div id="sidebar" class="h-screen bg-[#212121] text-white/90 p-6 flex flex-col justify-between shadow-xl flex-shrink-0 z-20" style="width: 272px; min-width: 272px; max-width: 272px;">
-            <div>
-                <div class="flex items-center gap-2 mb-8 px-2 text-white">
-                    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                        <i class="bi bi-shop text-lg"></i>
-                    </div>
-                    <span class="font-bold text-xl tracking-wide">PannaKoda</span>
-                </div>
-                
-                <nav class="space-y-1.5" id="sidebar-nav">
-                    <?php if (!$is_employee_role): ?>
-                        <a href="#" data-target="dashboard-page" class="nav-tab flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all font-medium no-underline text-inherit hover:bg-white/10">
-                            <i class="bi bi-grid-1x2-fill text-base"></i> Dashboard
-                        </a>
-                        <a href="#" data-target="recruitment-page" class="nav-tab flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all font-medium no-underline text-inherit hover:bg-white/10">
-                            <i class="bi bi-plus-circle-fill text-base"></i> Recruitment Management
-                        </a>
-                        <a href="#" data-target="applicant-page" class="nav-tab flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all font-medium no-underline text-inherit hover:bg-white/10">
-                            <i class="bi bi-bar-chart-line-fill text-base"></i> Applicant Management 
-                        </a>
-                    <?php endif; ?>
-
-                    <a href="#" data-target="employee-page" class="nav-tab flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all font-medium no-underline bg-[#FF8C00] text-white shadow-md font-semibold">
-                        <i class="bi bi-people-fill text-base"></i> <?= $is_employee_role ? 'My Info & Payslip' : 'Employee Management' ?>
-                    </a>
-
-                    <?php if ($is_employee_role): ?>
-                        <a href="#" data-target="leave-page" class="nav-tab flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all font-medium no-underline text-inherit hover:bg-white/10">
-                            <i class="bi bi-envelope-paper-fill text-base"></i> Leave Application
-                        </a>
-                    <?php endif; ?>
-
-                    <a href="#" data-target="attendance-page" class="nav-tab flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all font-medium no-underline text-inherit hover:bg-white/10">
-                        <i class="bi bi-clock-history text-base"></i> <?= $is_employee_role ? 'Time In / Time Out' : 'Attendance & Time' ?>
-                    </a>
-                </nav>
+<div class="flex h-screen w-full overflow-hidden">
+    
+    <!-- MODERN SIDEBAR -->
+    <div class="w-64 bg-zinc-900 text-zinc-300 flex flex-col justify-between border-r border-zinc-800 shrink-0">
+        <div>
+            <div class="p-6 border-b border-zinc-800">
+                <h2 class="text-white font-black text-lg tracking-wider flex items-center gap-2">
+                    <i class="bi bi-hexagon-fill text-[#FF8C00]"></i> PANNAKODA
+                </h2>
+                <p class="text-[10px] text-zinc-500 uppercase mt-0.5">Employee Portal</p>
             </div>
+
+            <nav class="p-4 space-y-1.5 text-xs font-semibold">
+                <a href="info.php" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#FF8C00] text-white shadow-md">
+                    <i class="bi bi-person-badge text-base"></i> My Profile
+                </a>
+                
+                <button onclick="openAttendanceModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
+                    <i class="bi bi-geo-alt-fill text-base text-emerald-400"></i> Geo Attendance
+                </button>
+
+                <button onclick="openLeaveModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
+                    <i class="bi bi-calendar-plus text-base text-amber-400"></i> Request Leave
+                </button>
+
+                <button onclick="openPayslipModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
+                    <i class="bi bi-wallet2 text-base text-indigo-400"></i> Payslip Statement
+                </button>
+            </nav>
+        </div>
+
+        <div class="p-4 border-t border-zinc-800">
+            <a href="logout.php" id="logoutBtn" class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold">
+                <i class="bi bi-box-arrow-right text-base"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 h-screen overflow-y-auto p-6 md:p-10 bg-zinc-100">
+        <div class="max-w-5xl mx-auto space-y-6">
             
-            <button type="button" onclick="confirmLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all font-medium mt-auto border border-white/20">
-                <i class="bi bi-box-arrow-right text-base"></i> Log out
+            <!-- Header Profile Banner -->
+            <div class="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 text-white rounded-3xl p-8 shadow-xl border border-zinc-800 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#FF8C00]/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="flex items-center gap-5 z-10">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#FF8C00] to-orange-600 flex items-center text-white justify-center text-3xl font-black shadow-lg shadow-orange-500/20">
+                        <?= strtoupper(substr($employee['full_name'], 0, 1)) ?>
+                    </div>
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-[#FF8C00] text-xs font-bold uppercase tracking-wider mb-2 border border-white/5">
+                            <i class="bi bi-shield-check"></i> <?= htmlspecialchars($role) ?>
+                        </div>
+                        <h1 class="text-2xl md:text-3xl font-black tracking-tight text-white">
+                            <?php echo htmlspecialchars($employee['full_name']); ?>
+                        </h1>
+                        <p class="text-xs text-zinc-400 mt-1 font-mono">
+                            ID: <?= htmlspecialchars($employee['employee_id'] ?? 'EMP-' . str_pad($employee['id'], 4, '0', STR_PAD_LEFT)) ?> &bull; Dept: <?= htmlspecialchars($employee['department'] ?? 'Unassigned') ?>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 z-10">
+                    <button onclick="window.print()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold backdrop-blur-md transition-all border border-white/10 flex items-center gap-2">
+                        <i class="bi bi-printer text-sm text-[#FF8C00]"></i> Print Profile
+                    </button>
+                </div>
+            </div>
+
+            <!-- Credentials Grid Details -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2 space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
+                        <h3 class="text-xs font-black text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="bi bi-person-lines-fill text-[#FF8C00]"></i> Personal & Employment Details
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
+                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Full Name</span>
+                                <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($employee['full_name']); ?></span>
+                            </div>
+                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
+                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Employee ID</span>
+                                <span class="font-mono font-bold text-indigo-600 mt-0.5 block"><?php echo htmlspecialchars($employee['employee_id'] ?? 'EMP-2026-...'); ?></span>
+                            </div>
+                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
+                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Department</span>
+                                <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($employee['department'] ?? 'Unassigned'); ?></span>
+                            </div>
+                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
+                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Position / Role</span>
+                                <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($role); ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Government Identifiers -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
+                        <h3 class="text-xs font-black text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="bi bi-shield-shaded text-emerald-500"></i> Government Mandated Identifiers
+                        </h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
+                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">SSS No.</span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['sss_id'] ?? 'N/A'); ?></span>
+                            </div>
+                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
+                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">PhilHealth</span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['philhealth_id'] ?? 'N/A'); ?></span>
+                            </div>
+                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
+                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">Pag-IBIG</span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['pagibig_id'] ?? 'N/A'); ?></span>
+                            </div>
+                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
+                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">GSIS No.</span>
+                                <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs"><?php echo htmlspecialchars($employee['gsis_id'] ?? 'N/A'); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Access Emails -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200 flex flex-col justify-between h-full">
+                        <div>
+                            <h3 class="text-xs font-black text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <i class="bi bi-envelope-at-fill text-indigo-500"></i> System Access Emails
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                                    <span class="block text-[10px] text-indigo-600 font-bold uppercase tracking-wide">Employee Email</span>
+                                    <span class="font-mono font-bold text-indigo-900 text-xs block mt-1 break-all">
+                                        <?php echo htmlspecialchars($employee['employee_gmail'] ?? 'Not set'); ?>
+                                    </span>
+                                </div>
+                                <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100">
+                                    <span class="block text-[10px] text-emerald-600 font-bold uppercase tracking-wide">Company Gmail</span>
+                                    <span class="font-mono font-bold text-emerald-900 text-xs block mt-1 break-all">
+                                        <?php echo htmlspecialchars($employee['company_gmail'] ?? 'Not set'); ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- LEAVE REQUEST MODAL -->
+<div id="leaveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-200">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-calendar-plus text-amber-500"></i> File Leave Request</h3>
+            <button onclick="closeLeaveModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Leave Type</label>
+                <select name="leave_type" required class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500">
+                    <option value="Vacation Leave">Vacation Leave</option>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Emergency Leave">Emergency Leave</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Reason Statement</label>
+                <textarea name="reason" rows="3" required placeholder="Iahad ang dahilan ng iyong pagliban..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500"></textarea>
+            </div>
+            <button type="submit" name="submit_leave" class="w-full bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-orange-500/20 text-sm">
+                Submit Leave Application
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- GEOLOCATION ATTENDANCE MODAL -->
+<div id="attendanceModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-200 text-center">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-geo-alt-fill text-emerald-500"></i> Geo-Location Attendance</h3>
+            <button onclick="closeAttendanceModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <p class="text-xs text-zinc-500 mb-6">Piliin kung magpapatala ka ng Time In o Time Out gamit ang iyong GPS coordinates.</p>
+        
+        <div id="geoStatus" class="mb-4 text-xs font-mono font-bold text-amber-600 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+            Naghihintay ng GPS Location...
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="recordAttendance('time_in')" id="btnTimeIn" disabled class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-md text-xs opacity-50 cursor-not-allowed">
+                <i class="bi bi-box-arrow-in-right"></i> RECORD TIME IN
+            </button>
+            <button onclick="recordAttendance('time_out')" id="btnTimeOut" disabled class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl transition-all shadow-md text-xs opacity-50 cursor-not-allowed">
+                <i class="bi bi-box-arrow-out-right"></i> RECORD TIME OUT
             </button>
         </div>
-
-        <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
-            <div class="max-w-6xl mx-auto">
-                
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 id="dynamic-title" class="text-3xl font-black text-orange-500 tracking-tight">
-                            <?= $is_employee_role ? 'My Corporate Dashboard' : 'PannaKoda Employee Directory' ?>
-                        </h1>
-                        <p id="dynamic-subtitle" class="text-sm text-slate-400">Manage logs, review active payroll profiles and configurations.</p>
-                    </div>
-                    <span class="bg-orange-500/10 text-orange-400 text-xs px-3 py-1.5 rounded-full border border-orange-500/20 font-bold uppercase">
-                        <?= $is_employee_role ? 'Employee View Mode' : 'HR Workspace Admin' ?>
-                    </span>
-                </div>
-
-                <?php if(!empty($notification_msg)): ?>
-                    <?php $alert_theme = strpos($notification_msg, 'Error') !== false ? 'bg-red-100 border-red-500 text-red-700' : 'bg-green-100 border-green-500 text-green-700'; ?>
-                    <div class="border-l-4 p-4 mb-4 rounded-xl text-xs font-bold shadow-sm <?= $alert_theme ?>">
-                        <?= htmlspecialchars($notification_msg) ?>
-                    </div>
-                <?php endif; ?>
-
-                <div id="pages-container" >
-
-                    <?php if (!$is_employee_role): ?>
-                    <div id="dashboard-page" class="page-section hidden bg-white p-6  rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 class="text-xl font-bold mb-2">Analytics Overview</h3>
-                        <p class="text-slate-500">Ito ang system dashboard section. Dito mo makikita ang stats.</p>
-                    </div>
-
-                    <div id="recruitment-page" class="page-section hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 class="text-xl font-bold mb-2">Recruitment Management</h3>
-                        <p class="text-slate-500">Dito pinapamahalaan ang mga job postings at hiring workflows.</p>
-                    </div>
-
-                    <div id="applicant-page" class="page-section hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 class="text-xl font-bold mb-2">Applicant Management</h3>
-                        <p class="text-slate-500">Listahan at statuses ng mga nag-apply sa kumpanya.</p>
-                    </div>
-                    <?php endif; ?>
-
-                    <div id="employee-page" class="page-section">
-                        <?php if(empty($all_employees)): ?>
-                            <div class="p-8 bg-white text-center rounded-2xl border text-slate-500 font-medium shadow-sm">
-                                No active employee account mapping found in the workspace data pipeline.
-                            </div>
-                        <?php else: ?>
-                            <?php if ($is_employee_role): ?>
-                                <?php $me = $all_employees[0]; ?>
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div class="lg:col-span-2 space-y-6">
-                                        <div class="bg-white  p-6 rounded-2xl border border-slate-200 shadow-md">
-                                            <h4 class="text-md font-bold text-slate-800 mb-4 border-b pb-2 text-orange-500"><i class="bi bi-person-lines-fill mr-2"></i>Employee Profile Data</h4>
-                                            <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-xs text-slate-700">
-                                                <div><span class="text-slate-400 font-bold block uppercase">Full Name:</span> <span class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($me['full_name']) ?></span></div>
-                                                <div><span class="text-slate-400 font-bold block uppercase">Assigned Station:</span> <span class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($me['department']) ?></span></div>
-                                                <div><span class="text-slate-400 font-bold block uppercase">Employee ID:</span> <span class="font-mono font-bold text-indigo-600 text-sm"><?= htmlspecialchars($me['display_emp_id']) ?></span></div>
-                                                <div><span class="text-slate-400 font-bold block uppercase">Contact Line:</span> <span class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($me['phone']) ?></span></div>
-                                                <div class="col-span-2"><span class="text-slate-400 font-bold block uppercase">Complete Address:</span> <span class="text-slate-900"><?= htmlspecialchars($me['address']) ?></span></div>
-                                            </div>
-                                        </div>
-                                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                                            <h4 class="text-md font-bold text-slate-800 mb-4 border-b pb-2 text-indigo-500"><i class="bi bi-credit-card-2-front mr-2"></i>Statutory Benefits ID Records</h4>
-                                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs">
-                                                <div class="p-2.5 bg-slate-50 border rounded-xl"><strong>GSIS ID:</strong><br><span class="text-slate-600"><?= htmlspecialchars($me['gsis_id'] ?: '—') ?></span></div>
-                                                <div class="p-2.5 bg-slate-50 border rounded-xl"><strong>SSS NO:</strong><br><span class="text-slate-600"><?= htmlspecialchars($me['sss_id'] ?: '—') ?></span></div>
-                                                <div class="p-2.5 bg-slate-50 border rounded-xl"><strong>PHILHEALTH:</strong><br><span class="text-slate-600"><?= htmlspecialchars($me['philhealth_id'] ?: '—') ?></span></div>
-                                                <div class="p-2.5 bg-slate-50 border rounded-xl"><strong>PAG-IBIG:</strong><br><span class="text-slate-600"><?= htmlspecialchars($me['pagibig_id'] ?: '—') ?></span></div>
-                                            </div>
-                                        </div>
-                                        <button onclick="triggerPayslip(<?= $me['id'] ?>)" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2">
-                                            <i class="bi bi-file-earmark-pdf-fill text-sm"></i> Launch Active Pay Summary Sheet
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php else: ?>
-                                <div class="rounded-2xl border border-slate-200 shadow-xl bg-white overflow-hidden">
-                                    <table class="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr class="bg-slate-50 border-b text-xs font-bold uppercase tracking-wider text-slate-700">
-                                                <th class="p-4">Emp ID</th>
-                                                <th class="p-4">Full Name</th>
-                                                <th class="p-4">System Corporate Account</th>
-                                                <th class="p-4">Deployment</th>
-                                                <th class="p-4 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y text-sm text-slate-800">
-                                            <?php foreach ($all_employees as $emp): ?>
-                                                <tr class="hover:bg-slate-50/80 transition-colors">
-                                                    <td class="p-4 font-mono font-bold text-indigo-600"><?= htmlspecialchars($emp['display_emp_id']) ?></td>
-                                                    <td class="p-4 font-semibold"><?= htmlspecialchars($emp['full_name']) ?></td>
-                                                    <td class="p-4">
-                                                        <div class="text-xs font-medium text-slate-700"><?= htmlspecialchars($emp['employee_gmail']) ?></div>
-                                                        <div class="text-[11px] text-slate-400">Phone: <?= htmlspecialchars($emp['phone']) ?></div>
-                                                    </td>
-                                                    <td class="p-4">
-                                                        <span class="px-2.5 py-0.5 bg-slate-100 text-slate-800 text-xs font-bold rounded-full border border-slate-200">
-                                                            <?= htmlspecialchars($emp['department']) ?>
-                                                        </span>
-                                                    </td>
-                                                    <td class="p-4 text-right">
-                                                        <button onclick="triggerPayslip(<?= $emp['id'] ?>)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-50 text-white font-bold text-xs rounded-lg shadow-sm transition-all">
-                                                            Open Payslip Sheet
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                    </div>
-
-                    <?php if ($is_employee_role && !empty($all_employees)): ?>
-                    <div id="leave-page" class="page-section hidden">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div>
-                                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                                    <h4 class="text-md font-black text-slate-800 uppercase tracking-tight mb-4"><i class="bi bi-envelope-paper-fill mr-2 text-orange-500"></i>Fill Up Leave Form</h4>
-                                    <form method="POST" class="space-y-4">
-                                        <input type="hidden" name="employee_id" value="<?= $all_employees[0]['id'] ?>">
-                                        <div>
-                                            <label class="text-xs font-bold">Leave Type</label>
-                                            <select name="leave_type" class="w-full p-2 border rounded-xl" required>
-                                                <option value="Sick Leave">Sick Leave</option>
-                                                <option value="Vacation Leave">Vacation Leave</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="text-xs font-bold">Reason</label>
-                                            <textarea name="reason" class="w-full p-2 border rounded-xl" required></textarea>
-                                        </div>
-                                        <button type="submit" name="apply_leave" class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl transition-all">
-                                            Dispatch Application Node
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                                <h4 class="text-md font-black text-slate-800 uppercase tracking-tight mb-4">Request Status</h4>
-                                <div class="space-y-3 max-h-[400px] overflow-y-auto">
-                                    <?php if(empty($leave_history)): ?>
-                                        <p class="text-xs text-slate-400">No records found.</p>
-                                    <?php else: ?>
-                                        <?php foreach($leave_history as $req): 
-                                            $status_color = ($req['status'] == 'Approved') ? 'bg-green-100 text-green-700' : 
-                                                            (($req['status'] == 'Rejected') ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700');
-                                        ?>
-                                            <div class="p-3 border rounded-xl flex justify-between items-center">
-                                                <div>
-                                                    <p class="text-xs font-bold"><?= htmlspecialchars($req['leave_type']) ?></p>
-                                                    <p class="text-[10px] text-slate-500 truncate w-40"><?= htmlspecialchars($req['reason']) ?></p>
-                                                </div>
-                                                <span class="px-2 py-1 text-[10px] font-bold rounded-full <?= $status_color ?>">
-                                                    <?= htmlspecialchars($req['status']) ?>
-                                                </span>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                    <div id="attendance-page" class="page-section hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 class="text-xl font-bold mb-2"><?= $is_employee_role ? 'Time In / Time Out Engine' : 'Attendance Logs Data Pipeline' ?></h3>
-                        <p class="text-slate-500 mb-4">Current Server Time Node: <span class="font-mono bg-slate-200 px-2 py-0.5 rounded text-sm font-bold"><?= date('h:i A') ?></span></p>
-                        
-                        <?php if ($is_employee_role && !empty($all_employees)): ?>
-                           <form method="POST" id="attendanceForm" class="flex gap-4">
-    <input type="hidden" name="employee_id" value="<?= $all_employees[0]['id'] ?>">
-
-    <input type="hidden" name="latitude" id="latitude">
-    <input type="hidden" name="longitude" id="longitude">
-
-    <button type="submit" name="time_in" id="btnTimeIn"
-        class="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs uppercase shadow-md">
-        Time In
-    </button>
-
-    <button type="submit" name="time_out" id="btnTimeOut"
-        class="px-6 py-3 bg-rose-600 text-white font-bold rounded-xl text-xs uppercase shadow-md">
-        Time Out
-    </button>
-</form>
-                        <?php else: ?>
-                            <div class="p-4 bg-slate-50 rounded-xl border text-xs font-mono text-slate-600">
-                                [System Log] Biometric pipeline active. Server monitoring operational nodes...
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                </div>
-            </div>
-        </div>
     </div>
+</div>
 
-    <div class="modal fade" id="payslipModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-md modal-dialog-centered">
-            <div class="modal-content border-0 rounded-2xl overflow-hidden shadow-2xl">
-                <div class="p-2 bg-slate-900 flex justify-end">
-                    <button type="button" class="btn-close btn-close-white px-3" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body bg-slate-100 p-4" id="printArea"></div>
-                <div class="bg-slate-50 p-3 border-t flex justify-end gap-2">
-                    <button type="button" class="px-4 py-2 bg-slate-600 text-white font-bold rounded-xl text-xs" data-bs-dismiss="modal">Close</button>
-                    <button type="button" onclick="window.print()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs"><i class="bi bi-printer mr-1"></i> Print</button>
-                </div>
-            </div>
+<!-- EXACT PAYSLIP STATEMENT MODAL (Identical layout to employee.php triggerPayslip) -->
+<div id="payslipModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden">
+        <div class="flex justify-between items-center bg-slate-50 px-6 py-4 border-b no-print">
+            <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2 text-sm">
+                <i class="bi bi-receipt text-emerald-600"></i> Employee Payroll Statement
+            </h5>
+            <button onclick="closePayslipModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
         </div>
-    </div>
-
-    <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
-    <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
-
-    <script>
-        function confirmLogout() {
-            Swal.fire({
-                title: 'Log Out?',
-                text: "Are you sure you want to Log out?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#FF8C00',
-                cancelButtonColor: '#475569',
-                confirmButtonText: 'Yes',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = 'logout.php';
-                }
-            });
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const tabs = document.querySelectorAll(".nav-tab");
-            const sections = document.querySelectorAll(".page-section");
-            const dynamicTitle = document.getElementById("dynamic-title");
-            const dynamicSubtitle = document.getElementById("dynamic-subtitle");
-
-            const pageMeta = {
-                "dashboard-page": { title: "Analytics Dashboard", sub: "Real-time metrics tracking and performance nodes." },
-                "recruitment-page": { title: "Recruitment Workspace", sub: "Control current corporate recruitment pipelines." },
-                "applicant-page": { title: "Applicants Registry", sub: "Review system talent screening logs." },
-                "employee-page": { 
-                    title: "<?= $is_employee_role ? 'My Corporate Dashboard' : 'PannaKoda Employee Directory' ?>", 
-                    sub: "Manage logs, review active payroll profiles and configurations." 
-                },
-                "leave-page": { title: "Leave Application Request", sub: "File and submit digital time-off records." },
-                "attendance-page": { title: "Attendance Tracking Node", sub: "Biometric clock parameters and logs." }
-            };
-
-            function switchPage(targetId) {
-                sections.forEach(sec => sec.classList.add("hidden"));
-                const activeSection = document.getElementById(targetId);
-                if (activeSection) activeSection.classList.remove("hidden");
-
-                tabs.forEach(t => {
-                    if (t.getAttribute("data-target") === targetId) {
-                        t.classList.add("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
-                        t.classList.remove("hover:bg-white/10", "text-inherit");
-                    } else {
-                        t.classList.remove("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
-                        t.classList.add("hover:bg-white/10", "text-inherit");
-                    }
-                });
-
-                if (pageMeta[targetId]) {
-                    dynamicTitle.innerText = pageMeta[targetId].title;
-                    dynamicSubtitle.innerText = pageMeta[targetId].sub;
-                }
-            }
-
-            tabs.forEach(tab => {
-                tab.addEventListener("click", function (e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute("data-target");
-                    switchPage(targetId);
-                    history.pushState(null, '', `?page=${targetId}`);
-                });
-            });
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const initialPage = urlParams.get('page');
-            if (initialPage && document.getElementById(initialPage)) {
-                switchPage(initialPage);
-            } else {
-                switchPage("employee-page"); 
-            }
-        });
-
-        const allEmployees = <?= json_encode($all_employees) ?>;
-        let bsModalInstance = null;
-
-        function triggerPayslip(dbId) {
-            const emp = allEmployees.find(e => e.id == dbId);
-            if (!emp) return;
-
-            const modalBody = document.getElementById('printArea');
-            
-            function renderPayslip(mode = 'monthly') {
-                const isManager = (emp.department === 'Manager' || emp.department === 'HR Department');
-                const isMWE = true; // Minimum Wage Earner flag
-                
-                // Base calculations depending on Monthly or Kinsenas (Semi-Monthly)
-                const baseMonthly = isManager ? 20000 : 15000;
-                const divisor = (mode === 'monthly') ? 1 : 2;
-                
-                const dailyRate = baseMonthly / 22; // Assuming 22 working days a month
-                const daysWorked = mode === 'monthly' ? 22 : 11;
-                const basicPay = baseMonthly / divisor;
-                
-                // Allowances & Incentives
-                const allowances = (mode === 'monthly' ? 1000 : 500);
-                const incentives = (mode === 'monthly' ? 500 : 250);
-                const overtimePay = (mode === 'monthly' ? 850 : 425);
-                const holidayPay = (mode === 'monthly' ? 645 : 322.50);
-
-                const grossPay = basicPay + allowances + incentives + overtimePay + holidayPay;
-                
-                // Government Deductions (pro-rated if semi-monthly)
-                const sss = (isManager ? 900 : 675) / divisor;
-                const phil = (isManager ? 400 : 300) / divisor;
-                const pagibig = 100 / divisor;
-                const withholdingTax = 0.00; // MWE Tax Exempt
-                
-                const lateDeduction = 0.00;
-                const absenceDeduction = 0.00;
-
-                const totalDeductions = sss + phil + pagibig + withholdingTax + lateDeduction + absenceDeduction;
-                const netPay = grossPay - totalDeductions;
-
-                const payPeriod = mode === 'monthly' ? 'July 1–31, 2026' : 'July 1–15, 2026';
-                const payDate = mode === 'monthly' ? 'August 1, 2026' : 'July 18, 2026';
-
-                return `
-                    <div class="bg-white p-6 rounded-xl border print-container shadow-sm text-xs font-sans text-slate-800">
-                        <div class="flex justify-between items-start border-b pb-4 mb-4">
-                            <div>
-                                <h2 class="font-black text-base text-slate-900 uppercase tracking-wide">PannaKoda Enterprise</h2>
-                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Official Payslip Statement (${mode.toUpperCase()})</p>
-                                <p class="text-[9px] text-slate-400 mt-0.5">TIN: 000-123-456-000 | Dasmariñas, Cavite</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="px-2.5 py-1 bg-slate-100 font-bold rounded-md uppercase text-[10px]">${mode} View</span>
-                                <p class="text-[10px] text-slate-400 mt-1">Pay Period: ${payPeriod}</p>
-                                <p class="text-[10px] text-slate-400">Pay Date: ${payDate}</p>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            <div>
-                                <span class="text-slate-400 block font-bold text-[9px] uppercase">Employee Name:</span>
-                                <span class="font-bold text-slate-900">${emp.full_name}</span>
-                                <span class="block text-[10px] text-indigo-600 font-semibold">${isMWE ? '★ Minimum Wage Earner (Tax Exempt)' : 'Regular Wage Earner'}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block font-bold text-[9px] uppercase">Employee ID:</span>
-                                <span class="font-mono font-bold text-indigo-600">${emp.display_emp_id}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block font-bold text-[9px] uppercase">Position / Dept:</span>
-                                <span class="font-semibold text-slate-700">${emp.department}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block font-bold text-[9px] uppercase">Contact Line:</span>
-                                <span class="font-semibold text-slate-700">${emp.phone}</span>
-                            </div>
-                        </div>
-
-                        <div class="mb-4 no-print flex gap-2">
-                            <button onclick="window.switchPayslipMode('${dbId}', 'monthly')" class="px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 font-bold text-[10px] ${mode === 'monthly' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}">Monthly</button>
-                            <button onclick="window.switchPayslipMode('${dbId}', 'semi-monthly')" class="px-2.5 py-1 rounded bg-slate-200 hover:bg-slate-300 font-bold text-[10px] ${mode === 'semi-monthly' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}">Kinsenas (Semi-Monthly)</button>
-                        </div>
-
-                        <div class="space-y-3">
-                            <div>
-                                <h4 class="font-bold text-slate-700 uppercase tracking-wide text-[10px] mb-1.5 border-b pb-1">Earnings</h4>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Basic Pay (Daily Rate: ₱${dailyRate.toFixed(2)} × ${daysWorked} days)</span>
-                                    <span class="font-mono font-semibold">₱${basicPay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Overtime Pay</span>
-                                    <span class="font-mono font-semibold">₱${overtimePay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Holiday Pay</span>
-                                    <span class="font-mono font-semibold">₱${holidayPay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Allowances (Meal, Transpo, Rice)</span>
-                                    <span class="font-mono font-semibold">₱${allowances.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Incentives / Bonus</span>
-                                    <span class="font-mono font-semibold">₱${incentives.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1.5 font-bold text-slate-900 bg-slate-50 px-1 rounded mt-1">
-                                    <span>Gross Pay</span>
-                                    <span class="font-mono">₱${grossPay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 class="font-bold text-slate-700 uppercase tracking-wide text-[10px] mb-1.5 border-b pb-1">Deductions</h4>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">SSS Contribution</span>
-                                    <span class="font-mono font-semibold text-rose-600">-₱${sss.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">PhilHealth Contribution</span>
-                                    <span class="font-mono font-semibold text-rose-600">-₱${phil.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Pag-IBIG Contribution</span>
-                                    <span class="font-mono font-semibold text-rose-600">-₱${pagibig.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Withholding Tax (BIR Tax Exempt for MWE)</span>
-                                    <span class="font-mono font-semibold text-slate-500">₱${withholdingTax.toFixed(2)}</span>
-                                </div>
-                                <div class="flex justify-between py-1 border-b border-dashed">
-                                    <span class="text-slate-600">Absences / Late / Undertime</span>
-                                    <span class="font-mono font-semibold text-rose-600">-₱${(lateDeduction + absenceDeduction).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                                <div class="flex justify-between py-1.5 font-bold text-rose-700 bg-rose-50/50 px-1 rounded mt-1">
-                                    <span>Total Deductions</span>
-                                    <span class="font-mono">-₱${totalDeductions.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                </div>
-                            </div>
-
-                            <div class="pt-2 bg-indigo-50 p-3 rounded-lg border border-indigo-100 flex justify-between items-center mt-4">
-                                <div>
-                                    <span class="font-black text-indigo-900 block uppercase tracking-wider text-[11px]">Net Take-Home Pay</span>
-                                    <span class="text-[9px] text-indigo-500">Computed via standard Philippine labor & tax compliance</span>
-                                </div>
-                                <span class="font-mono font-black text-indigo-700 text-sm">₱${netPay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Attach handler globally to support switching views dynamically inside modal
-            window.switchPayslipMode = function(id, mode) {
-                modalBody.innerHTML = renderPayslip(mode);
-            };
-
-            modalBody.innerHTML = renderPayslip('monthly');
-
-            if (!bsModalInstance) {
-                bsModalInstance = new bootstrap.Modal(document.getElementById('payslipModal'));
-            }
-            bsModalInstance.show();
-        }
         
+        <div class="p-6 overflow-y-auto max-h-[75vh]" id="printArea">
+            <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs">
+                <div class="text-center border-b pb-4 mb-4">
+                    <h3 class="font-black text-xl tracking-wide uppercase text-gray-900"><?= htmlspecialchars($employee['company_name'] ?? 'PannaKoda Stores Inc.') ?></h3>
+                    <p class="text-[11px] text-gray-500 font-medium"><?= htmlspecialchars($employee['company_address'] ?? '123 Business Corporate Center, Cavite, Philippines') ?></p>
+                    <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000</p>
+                    <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
+                        PAYSLIP STATEMENT | <?= $cutOffPeriod ?>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4 border-b pb-4 bg-slate-50/60 p-3 rounded-lg">
+                   <div>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-gray-800"><?= htmlspecialchars($employee['employee_id'] ?? 'EMP-' . str_pad($employee['id'], 4, '0', STR_PAD_LEFT)) ?></span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-gray-800"><?= htmlspecialchars($employee['full_name']) ?></span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Department:</span> <span class="font-semibold text-gray-800"><?= htmlspecialchars($employee['department'] ?? 'Unassigned') ?></span></p>
+                   </div>
+                   <div>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800"><?= htmlspecialchars($role) ?></span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800"><?= $payDateStr ?></span></p>
+                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-emerald-600">MWE Exempt (₱0.00 Tax)</span></p>
+                   </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 items-start mb-4">
+                    <div>
+                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings Breakdown</h6>
+                        <div class="space-y-1">
+                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
+                                <span class="text-gray-600">Basic Pay (Kinsenas)</span> 
+                                <span class="font-semibold font-mono">₱<?= number_format($kinsenas_base, 2) ?></span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
+                                <span class="text-gray-600">Allowances (Rice/Meal)</span> 
+                                <span class="font-semibold font-mono">₱<?= number_format($kinsenas_allowance, 2) ?></span>
+                            </div>
+                            <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
+                                <span>Gross Pay (Period)</span> 
+                                <span class="font-mono text-emerald-700">₱<?= number_format($kinsenas_gross, 2) ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Deductions Breakdown</h6>
+                        <div class="space-y-1">
+                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
+                                <span class="text-gray-600">SSS Contribution</span> 
+                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_sss, 2) ?></span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
+                                <span class="text-gray-600">PhilHealth Contribution</span> 
+                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_philhealth, 2) ?></span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
+                                <span class="text-gray-600">Pag-IBIG Contribution</span> 
+                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_pagibig, 2) ?></span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
+                                <span class="text-gray-600">Withholding Tax (BIR)</span> 
+                                <span class="font-mono text-emerald-600 font-semibold">₱0.00</span>
+                            </div>
+                            <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
+                                <span>Total Deductions</span> 
+                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_deductions, 2) ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-100 p-2.5 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-600 border border-slate-200">
+                    <div><span class="font-semibold">Monthly Base Reference:</span> ₱<?= number_format($monthly_base, 2) ?></div>
+                    <div><span class="font-semibold">Monthly Gross Reference:</span> ₱<?= number_format($monthly_gross, 2) ?></div>
+                    <div><span class="font-semibold">Monthly Total Deductions:</span> ₱<?= number_format($monthly_deductions, 2) ?></div>
+                    <div><span class="font-semibold">Monthly Net Reference:</span> ₱<?= number_format($monthly_net, 2) ?></div>
+                </div>
+
+                <div class="bg-[#212121] text-white p-3.5 rounded-xl flex justify-between items-center shadow-inner">
+                    <div>
+                        <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
+                        <p class="text-[10px] text-white/40">Kinsenas Payout Calculation</p>
+                    </div>
+                    <div class="text-right">
+                        <h2 class="text-xl font-black text-[#FF8C00] font-mono">₱<?= number_format($kinsenas_net, 2) ?></h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 px-6 py-3 border-t flex justify-end gap-2 no-print">
+            <button onclick="closePayslipModal()" class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-100 rounded-xl text-xs font-semibold text-gray-700">Close</button>
+            <button onclick="window.print()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5">
+                <i class="bi bi-printer"></i> Print Statement
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Modal Controls
+    function openLeaveModal() { document.getElementById('leaveModal').classList.remove('hidden'); }
+    function closeLeaveModal() { document.getElementById('leaveModal').classList.add('hidden'); }
     
-const OFFICE_LAT = 14.3018;      // PALITAN ng company latitude
-const OFFICE_LNG = 120.9586;     // PALITAN ng company longitude
-const MAX_DISTANCE = 100;        // meters
+    function openPayslipModal() { document.getElementById('payslipModal').classList.remove('hidden'); }
+    function closePayslipModal() { document.getElementById('payslipModal').classList.add('hidden'); }
 
-function distance(lat1, lon1, lat2, lon2){
+    function openAttendanceModal() {
+        document.getElementById('attendanceModal').classList.remove('hidden');
+        getLocation();
+    }
+    function closeAttendanceModal() { document.getElementById('attendanceModal').classList.add('hidden'); }
 
-    const R = 6371000;
+    let userLat = null;
+    let userLong = null;
 
-    const dLat = (lat2-lat1) * Math.PI/180;
-    const dLon = (lon2-lon1) * Math.PI/180;
-
-    const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1*Math.PI/180) *
-        Math.cos(lat2*Math.PI/180) *
-        Math.sin(dLon/2) *
-        Math.sin(dLon/2);
-
-    return R * 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-document.getElementById("attendanceForm").addEventListener("submit",function(e){
-
-    e.preventDefault();
-
-    if(!navigator.geolocation){
-        Swal.fire("Error","GPS not supported.","error");
-        return;
+    function getLocation() {
+        const statusDiv = document.getElementById('geoStatus');
+        if (navigator.geolocation) {
+            statusDiv.textContent = "Kinukuha ang iyong GPS location...";
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userLat = position.coords.latitude;
+                    userLong = position.coords.longitude;
+                    statusDiv.textContent = `GPS Nakuha! Lat: ${userLat.toFixed(4)}, Long: ${userLong.toFixed(4)}`;
+                    statusDiv.className = "mb-4 text-xs font-mono font-bold text-emerald-600 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200";
+                    
+                    const btnIn = document.getElementById('btnTimeIn');
+                    const btnOut = document.getElementById('btnTimeOut');
+                    btnIn.disabled = false; btnIn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btnOut.disabled = false; btnOut.classList.remove('opacity-50', 'cursor-not-allowed');
+                },
+                (error) => {
+                    statusDiv.textContent = "Nabigo makuha ang GPS: " + error.message;
+                    statusDiv.className = "mb-4 text-xs font-mono font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200";
+                },
+                { enableHighAccuracy: true }
+            );
+        } else {
+            statusDiv.textContent = "Hindi suportado ng browser mo ang Geolocation.";
+        }
     }
 
-    navigator.geolocation.getCurrentPosition(function(pos){
-
-        const lat=pos.coords.latitude;
-        const lng=pos.coords.longitude;
-
-        document.getElementById("latitude").value=lat;
-        document.getElementById("longitude").value=lng;
-
-        const meters=distance(lat,lng,OFFICE_LAT,OFFICE_LNG);
-
-        if(meters>MAX_DISTANCE){
-
-            Swal.fire({
-                icon:"error",
-                title:"Check In Denied",
-                text:"You are outside the allowed location."
-            });
-
+    function recordAttendance(type) {
+        if (!userLat || !userLong) {
+            Swal.fire('Error', 'Wala pang nakuhang GPS coordinates.', 'error');
             return;
         }
 
-        e.target.submit();
+        fetch('process_attendance.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=${type}&lat=${userLat}&lng=${userLong}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            closeAttendanceModal();
+            Swal.fire({
+                title: data.status === 'success' ? 'Tagumpay!' : 'Paunawa',
+                text: data.message,
+                icon: data.status,
+                confirmButtonColor: '#FF8C00'
+            });
+        })
+        .catch(err => {
+            Swal.fire('Error', 'Nagka-problema sa koneksyon sa sistema.', 'error');
+        });
+    }
 
-    },function(){
-
-        Swal.fire("Error","Please enable Location.","error");
-
-    });
-
-});
-
-    </script>
+    <?php if(!empty($leave_msg)): ?>
+        Swal.fire({
+            title: 'Ipinadala na!',
+            text: '<?= addslashes($leave_msg) ?>',
+            icon: 'success',
+            confirmButtonColor: '#FF8C00'
+        });
+    <?php endif; ?>
+</script>
 </body>
 </html>

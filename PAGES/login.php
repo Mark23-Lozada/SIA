@@ -1,7 +1,10 @@
 <?php
+ob_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start(); 
 
-// Database Connection Setup
 $host = "localhost";
 $username = "root";
 $password_db = ""; 
@@ -16,36 +19,16 @@ if (!$db) {
 $message = "";
 $messageClass = "";
 
-// Get message triggers from registration or password resets
-if (isset($_GET['error']) && $_GET['error'] == 'gmail_not_found') {
-    $message = "Gmail address not found in our records.";
-    $messageClass = "bg-red-100 border-red-400 text-red-700";
-}
-
-if (isset($_GET['success']) && $_GET['success'] == 'password_updated') {
-    $message = "Password updated successfully. You can now log in.";
-    $messageClass = "bg-green-100 border-green-400 text-green-700";
-}
-
-// Check kung may laman na ang Admin table para sa register visibility button
 $check_query = "SELECT COUNT(*) as total FROM admin";
 $check_result = $db->query($check_query);
 $row_count = $check_result->fetch_assoc();
 $admin_exists = $row_count['total'] > 0;
 
-// ... (sa ilalim ng $admin_exists logic)
-
-// Check kung may laman na ang HR table para sa register visibility button
-$check_hr_query = "SELECT COUNT(*) as total FROM hr_accounts";
-$check_hr_result = $db->query($check_hr_query);
-$hr_count_row = $check_hr_result->fetch_assoc();
-$hr_exists = $hr_count_row['total'] > 0;
-
 if(isset($_POST['login'])){
     $gmail = trim($_POST['gmail']); 
     $password = trim($_POST['password']); 
 
-    // 1. I-CHECK MUNA KUNG ADMIN ANG NAG-LOG IN
+    // 1. ADMIN LOGIN CHECK
     $admin_query = "SELECT id, gmail, password FROM admin WHERE gmail = ? LIMIT 1";
     $stmt = $db->prepare($admin_query);
     $stmt->bind_param("s", $gmail);
@@ -56,7 +39,7 @@ if(isset($_POST['login'])){
         if (password_verify($password, $admin_row['password'])) {
             session_unset();
             $_SESSION['admin_id'] = $admin_row['id']; 
-            $_SESSION['role'] = 'Admin';
+            $_SESSION['role'] = 'admin';
             header("Location: dashboard.php");
             exit();
         } else {
@@ -65,10 +48,10 @@ if(isset($_POST['login'])){
         }
     } 
     else {
-        // 2. KUNG HINDI ADMIN, I-CHECK KUNG EMPLOYEE
-        $emp_query = "SELECT id, full_name, employee_gmail, employee_password, department FROM employees WHERE employee_gmail = ? LIMIT 1";
+        // 2. EMPLOYEE LOGIN CHECK
+        $emp_query = "SELECT id, full_name, email, employee_gmail, company_gmail, employee_password, department, position FROM employees WHERE email = ? OR employee_gmail = ? OR company_gmail = ? LIMIT 1";
         $stmt2 = $db->prepare($emp_query);
-        $stmt2->bind_param("s", $gmail);
+        $stmt2->bind_param("sss", $gmail, $gmail, $gmail);
         $stmt2->execute();
         $emp_result = $stmt2->get_result();
 
@@ -76,46 +59,48 @@ if(isset($_POST['login'])){
             if (password_verify($password, $emp_row['employee_password'])) {
                 session_unset();
                 $_SESSION['user_id'] = $emp_row['id']; 
-                $_SESSION['role'] = 'Employee'; 
                 $_SESSION['fullname'] = $emp_row['full_name'];
-                $_SESSION['employee_gmail'] = $emp_row['employee_gmail'];
+                $_SESSION['employee_gmail'] = $emp_row['employee_gmail'] ?? $emp_row['company_gmail'];
                 
-                header("Location: info.php"); 
-                exit();
-            } else {
-                $message = "Incorrect password for Employee.";
-                $messageClass = "bg-red-100 border-red-400 text-red-700";
-            }
-        } 
-        else {
-            // 3. KUNG HINDI ADMIN AT EMPLOYEE, I-CHECK KUNG HR (Galing sa hr_accounts table)
-            $hr_query = "SELECT id, gmail, password, role FROM hr_accounts WHERE gmail = ? LIMIT 1";
-            $stmt3 = $db->prepare($hr_query);
-            $stmt3->bind_param("s", $gmail);
-            $stmt3->execute();
-            $hr_result = $stmt3->get_result();
+                $department = strtolower(trim($emp_row['department']));
+                $_SESSION['role'] = $department; 
 
-            if($hr_row = $hr_result->fetch_assoc()){
-                if (password_verify($password, $hr_row['password'])) {
-                    session_unset();
-                    $_SESSION['hr_id'] = $hr_row['id']; 
-                    $_SESSION['role'] = $hr_row['role']; // Ang value nito ay 'hr' base sa database structure mo
-                    $_SESSION['gmail'] = $hr_row['gmail'];
-                    
-                    header("Location: dashboard.php"); // Direkta sa dashboard.php gaya ng request mo
+                // Suriin kung personal/employee email o company email ang ginamit
+                $is_employee_gmail_login = ($gmail === $emp_row['email'] || $gmail === $emp_row['employee_gmail']);
+
+                if ($is_employee_gmail_login) {
+                    header("Location: info.php"); 
                     exit();
                 } else {
-                    $message = "Incorrect password for HR.";
-                    $messageClass = "bg-red-100 border-red-400 text-red-700";
+                    // Pag-route batay sa department kapag company_gmail ang ginamit
+                    if ($department === 'admin') {
+                        header("Location: dashboard.php"); 
+                        exit();
+                    } elseif ($department === 'hr') {
+                        header("Location: dashboard.php"); 
+                        exit();
+                    } elseif ($department === 'finance') {
+                        header("Location: ../project-test1/FRONTEND/history.php"); 
+                        exit();
+                    } elseif ($department === 'manager') {
+                        header("Location: ../project-test1/FRONTEND/add_item.php"); 
+                        exit();
+                    } else {
+                        header("Location: ../project-test1/FRONTEND/pos_dash.php"); 
+                        exit();
+                    }
                 }
             } else {
-                // Kapag wala sa tatlong table ang email
-                $message = "Gmail/Email address not found in our records.";
-                $messageClass = "bg-yellow-100 border-yellow-400 text-yellow-700";
+                $message = "Incorrect password.";
+                $messageClass = "bg-red-100 border-red-400 text-red-700";
             }
+        } else {
+            $message = "Gmail address not found in our records.";
+            $messageClass = "bg-red-100 border-red-400 text-red-700";
         }
     }
 }
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -131,7 +116,6 @@ if(isset($_POST['login'])){
 <div class="w-full max-w-md p-4">
     <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden p-8">
         
-        <!-- Header Brand Logo and Text -->
         <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-xl text-white mb-3 shadow-md shadow-orange-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -142,14 +126,12 @@ if(isset($_POST['login'])){
             <p class="text-sm text-slate-500 mt-1">Sign in as Admin or Employee</p>
         </div>
 
-        <!-- System Response Messages -->
         <?php if(!empty($message)): ?>
             <div class="border-l-4 p-4 mb-6 rounded <?php echo $messageClass; ?> relative text-sm" role="alert">
                 <span class="block sm:inline"><?php echo $message; ?></span>
             </div>
         <?php endif; ?>
 
-        <!-- Form Fields -->
         <form method="POST" class="space-y-5">
             <div>
                 <label for="floatingGmail" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Gmail / Email Address</label>
@@ -168,7 +150,6 @@ if(isset($_POST['login'])){
                     <input type="checkbox" id="showpassword" onclick="togglePasswordVisibility()" class="rounded border-slate-300 text-orange-500 focus:ring-orange-500 h-4 w-4 mr-2">
                     <span>Show Password</span>
                 </label>
-              
             </div>
 
             <div class="pt-2 space-y-3">
@@ -177,21 +158,14 @@ if(isset($_POST['login'])){
                     Sign In
                 </button>
 
-            <div class="pt-2 space-y-3">
-    <?php if (!$admin_exists): ?>
-        <button type="button" onclick="location.href='register.php'" 
-                class="w-full bg-slate-500 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform active:scale-[0.99]">
-            Register Initial Admin Account
-        </button>
-    <?php endif; ?>
-
-    <?php if ($admin_exists && !$hr_exists): ?>
-        <button type="button" onclick="location.href='register_hr.php'" 
-                class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform active:scale-[0.99]">
-            Add HR Account
-        </button>
-    <?php endif; ?>
-</div>
+                <div class="pt-2 space-y-3">
+                    <?php if (!$admin_exists): ?>
+                        <button type="button" onclick="location.href='register.php'" 
+                                class="w-full bg-slate-500 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform active:scale-[0.99]">
+                            Register Initial Admin Account
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
         </form>      
     </div>
