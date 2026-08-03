@@ -7,7 +7,8 @@ if (session_status() === PHP_SESSION_NONE) {
 $current_role = isset($_SESSION['role']) ? strtolower(trim($_SESSION['role'])) : '';
 
 // HUWAG MAG-LOGOUT O MAG-REDIRECT KUNG ADMIN O HR ANG ROLE SA SIDEBAR
-if (!isset($_SESSION['user_id']) || ($current_role !== 'admin' && $current_role !== 'hr')) {
+// Suriin kung may user_id o admin_id at kung tama ang role
+if ((!isset($_SESSION['user_id']) && !isset($_SESSION['admin_id'])) || ($current_role !== 'admin' && $current_role !== 'hr')) {
     header("Location: login.php");
     exit();
 }
