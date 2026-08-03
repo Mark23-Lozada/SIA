@@ -66,6 +66,8 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'profit_and_loss.php', 'Profit & Loss', 'bi bi-graph-up-arrow', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'transaction.php', 'Transaction', 'bi bi-diagram-3-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'branches_management.php', 'Add Branch', 'bi bi-diagram-3-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'branch_map.php', 'Branch Map', 'bi bi-map-fill', $exact_current_page);
  
       
         ?>
@@ -102,7 +104,8 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
           renderCompactLink($frontendPrefix . 'cooking.php', 'Cooking', 'bi bi-egg-fried', $exact_current_page);
           renderCompactLink($frontendPrefix . 'depart.php', 'Departs', 'bi bi-diagram-3-fill', $exact_current_page);
-         
+          renderCompactLink($hrmsPrefix . 'manager_reimbursement_review.php', 'Reimbursement Approval', 'bi bi-cash-stack', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'liquidation_request.php', 'Liquidation Review', 'bi bi-file-earmark-check', $exact_current_page);
       
 
       

@@ -205,7 +205,8 @@ $ingredients_result = $ingredients_stmt->get_result();
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Quantity</label>
-                        <input type="number" id="restock_quantity" value="10" min="1" step="any" oninput="calculateTotalCost()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold" required>
+                        <!-- Updated with max="10" -->
+                        <input type="number" id="restock_quantity" value="10" min="1" max="10" step="any" oninput="calculateTotalCost()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold" required>
                     </div>
                 </div>
 
@@ -260,8 +261,21 @@ $ingredients_result = $ingredients_stmt->get_result();
         }
 
         function validateBudget(event) {
+            const qty = parseFloat(document.getElementById('restock_quantity').value) || 0;
             const requestedAmount = parseFloat(document.getElementById('modal_amount').value) || 0;
             
+            // Validation para masigurong hindi hihigit sa 10 ang quantity
+            if (qty > 100) {
+                event.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Quantity!',
+                    text: 'The maximum allowed quantity for restock is 100.',
+                    confirmButtonColor: '#ea580c'
+                });
+                return false;
+            }
+
             if (requestedAmount > globalCompanyBudget) {
                 event.preventDefault(); // Pigilan ang pag-submit ng form
                 Swal.fire({
@@ -302,3 +316,4 @@ $ingredients_result = $ingredients_stmt->get_result();
 </body>
 </html>
 <?php $conn->close(); ?>
+```[cite: 1]

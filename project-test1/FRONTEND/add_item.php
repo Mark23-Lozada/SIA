@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// 1. Siguraduhin muna na may naka-login na user
+// 1. Siguraduhin muna na may naka-login na user[cite: 2]
 if (!isset($_SESSION['role'])) {
     header("Location: ../../PAGES/login.php");
     exit();
@@ -12,7 +12,7 @@ require_once __DIR__ . '/../BACKEND/db_inventory.php';
 $current_page = basename($_SERVER['PHP_SELF']);
 
 // ============================================================
-// Handles the optional item image upload.
+// Handles the optional item image upload.[cite: 2]
 // ============================================================
 function handle_item_image_upload(&$swal_trigger, &$swal_type, &$swal_title, &$swal_text) {
     if (!isset($_FILES['item_image']) || $_FILES['item_image']['error'] === UPLOAD_ERR_NO_FILE) {
@@ -100,11 +100,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $swal_title = "Invalid Price!";
         $swal_text = "The price must be greater than 0.";
         $isValid = false;
-    } elseif ($price > 10000) {
+    } elseif ($price > 1000) {
         $swal_trigger = true;
         $swal_type = "error";
         $swal_title = "Invalid Price!";
-        $swal_text = "The price cannot exceed ₱10,000.00.";
+        $swal_text = "The price cannot exceed ₱1,000.00 based on items configuration.";
         $isValid = false;
     }
 
@@ -116,11 +116,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $check_result = $check_stmt->get_result();
 
             if ($check_result->num_rows > 0) {
-                $swal_trigger = true;
-                $swal_type = "warning";
-                $swal_title = "Category Already Exists!";
-                $swal_text = "The category '" . htmlspecialchars($new_category_name) . "' already exists. Please select it from the dropdown menu instead.";
-                $is_duplicate = true;
+                $existing_cat = $check_result->fetch_assoc();
+                $final_category_id = (int)$existing_cat['id'];
             } else {
                 $insert_cat_stmt = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
                 $insert_cat_stmt->bind_param("s", $new_category_name);
@@ -132,9 +129,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $check_stmt->close();
         } else {
             $final_category_id = $dropdown_category_id;
+            
+            if ($final_category_id > 0) {
+                $cat_exist_stmt = $conn->prepare("SELECT id FROM categories WHERE id = ?");
+                $cat_exist_stmt->bind_param("i", $final_category_id);
+                $cat_exist_stmt->execute();
+                $cat_exist_result = $cat_exist_stmt->get_result();
+                
+                if ($cat_exist_result->num_rows === 0) {
+                    $swal_trigger = true;
+                    $swal_type = "error";
+                    $swal_title = "Category Not Found!";
+                    $swal_text = "The selected category does not exist in the database. Please choose a valid category.";
+                    $isValid = false;
+                }
+                $cat_exist_stmt->close();
+            } else {
+                $swal_trigger = true;
+                $swal_type = "warning";
+                $swal_title = "Incomplete Form!";
+                $swal_text = "Please select an existing category or type a new one.";
+                $isValid = false;
+            }
         }
 
-        if (!$is_duplicate && !empty($item_name) && $final_category_id > 0 && $price > 0) {
+        if ($isValid && !$is_duplicate && !empty($item_name) && $final_category_id > 0 && $price > 0) {
+            // Strict duplicate check ignoring spaces/case (e.g. "choco butter" matches "chocobutter")
             $item_check_stmt = $conn->prepare("SELECT id FROM items WHERE LOWER(REPLACE(item_name, ' ', '')) = LOWER(REPLACE(?, ' ', '')) AND category_id = ?");
             $item_check_stmt->bind_param("si", $item_name, $final_category_id);
             $item_check_stmt->execute();
@@ -144,7 +164,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $swal_trigger = true;
                 $swal_type = "warning";
                 $swal_title = "Duplicate Item Name!";
-                $swal_text = "The item '" . htmlspecialchars($item_name) . "' already exists under this selected category.";
+                $swal_text = "The item '" . htmlspecialchars($item_name) . "' already exists under this selected category (spacing or name variant match).";
             } else {
                 $image_path = handle_item_image_upload($swal_trigger, $swal_type, $swal_title, $swal_text);
 
@@ -170,7 +190,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
             }
             $item_check_stmt->close();
-        } elseif (!$is_duplicate && !$swal_trigger) {
+        } elseif (!$is_duplicate && !$swal_trigger && $isValid) {
             $swal_trigger = true;
             $swal_type = "warning";
             $swal_title = "Incomplete Form!";
@@ -186,7 +206,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple POS - Add Item</title>
-    <!-- Combined CSS Utilities -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <script src="../LIBRARIES/tailwind.js"></script>
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
@@ -194,7 +213,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         #sidebar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        /* Smooth Custom Dropdown styling */
         .dropdown-animate { transform-origin: top; animation: scaleIn 0.15s ease-out; }
         @keyframes scaleIn { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
     </style>
@@ -204,7 +222,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
  <div class="flex h-screen w-full overflow-hidden">
   <?php include '../../PAGES/sidebar.php'; ?>
 
-    <!-- Main Workspace Container -->
     <div id="main-wrapper" class="flex-grow flex flex-col h-full overflow-y-auto">
         <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
             <div class="flex items-center gap-4">
@@ -219,7 +236,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </header>
         
-        <!-- Modernized Orange & White View Layer -->
         <div class="flex-grow p-6 flex flex-col items-center justify-start lg:pt-10">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 w-full max-w-xl transition-all duration-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5 mb-6 border-b border-slate-100 pb-4">
@@ -234,7 +250,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST" enctype="multipart/form-data" novalidate class="space-y-5">
 
-                    <!-- Image Upload -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-2 tracking-wide">Item Image (Optional)</label>
                         <div id="imageDropzone" class="border-2 border-dashed border-slate-300 hover:border-orange-400 rounded-xl text-center p-6 cursor-pointer bg-slate-50/50 hover:bg-orange-50/10 transition-all flex flex-col items-center justify-center">
@@ -253,7 +268,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </button>
                     </div>
 
-                    <!-- Category inputs split logically -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="new_category_name" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Create New Category</label>
@@ -287,7 +301,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     <div class="border-t border-slate-100 my-4"></div>
 
-                    <!-- Item Identity Info -->
                     <div>
                         <label for="item_name" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Item Name <span class="text-red-500">*</span></label>
                         <input type="text" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 placeholder:text-slate-400 transition-all" id="item_name" name="item_name" placeholder="e.g., Iced Caramel Macchiato" required>
@@ -297,12 +310,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <label for="price" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Price (PHP ₱) <span class="text-red-500">*</span></label>
                         <div class="relative">
                             <span class="absolute left-3.5 top-2 text-sm font-semibold text-slate-400">₱</span>
-                            <input type="number" step="0.01" min="0.01" class="w-full text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 placeholder:text-slate-400 transition-all font-medium" id="price" name="price" placeholder="0.00" required>
+                            <input type="number" step="0.01" min="0.01" max="1000" class="w-full text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 placeholder:text-slate-400 transition-all font-medium" id="price" name="price" placeholder="0.00" required>
                         </div>
-                        <p class="text-[10px] text-slate-400 mt-1">Maximum price allowed is ₱10,000.00</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Maximum price allowed is ₱1,000.00</p>
                     </div>
 
-                    <!-- Info Alert Component -->
                     <div class="bg-amber-50/60 rounded-xl p-3 border border-amber-200/60 flex items-start gap-2.5 text-xs text-amber-800 leading-relaxed">
                         <i class="bi bi-info-circle-fill text-amber-500 text-sm mt-0.5"></i>
                         <p>
@@ -312,7 +324,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </p>
                     </div>
 
-                    <!-- Submit Engine Trigger -->
                     <button type="submit" class="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm rounded-xl transition-all shadow-md shadow-orange-600/10 focus:outline-none focus:ring-4 focus:ring-orange-200 flex items-center justify-center gap-2">
                         <i class="bi bi-save-fill"></i> Save and View Inventory
                     </button>
@@ -323,13 +334,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 </div>
     <script>
-        // Smooth Sidebar Toggle Control System
         document.getElementById('burgerToggle').addEventListener('click', function() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('hidden');
         });
 
-        // Tailored Dropdown Handling Architecture
         const dropBtn = document.getElementById('dropdownMenuButton');
         const dropList = document.getElementById('dropdownList');
         const hiddenInput = document.getElementById('hidden_category_id');
@@ -354,7 +363,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         document.addEventListener('click', () => dropList.classList.add('hidden'));
 
-        // Drag & Drop Media Handling Component Engine
         (function() {
             const dropzone = document.getElementById('imageDropzone');
             const fileInput = document.getElementById('item_image');
@@ -401,12 +409,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 fileInput.value = '';
                 preview.src = '';
                 preview.classList.add('hidden');
-                prompt.classList.remove('hidden');
+                prompt.classList.add('hidden');
                 removeBtn.classList.add('hidden');
             });
         })();
 
-        // SweetAlert Execution Module
         <?php if ($swal_trigger): ?>
             Swal.fire({
                 icon: '<?php echo $swal_type; ?>',
