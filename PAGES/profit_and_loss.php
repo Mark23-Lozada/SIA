@@ -28,24 +28,37 @@ $expense_query = "SELECT SUM(amount) as total_expenses
 $exp_res = $conn->query($expense_query);
 $total_expenses_budget = ($exp_res && $e_row = $exp_res->fetch_assoc()) ? ($e_row['total_expenses'] ?? 0) : 0;
 
+// Fetch total approved salary advances para masama sa expenses/deductions
+$advance_expense_query = "SELECT SUM(amount) as total_advances 
+                          FROM salary_advances 
+                          WHERE status = 'Approved' 
+                          AND YEAR(created_at) = YEAR(CURDATE())";
+$adv_exp_res = $conn->query($advance_expense_query);
+$total_salary_advances = ($adv_exp_res && $a_row = $adv_exp_res->fetch_assoc()) ? ($a_row['total_advances'] ?? 0) : 0;
+
 // Fetch total employee payroll expenses (Active Hired Salaries)
 $total_payroll = 0.00;
 
-// Combine operational expenses + payroll expenses
-$total_expenses = $total_expenses_budget + $total_payroll;
-if ($total_expenses == 0) {
+// Combine operational expenses + payroll expenses + approved salary advances
+$total_expenses = $total_expenses_budget + $total_payroll + $total_salary_advances;
+if ($total_expenses == 0 && $total_revenue == 45850.00) {
     $total_expenses = 18200.00; // Fallback match mock if empty db
 }
 
 // Net Profit Calculation
 $net_profit = $total_revenue - $total_expenses;
 
-// Fetch list of detailed deductions / expenses for table listing
-$deductions_query = "SELECT request_id as ref_id, title as description, department, amount, created_at, 'Budget Expense' as type 
-                     FROM budget_requests 
-                     WHERE status = 'Fully Approved (Admin)' 
-                     AND YEAR(created_at) = YEAR(CURDATE())
-                     ORDER BY created_at DESC";
+// Fetch list of detailed deductions / expenses for table listing (Pinagsamang Budget Requests at Salary Advances)
+$deductions_query = "
+    (SELECT request_id as ref_id, title as description, department, amount, created_at, 'Budget Expense' as type 
+     FROM budget_requests 
+     WHERE status = 'Fully Approved (Admin)' AND YEAR(created_at) = YEAR(CURDATE()))
+    UNION
+    (SELECT CONCAT('ADV-', sa.id) as ref_id, CONCAT('Salary Advance: ', sa.reason) as description, e.department, sa.amount, sa.created_at, 'Salary Advance' as type 
+     FROM salary_advances sa 
+     JOIN employees e ON sa.employee_id = e.id 
+     WHERE sa.status = 'Approved' AND YEAR(sa.created_at) = YEAR(CURDATE()))
+    ORDER BY created_at DESC";
 $deductions_result = $conn->query($deductions_query);
 
 // Fetch monthly breakdown for chart (Fixed for ONLY_FULL_GROUP_BY compatibility)
@@ -119,7 +132,7 @@ if ($chart_res && $chart_res->num_rows > 0) {
                     </form>
                 </div>
 
-                <!-- Summary Boxes (Total Revenue, Total Expenses Breakdown, Net Profit) -->
+                <!-- Summary Boxes -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-green-500">
                         <div class="flex items-center justify-between mb-1">
@@ -145,7 +158,7 @@ if ($chart_res && $chart_res->num_rows > 0) {
                             <span class="p-2 bg-red-50 text-red-600 rounded-lg"><i class="bi bi-graph-down-arrow text-lg"></i></span>
                         </div>
                         <h3 class="text-2xl font-black text-red-600">₱<?php echo number_format($total_expenses, 2); ?></h3>
-                        <p class="text-xs text-gray-500 mt-2">Budget requests & operational costs</p>
+                        <p class="text-xs text-gray-500 mt-2">Budget, operational, & salary advances</p>
                     </div>
 
                     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-orange-500">
@@ -203,6 +216,10 @@ if ($chart_res && $chart_res->num_rows > 0) {
                                         <td class="py-3 px-2 font-medium text-gray-900">Approved Budget Deductions</td>
                                         <td class="py-3 px-2 text-right text-red-600 font-semibold">(₱<?php echo number_format($total_expenses_budget, 2); ?>)</td>
                                     </tr>
+                                    <tr>
+                                        <td class="py-3 px-2 font-medium text-gray-900">Approved Salary Advances</td>
+                                        <td class="py-3 px-2 text-right text-red-600 font-semibold">(₱<?php echo number_format($total_salary_advances, 2); ?>)</td>
+                                    </tr>
                                     <tr class="bg-orange-50 font-bold">
                                         <td class="py-3 px-2 text-gray-900">Net Profit / (Loss)</td>
                                         <td class="py-3 px-2 text-right <?php echo ($net_profit >= 0) ? 'text-green-600' : 'text-red-600'; ?>">₱<?php echo number_format($net_profit, 2); ?></td>
@@ -212,11 +229,11 @@ if ($chart_res && $chart_res->num_rows > 0) {
                         </div>
                     </div>
 
-                    <!-- Detailed Budget Expense Itemized List -->
+                    <!-- Detailed Budget Expense & Salary Advance Itemized List -->
                     <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden lg:col-span-2">
                         <div class="px-6 py-4 border-b border-gray-200 font-bold text-gray-900 flex justify-between items-center bg-gray-50">
-                            <span>Itemized Expense & Payroll Ledger List</span>
-                            <span class="text-xs text-gray-500 font-normal">Approved Deductions & Operational Costs</span>
+                            <span>Itemized Expense & Salary Advance Ledger</span>
+                            <span class="text-xs text-gray-500 font-normal">Approved Costs & Cash Advances</span>
                         </div>
                         <div class="overflow-x-auto p-4 max-h-[350px] overflow-y-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -237,7 +254,7 @@ if ($chart_res && $chart_res->num_rows > 0) {
                                                     <div class="text-xs font-normal text-gray-500"><?php echo htmlspecialchars($d_row['description']); ?></div>
                                                 </td>
                                                 <td class="py-3 px-4">
-                                                    <span class="px-2.5 py-1 rounded-md text-xs font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+                                                    <span class="px-2.5 py-1 rounded-md text-xs font-semibold border <?php echo ($d_row['type'] === 'Salary Advance') ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-amber-50 text-amber-700 border-amber-200'; ?>">
                                                         <?php echo htmlspecialchars($d_row['type']); ?>
                                                     </span>
                                                     <div class="text-xs text-gray-500 mt-0.5"><?php echo htmlspecialchars($d_row['department'] ?? 'General'); ?></div>
@@ -250,7 +267,7 @@ if ($chart_res && $chart_res->num_rows > 0) {
                                         <?php endwhile; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="4" class="text-center py-8 text-gray-400 italic">No itemized expense records found.</td>
+                                            <td colspan="4" class="text-center py-8 text-gray-400 italic">No itemized expense or salary advance records found.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>

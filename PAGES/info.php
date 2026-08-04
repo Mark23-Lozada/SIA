@@ -85,7 +85,6 @@ $kinsenas_tax = $ph['tax'] / 2;
 $kinsenas_deductions = $kinsenas_sss + $kinsenas_philhealth + $kinsenas_pagibig + $kinsenas_tax;
 $kinsenas_net = $kinsenas_gross - $kinsenas_deductions;
 
-// Date calculations para sa cut-off period text
 $day = date('j');
 $monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 $currentMonthYear = $monthNames[date('n') - 1] . ' ' . date('Y');
@@ -105,6 +104,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
         $leave_msg = "Leave request successfully submitted to HR screening!";
     }
     $l_stmt->close();
+}
+
+// Handle Salary Advance Request Submission with Range Validation
+$advance_msg = "";
+$advance_error = "";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
+    $adv_amount = floatval($_POST['amount'] ?? 0);
+    $adv_reason = $_POST['reason'] ?? '';
+    
+    // Server-side validation: Max 10k, Min 1k[cite: 1]
+    if ($adv_amount < 1000 || $adv_amount > 10000) {
+        $advance_error = "Salary advance amount must be between ₱1,000 and ₱10,000[cite: 1].";
+    } else {
+        $status = 'Pending';
+        $a_stmt = $conn->prepare("INSERT INTO salary_advances (employee_id, amount, reason, status) VALUES (?, ?, ?, ?)");
+        $a_stmt->bind_param("idss", $user_id, $adv_amount, $adv_reason, $status);
+        if ($a_stmt->execute()) {
+            $advance_msg = "Salary advance request successfully submitted for Finance review!";
+        }
+        $a_stmt->close();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -153,6 +173,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                     <i class="bi bi-calendar-plus text-base text-amber-400"></i> Request Leave
                 </button>
 
+                <button onclick="openAdvanceModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
+                    <i class="bi bi-cash-stack text-base text-cyan-400"></i> Request Salary Advance
+                </button>
+
                 <button onclick="openPayslipModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
                     <i class="bi bi-wallet2 text-base text-indigo-400"></i> Payslip Statement
                 </button>
@@ -190,8 +214,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                         </p>
                     </div>
                 </div>
-
-               
             </div>
 
             <!-- Credentials Grid Details -->
@@ -295,10 +317,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
             </div>
             <div>
                 <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Reason Statement</label>
-                <textarea name="reason" rows="3" required placeholder="Iahad ang dahilan ng iyong pagliban..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500"></textarea>
+                <textarea name="reason" rows="3" required placeholder="State your reason for absence..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500"></textarea>
             </div>
             <button type="submit" name="submit_leave" class="w-full bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-orange-500/20 text-sm">
                 Submit Leave Application
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- SALARY ADVANCE REQUEST MODAL -->
+<div id="advanceModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-200">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-cash-stack text-cyan-500"></i> Request Salary Advance</h3>
+            <button onclick="closeAdvanceModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form method="POST" class="space-y-4" onsubmit="return validateAdvanceAmount()">
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Amount Requested (₱) [Min: ₱1,000 - Max: ₱10,000]</label>
+                <input type="number" step="0.01" id="adv_amount_input" name="amount" min="1000" max="10000" required placeholder="Enter amount (1,000 - 10,000)..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Reason Statement</label>
+                <textarea name="reason" rows="3" required placeholder="State the reason for advance..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500"></textarea>
+            </div>
+            <button type="submit" name="submit_advance" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-cyan-500/20 text-sm">
+                Submit Advance Request
             </button>
         </form>
     </div>
@@ -311,10 +356,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
             <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-geo-alt-fill text-emerald-500"></i> Geo-Location Attendance</h3>
             <button onclick="closeAttendanceModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
         </div>
-        <p class="text-xs text-zinc-500 mb-6">Piliin kung magpapatala ka ng Time In o Time Out gamit ang iyong GPS coordinates.</p>
+        <p class="text-xs text-zinc-500 mb-6">Choose whether to record Time In or Time Out using your GPS coordinates.</p>
         
         <div id="geoStatus" class="mb-4 text-xs font-mono font-bold text-amber-600 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-            Naghihintay ng GPS Location...
+            Waiting for GPS Location...
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -366,7 +411,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
 
                 <div class="grid grid-cols-2 gap-6 items-start mb-4">
                     <div>
-                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings (Kinsenas Breakdown)</h6>
+                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings (Semi-Monthly Breakdown)</h6>
                         <div class="space-y-1">
                             <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
                                 <span class="text-gray-600">Basic Salary (Semi-Monthly)</span> 
@@ -420,7 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                 <div class="bg-[#212121] text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
                     <div>
                         <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
-                        <p class="text-[10px] text-white/40">Kinsenas Payout (15-Day Cycle)</p>
+                        <p class="text-[10px] text-white/40">Semi-Monthly Payout (15-Day Cycle)</p>
                     </div>
                     <div class="text-right">
                         <h2 class="text-2xl font-black text-[#FF8C00] font-mono">₱<?= number_format($kinsenas_net, 2) ?></h2>
@@ -443,6 +488,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
     function openLeaveModal() { document.getElementById('leaveModal').classList.remove('hidden'); }
     function closeLeaveModal() { document.getElementById('leaveModal').classList.add('hidden'); }
     
+    function openAdvanceModal() { document.getElementById('advanceModal').classList.remove('hidden'); }
+    function closeAdvanceModal() { document.getElementById('advanceModal').classList.add('hidden'); }
+
     function openPayslipModal() { document.getElementById('payslipModal').classList.remove('hidden'); }
     function closePayslipModal() { document.getElementById('payslipModal').classList.add('hidden'); }
 
@@ -452,18 +500,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
     }
     function closeAttendanceModal() { document.getElementById('attendanceModal').classList.add('hidden'); }
 
+    // Client-side validation for Salary Advance (Min: 1000, Max: 10000)
+    function validateAdvanceAmount() {
+        const amount = parseFloat(document.getElementById('adv_amount_input').value);
+        if (amount < 1000 || amount > 10000) {
+            Swal.fire({
+                title: 'Invalid Amount',
+                text: 'The salary advance request must be between ₱1,000 and ₱10,000[cite: 1].',
+                icon: 'warning',
+                confirmButtonColor: '#FF8C00'
+            });
+            return false;
+        }
+        return true;
+    }
+
     let userLat = null;
     let userLong = null;
 
     function getLocation() {
         const statusDiv = document.getElementById('geoStatus');
         if (navigator.geolocation) {
-            statusDiv.textContent = "Kinukuha ang iyong GPS location...";
+            statusDiv.textContent = "Fetching your GPS location...";
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     userLat = position.coords.latitude;
                     userLong = position.coords.longitude;
-                    statusDiv.textContent = `GPS Nakuha! Lat: ${userLat.toFixed(4)}, Long: ${userLong.toFixed(4)}`;
+                    statusDiv.textContent = `GPS Acquired! Lat: ${userLat.toFixed(4)}, Long: ${userLong.toFixed(4)}`;
                     statusDiv.className = "mb-4 text-xs font-mono font-bold text-emerald-600 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200";
                     
                     const btnIn = document.getElementById('btnTimeIn');
@@ -472,19 +535,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
                     btnOut.disabled = false; btnOut.classList.remove('opacity-50', 'cursor-not-allowed');
                 },
                 (error) => {
-                    statusDiv.textContent = "Nabigo makuha ang GPS: " + error.message;
+                    statusDiv.textContent = "Failed to get GPS: " + error.message;
                     statusDiv.className = "mb-4 text-xs font-mono font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200";
                 },
                 { enableHighAccuracy: true }
             );
         } else {
-            statusDiv.textContent = "Hindi suportado ng browser mo ang Geolocation.";
+            statusDiv.textContent = "Geolocation is not supported by your browser.";
         }
     }
 
     function recordAttendance(type) {
         if (!userLat || !userLong) {
-            Swal.fire('Error', 'Wala pang nakuhang GPS coordinates.', 'error');
+            Swal.fire('Error', 'No GPS coordinates acquired yet.', 'error');
             return;
         }
 
@@ -497,24 +560,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_leave'])) {
         .then(data => {
             closeAttendanceModal();
             Swal.fire({
-                title: data.status === 'success' ? 'Tagumpay!' : 'Paunawa',
+                title: data.status === 'success' ? 'Success!' : 'Notice',
                 text: data.message,
                 icon: data.status,
                 confirmButtonColor: '#FF8C00'
             });
         })
         .catch(err => {
-            Swal.fire('Error', 'Nagka-problema sa koneksyon sa sistema.', 'error');
+            Swal.fire('Error', 'System connection problem occurred.', 'error');
         });
     }
 
     <?php if(!empty($leave_msg)): ?>
-        Swal.fire({
-            title: 'Ipinadala na!',
-            text: '<?= addslashes($leave_msg) ?>',
-            icon: 'success',
-            confirmButtonColor: '#FF8C00'
-        });
+        Swal.fire({title: 'Submitted!', text: '<?= addslashes($leave_msg) ?>', icon: 'success', confirmButtonColor: '#FF8C00'});
+    <?php endif; ?>
+
+    <?php if(!empty($advance_msg)): ?>
+        Swal.fire({title: 'Submitted!', text: '<?= addslashes($advance_msg) ?>', icon: 'success', confirmButtonColor: '#FF8C00'});
+    <?php endif; ?>
+
+    <?php if(!empty($advance_error)): ?>
+        Swal.fire({title: 'Notice', text: '<?= addslashes($advance_error) ?>', icon: 'warning', confirmButtonColor: '#FF8C00'});
     <?php endif; ?>
 </script>
 </body>
