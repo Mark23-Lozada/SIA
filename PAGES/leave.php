@@ -84,6 +84,7 @@ $hr_leave_queue = $conn->query($sql);
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <script src="../LIBRARIES/tailwind.js"></script>
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
 
