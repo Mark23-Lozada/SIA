@@ -52,15 +52,15 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
     ?>
         <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Admin Control</div>
         <?php
-      
+      renderCompactLink($hrmsPrefix. 'dashboard.php', 'Applicant Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
+      renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
           renderCompactLink($frontendPrefix . 'pos_dash.php', 'POS Dashboard', 'bi-speedometer2', $exact_current_page);
           renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'profit_and_loss.php', 'Profit & Loss', 'bi bi-graph-up-arrow', $exact_current_page);
              renderCompactLink($hrmsPrefix . 'admin_cash_advance.php', 'Cash Advance Management', 'bi bi-cash-coin', $exact_current_page);
-          renderCompactLink($hrmsPrefix . 'admin_liquidation_approve.php', 'Liquidation Approval', 'bi bi-file-earmark-check', $exact_current_page);
+          
           renderCompactLink($hrmsPrefix . 'admin_reimbursement_approve.php', 'Reimbursement Approval', 'bi bi-cash-stack', $exact_current_page);
-          renderCompactLink($hrmsPrefix . 'admin_resignation_approve.php', 'Employee Resignation Approval', 'bi bi-person-x', $exact_current_page);
+         
           renderCompactLink($hrmsPrefix . 'admin_applicants.php', 'Admin Applicants Management', 'bi-person-badge', $exact_current_page);
          renderCompactLink($hrmsPrefix . 'admin_leaves.php', 'Leave Management', 'bi bi-calendar-check', $exact_current_page);
         renderCompactLink($hrmsPrefix . 'admin_budget_approve.php', 'Budget Approval', 'bi bi-cash-stack', $exact_current_page);

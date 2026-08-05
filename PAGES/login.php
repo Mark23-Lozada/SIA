@@ -74,7 +74,7 @@ if(isset($_POST['login'])){
                 } else {
                     // Pag-route batay sa department kapag company_gmail ang ginamit
                     if ($department === 'admin') {
-                        header("Location: dashboard.php"); 
+                        header("Location: ../project-test1/FORNTEND/sales_day.php"); 
                         exit();
                     } elseif ($department === 'hr') {
                         header("Location: dashboard.php"); 

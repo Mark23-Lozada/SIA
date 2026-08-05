@@ -60,6 +60,7 @@ if ($action === 'fetch_dashboard_data') {
   <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
   <script src="../LIBRARIES/tailwind.js"></script>
   <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
 
