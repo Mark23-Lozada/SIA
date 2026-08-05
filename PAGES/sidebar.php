@@ -58,7 +58,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'profit_and_loss.php', 'Profit & Loss', 'bi bi-graph-up-arrow', $exact_current_page);
              renderCompactLink($hrmsPrefix . 'admin_cash_advance.php', 'Cash Advance Management', 'bi bi-cash-coin', $exact_current_page);
-          
+          renderCompactLink($hrmsPrefix . 'admin_promotion.php', 'Promotion Management', 'bi bi-person-badge', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'admin_reimbursement_approve.php', 'Reimbursement Approval', 'bi bi-cash-stack', $exact_current_page);
          
           renderCompactLink($hrmsPrefix . 'admin_applicants.php', 'Admin Applicants Management', 'bi-person-badge', $exact_current_page);
@@ -105,7 +105,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($frontendPrefix . 'depart.php', 'Departs', 'bi bi-diagram-3-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'manager_reimbursement_review.php', 'Reimbursement Approval', 'bi bi-cash-stack', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'liquidation_request.php', 'Liquidation Review', 'bi bi-file-earmark-check', $exact_current_page);
-      
+          renderCompactLink($hrmsPrefix . 'manager_promotion.php', 'Employee Promotion', 'bi bi-person-badge', $exact_current_page);
 
       
         ?>
@@ -117,6 +117,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
     ?>
         <div class="section-title uppercase tracking-wider text-white/40 font-bold px-2">Finance</div>
         <?php
+        renderCompactLink($hrmsPrefix . 'finance_promotion.php', 'Promotion Review', 'bi bi-person-badge', $exact_current_page);
         renderCompactLink($frontendPrefix . 'pos_dash.php', 'POS Dashboard', 'bi-speedometer2', $exact_current_page);
           renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
           renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
@@ -126,7 +127,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($hrmsPrefix . 'transaction.php', 'Transaction', 'bi bi-diagram-3-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'tax.php', 'Tax Management', 'bi bi-diagram-3-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'finance_cash_review.php', 'Cash Advance Review', 'bi bi-cash-coin', $exact_current_page);
-      
+        renderCompactLink($hrmsPrefix . 'employee_salary.php' , 'Employee Salary', 'bi bi-cash-coin', $exact_current_page);
         ?>
     <?php endif; ?>
   </nav>

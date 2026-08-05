@@ -18,6 +18,9 @@ $pass = "";
 $dbname = "pos";
 
 $conn = new mysqli($host, $user, $pass, $dbname);
+if ($conn->connect_error) {
+    die("Database Connection Failed: " . $conn->connect_error);
+}
 
 // 1. HANDLE ONBOARDING SUBMISSION / UPDATE VIA POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'complete_onboarding') {
@@ -46,7 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $contract_end_date = $conn->real_escape_string($_POST['contract_end_date'] ?? '');
     $contract_duration_years = floatval($_POST['contract_duration_years'] ?? 1.0);
     $work_location = $conn->real_escape_string($_POST['work_location'] ?? '');
+    
+    // Siguruhing hindi 0 ang salary; mag-fallback kung sakaling blangko
     $salary = floatval($_POST['salary']);
+    if ($salary <= 0) {
+        $salary = ($role === 'Manager') ? 45000.00 : 22000.00;
+    }
 
     // Backend Strong Password Validation
     if (strlen($password_input) < 8 || 
@@ -103,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             WHERE id = $id";
         
         if ($conn->query($update_sql)) {
-            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with Philippine statutory profile setup!"]);
+            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with fixed salary saved!"]);
         } else {
             echo json_encode(["success" => false, "message" => $conn->error]);
         }
@@ -385,17 +393,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employee Gmail (Auto: last.firstname@...)</label>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employee Gmail</label>
                   <input type="text" id="modalEmployeeGmail" readonly class="form-control bg-gray-100 text-sm text-indigo-600 font-medium">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Gmail (Auto: Dept/Name@...)</label>
+                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Gmail</label>
                   <input type="text" id="modalCompanyGmail" readonly class="form-control bg-gray-100 text-sm text-emerald-600 font-medium">
                 </div>
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Set Password (Shared for Both Accounts)</label>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Set Password</label>
                 <input type="password" id="modalPassword" required class="form-control text-sm" placeholder="Ilagay ang strong password" oninput="validatePasswordStrength(this.value)">
                 <div id="passwordFeedback" class="text-[11px] mt-1 text-gray-500">
                   Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.
@@ -686,7 +694,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalGsis').value = emp.gsis_id || '-';
       
       const defaultSal = (emp.role || 'Staff') === 'Manager' ? 45000 : 22000;
-      document.getElementById('modalSalary').value = emp.salary ? emp.salary : defaultSal;
+      document.getElementById('modalSalary').value = (emp.salary && parseFloat(emp.salary) > 0) ? emp.salary : defaultSal;
 
       if (!onboardingModalInstance) {
         onboardingModalInstance = new bootstrap.Modal(document.getElementById('onboardingModal'));
@@ -698,6 +706,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       event.preventDefault();
       const id = document.getElementById('modalId').value;
       const password = document.getElementById('modalPassword').value;
+      
+      let salaryVal = document.getElementById('modalSalary').value;
+      const role = document.getElementById('modalRole').value;
+      if (!salaryVal || isNaN(salaryVal) || parseFloat(salaryVal) <= 0) {
+        salaryVal = (role === 'Manager') ? 45000 : 22000;
+      }
       
       const formData = new URLSearchParams();
       formData.append('action', 'complete_onboarding');
@@ -711,7 +725,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       formData.append('nationality', document.getElementById('modalNationality').value);
       formData.append('gender', document.getElementById('modalGender').value);
       formData.append('department', document.getElementById('modalDepartment').value);
-      formData.append('role', document.getElementById('modalRole').value);
+      formData.append('role', role);
       formData.append('employment_type', document.getElementById('modalEmploymentType').value);
       formData.append('immediate_supervisor', document.getElementById('modalSupervisor').value);
       formData.append('date_hired', document.getElementById('modalDateHired').value);
@@ -719,7 +733,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       formData.append('contract_end_date', document.getElementById('modalContractEnd').value);
       formData.append('contract_duration_years', document.getElementById('modalContractDuration').value);
       formData.append('work_location', document.getElementById('modalWorkLocation').value);
-      formData.append('salary', document.getElementById('modalSalary').value);
+      formData.append('salary', salaryVal);
 
       try {
         const res = await fetch(window.location.pathname, {
@@ -795,19 +809,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       });
     }
 
-    // Accurate Philippine Payroll & Statutory Computation Function (JS equivalent)
     function calculatePHPayroll(monthlyBase) {
-      // SSS (approx 4.5% employee share)
       let sss = Math.round(monthlyBase * 0.045 * 100) / 100;
       if (sss < 135) sss = 135;
       if (sss > 1350) sss = 1350;
 
-      // PhilHealth (2.5% employee share)
       let philhealth = Math.round(monthlyBase * 0.025 * 100) / 100;
       if (philhealth < 250) philhealth = 250;
       if (philhealth > 2500) philhealth = 2500;
 
-      // Pag-IBIG (2% employee share, capped at PHP 200)
       let pagibig = Math.round(monthlyBase * 0.02 * 100) / 100;
       if (pagibig > 200) pagibig = 200;
 
@@ -815,7 +825,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const taxableIncome = Math.max(0, monthlyBase - totalStatutory);
       let tax = 0.00;
 
-      // BIR TRAIN Law Monthly Tax Table
       if (taxableIncome > 20833 && taxableIncome <= 33333) {
         tax = (taxableIncome - 20833) * 0.15;
       } else if (taxableIncome > 33333 && taxableIncome <= 66667) {
@@ -837,13 +846,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       if (!emp) return;
 
       const monthlyBase = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
-      const monthlyAllowance = 2000; // Rice + Clothing allowance
+      const monthlyAllowance = 2000; 
       const monthlyGross = monthlyBase + monthlyAllowance;
 
       const ph = calculatePHPayroll(monthlyBase);
       const monthlyNet = monthlyGross - ph.totalDeductions;
 
-      // Kinsenas breakdown (15-day cut-off)
       const kinsenasBase = monthlyBase / 2;
       const kinsenasAllowance = monthlyAllowance / 2;
       const kinsenasGross = kinsenasBase + kinsenasAllowance;
