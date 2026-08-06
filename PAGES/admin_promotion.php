@@ -63,25 +63,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $conn->begin_transaction();
 
         try {
-            // 1. Update employee salary and position
+            // 1. Update employee salary and position[cite: 1]
             $updateEmp = $conn->prepare("UPDATE employees SET position_title = ?, salary = ? WHERE id = ?");
             $updateEmp->bind_param("sdi", $proposed_position, $new_salary, $employee_id);
             $updateEmp->execute();
             $updateEmp->close();
 
-            // 2. Update promotion request status
-            $updateReq = $conn->prepare("UPDATE promotion_requests SET status = 'Approved', admin_status = 'Approved', admin_approval_date = NOW() WHERE id = ?");
+            // 2. Update promotion request status (Inalis ang admin_approval_date para maiwasan ang error)
+            $updateReq = $conn->prepare("UPDATE promotion_requests SET status = 'Approved', admin_status = 'Approved' WHERE id = ?");
             $updateReq->bind_param("i", $request_id);
             $updateReq->execute();
             $updateReq->close();
 
             // 3. Record transaction to budget_requests so it reflects in transaction.php
+            $transId = "PROMO-" . $request_id;
             $transTitle = "Promotion & Salary Adjustment: " . $proposed_position;
-            $insertTrans = $conn->prepare("INSERT INTO budget_requests (title, requested_by, department, amount, status, created_at) VALUES (?, ?, ?, ?, 'Approved', NOW())");
-            $insertTrans->bind_param("sssd", $transTitle, $employee_name, $department, $new_salary);
+            $insertTrans = $conn->prepare("INSERT INTO budget_requests (request_id, title, requested_by, department, amount, status, created_at) VALUES (?, ?, ?, ?, ?, 'Approved', NOW())");
+            $insertTrans->bind_param("ssssd", $transId, $transTitle, $employee_name, $department, $new_salary);
             $insertTrans->execute();
             $insertTrans->close();
-
             $conn->commit();
             echo json_encode(["success" => true, "message" => "Promotion approved successfully! Employee salary/position updated and recorded in transactions."]);
         } catch (Exception $e) {

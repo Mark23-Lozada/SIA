@@ -60,7 +60,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
              renderCompactLink($hrmsPrefix . 'admin_cash_advance.php', 'Cash Advance Management', 'bi bi-cash-coin', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'admin_promotion.php', 'Promotion Management', 'bi bi-person-badge', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'admin_reimbursement_approve.php', 'Reimbursement Approval', 'bi bi-cash-stack', $exact_current_page);
-         
+       
           renderCompactLink($hrmsPrefix . 'admin_applicants.php', 'Admin Applicants Management', 'bi-person-badge', $exact_current_page);
          renderCompactLink($hrmsPrefix . 'admin_leaves.php', 'Leave Management', 'bi bi-calendar-check', $exact_current_page);
         renderCompactLink($hrmsPrefix . 'admin_budget_approve.php', 'Budget Approval', 'bi bi-cash-stack', $exact_current_page);
