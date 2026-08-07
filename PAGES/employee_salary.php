@@ -87,27 +87,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
     }
   </style>
 </head>
-<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+<body class="bg-[#f8fafc] font-sans antialiased h-screen overflow-hidden">
 
   <div class="flex h-screen w-full overflow-hidden">
     
     <?php include 'sidebar.php'; ?>
-    <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
+    <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0">
       
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Finance Dashboard: Employee Salary & Payroll</h1>
-          <p class="text-sm text-gray-500">Monitor employee base salaries, statutory contributions, department metrics, and generate payslips.</p>
+      <!-- MODERN DYNAMIC BANNER HEADER -->
+      <div class="relative overflow-hidden bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
+        <!-- Background Glow FX -->
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-blue-200 mb-3">
+              <i class="bi bi-cash-stack"></i> Finance Department
+            </div>
+            <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Employee Salary & Payroll Management</h1>
+            <p class="text-sm text-blue-100/80 max-w-2xl leading-relaxed">
+              Monitor employee base salaries, statutory contributions, department metrics, and generate official corporate payslips seamlessly.
+            </p>
+          </div>
+
+          <!-- Quick Action / Summary Indicator Pill -->
+          <div class="flex items-center gap-3">
+            <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/30 flex items-center justify-center text-blue-300">
+                <i class="bi bi-people-fill text-xl"></i>
+              </div>
+              <div>
+                <span class="block text-xs text-blue-200 font-medium">Total Workforce</span>
+                <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <!-- FINANCE TABS NAVIGATION -->
-        <div class="bg-gray-200/80 p-1 rounded-xl flex gap-1 shadow-inner">
-          <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
-            <i class="bi bi-cash-stack text-emerald-600"></i> Payroll & Salary List
-          </button>
-          <button id="tabHiredList" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <i class="bi bi-people text-[#FF8C00]"></i> Active Employees Directory
-          </button>
+
+        <!-- FINANCE TABS NAVIGATION (Integrated inside Header Footer area for clean modern layout) -->
+        <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-4">
+          <div class="text-xs text-blue-200/70 font-medium hidden sm:block">
+            <i class="bi bi-sliders mr-1"></i> Switch active directory view below
+          </div>
+          <div class="bg-black/20 backdrop-blur-md p-1 rounded-xl flex gap-1 border border-white/10 ml-auto">
+            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
+              <i class="bi bi-cash-stack text-emerald-600"></i> Payroll & Salary List
+            </button>
+            <button id="tabHiredList" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white">
+              <i class="bi bi-people text-[#FF8C00]"></i> Active Employees Directory
+            </button>
+          </div>
         </div>
       </div>
 
@@ -277,6 +307,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
       // Update Metric Values UI
       document.getElementById('statTotalEmp').innerText = totalEmp;
       document.getElementById('statOnboarding').innerText = onboardingCount;
+      document.getElementById('activeCountBadge').innerText = `${totalEmp} Active`;
 
       // Update Department Breakdown Badges
       const deptContainer = document.getElementById('deptBreakdownContainer');
@@ -576,7 +607,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
         if (id === activeBtnId) {
           btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold";
         } else {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-600 hover:text-gray-900";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white";
         }
       });
 

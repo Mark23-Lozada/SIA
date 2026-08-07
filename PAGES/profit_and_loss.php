@@ -105,10 +105,17 @@ if ($chart_res && $chart_res->num_rows > 0) {
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col overflow-y-auto">
             <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-                <h1 class="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                    <span class="w-3 h-3 bg-orange-500 rounded-full"></span> Profit and Loss Statement & Financial Analytics
-                </h1>
-                <span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">Active Fiscal Year <?php echo date('Y'); ?></span>
+                <div class="w-full bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 rounded-2xl p-6 text-white shadow-md relative overflow-hidden flex flex-col justify-center">
+                    <div class="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1 rounded-full text-xs font-semibold tracking-wide w-fit mb-2 backdrop-blur-sm border border-white/10">
+                        ANALYTICS OVERVIEW
+                    </div>
+                    <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
+                        Profit and Loss Statement & Financial Analytics (<?php echo date('F d, Y'); ?>)
+                    </h1>
+                    <p class="text-xs text-blue-100 mt-1 opacity-90">
+                        Monitor real-time revenue streams, earnings, and system reports seamlessly.
+                    </p>
+                </div>
             </header>
 
             <main class="p-6 space-y-6">

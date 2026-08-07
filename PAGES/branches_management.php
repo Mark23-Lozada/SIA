@@ -60,12 +60,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PannaKoda - API-Driven Nationwide Address Add Branch</title>
+    <title>PannaKoda - Branch Management</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    
+    <style>
+        .glass-header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+    </style>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            // (Keep existing JS logic here)
             const regionSelect = document.getElementById("regionSelect");
             const provinceSelect = document.getElementById("provinceSelect");
             const municipalitySelect = document.getElementById("municipalitySelect");
@@ -76,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             const municipalityText = document.getElementById("municipalityText");
             const barangayText = document.getElementById("barangayText");
 
-            // 1. Load Regions via PSGC API
             fetch("https://psgc.gitlab.io/api/regions/")
                 .then(res => res.json())
                 .then(data => {
@@ -87,25 +89,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         option.textContent = region.name;
                         regionSelect.appendChild(option);
                     });
-                })
-                .catch(err => console.error("Error loading regions:", err));
+                });
 
-            // 2. Load Provinces when Region changes
             regionSelect.addEventListener("change", function() {
                 const regionCode = this.value;
                 regionText.value = this.options[this.selectedIndex].text;
-
                 provinceSelect.innerHTML = '<option value="">Select Province</option>';
                 municipalitySelect.innerHTML = '<option value="">Select City / Municipality</option>';
                 barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-                
                 provinceSelect.disabled = true;
                 municipalitySelect.disabled = true;
                 barangaySelect.disabled = true;
 
                 if (!regionCode) return;
-
-                // May ibang region na walang province (tulad ng NCR), kaya kinukuha rin ang mga direktang munisipalidad/syudad kung sakali
                 fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/provinces/`)
                     .then(res => res.json())
                     .then(data => {
@@ -119,11 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             });
                             provinceSelect.disabled = false;
                         } else {
-                            // Kung walang province (e.g. NCR), direktang kunin ang mga cities/municipalities ng region
                             loadMunicipalitiesForRegion(regionCode);
                         }
-                    })
-                    .catch(err => console.error("Error loading provinces:", err));
+                    });
             });
 
             function loadMunicipalitiesForRegion(regionCode) {
@@ -141,18 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     });
             }
 
-            // 3. Load Cities / Municipalities when Province changes
             provinceSelect.addEventListener("change", function() {
                 const provinceCode = this.value;
                 provinceText.value = this.options[this.selectedIndex].text;
-
                 municipalitySelect.innerHTML = '<option value="">Select City / Municipality</option>';
                 barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
                 municipalitySelect.disabled = true;
                 barangaySelect.disabled = true;
 
                 if (!provinceCode) return;
-
                 fetch(`https://psgc.gitlab.io/api/provinces/${provinceCode}/cities-municipalities/`)
                     .then(res => res.json())
                     .then(data => {
@@ -164,20 +155,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             municipalitySelect.appendChild(option);
                         });
                         municipalitySelect.disabled = false;
-                    })
-                    .catch(err => console.error("Error loading municipalities:", err));
+                    });
             });
 
-            // 4. Load Barangays when City/Municipality changes
             municipalitySelect.addEventListener("change", function() {
                 const munCode = this.value;
                 municipalityText.value = this.options[this.selectedIndex].text;
-
                 barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
                 barangaySelect.disabled = true;
-
                 if (!munCode) return;
-
                 fetch(`https://psgc.gitlab.io/api/cities-municipalities/${munCode}/barangays/`)
                     .then(res => res.json())
                     .then(data => {
@@ -189,8 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             barangaySelect.appendChild(option);
                         });
                         barangaySelect.disabled = false;
-                    })
-                    .catch(err => console.error("Error loading barangays:", err));
+                    });
             });
 
             barangaySelect.addEventListener("change", function() {
@@ -199,108 +184,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         });
     </script>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased font-sans">
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
     <div class="flex h-screen w-full overflow-hidden">
-        
-        <!-- Sidebar Integration -->
         <div class="flex-shrink-0 h-full">
             <?php include 'sidebar.php'; ?>
         </div>
 
-        <!-- Main Content Area -->
         <div class="flex-1 flex flex-col overflow-y-auto">
-            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-                <h1 class="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                    <span class="w-3 h-3 bg-orange-500 rounded-full"></span> Add Company Branch (PSGC Live API)
-                </h1>
-               
+            <!-- Modern Header -->
+            <header class="glass-header text-white px-8 py-8 flex items-center justify-between shadow-lg m-6 rounded-3xl">
+                <div>
+                    <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-2 inline-block">Branches Overview</span>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Company Branch Management (National Footprint)</h1>
+                    <p class="text-blue-100 mt-1 opacity-90">Manage and configure all corporate branches across regions seamlessly.</p>
+                </div>
+                
             </header>
 
-            <main class="p-6 max-w-3xl mx-auto w-full mt-6">
-
+            <main class="px-6 pb-12 max-w-5xl mx-auto w-full">
                 <?php if (!empty($message)): ?>
-                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 mb-4">
-                        <i class="bi bi-check-circle-fill text-lg"></i> <?php echo htmlspecialchars($message); ?>
+                    <div class="bg-emerald-500 text-white px-6 py-4 rounded-2xl flex items-center gap-3 mb-6 shadow-md">
+                        <i class="bi bi-check-circle-fill text-xl"></i> <?php echo htmlspecialchars($message); ?>
                     </div>
                 <?php endif; ?>
                 <?php if (!empty($error)): ?>
-                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 mb-4">
-                        <i class="bi bi-x-circle-fill text-lg"></i> <?php echo htmlspecialchars($error); ?>
+                    <div class="bg-red-500 text-white px-6 py-4 rounded-2xl flex items-center gap-3 mb-6 shadow-md">
+                        <i class="bi bi-x-circle-fill text-xl"></i> <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
 
-                <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-                    <h2 class="text-lg font-bold text-gray-900 mb-6 border-b pb-3 flex items-center gap-2">
-                        <i class="bi bi-geo-alt-fill text-orange-500"></i> Nationwide Address Selector via API
+                <div class="bg-white border border-slate-200 rounded-3xl shadow-xl p-8">
+                    <h2 class="text-xl font-bold text-slate-900 mb-8 flex items-center gap-3">
+                        <i class="bi bi-plus-circle text-orange-500"></i> Register New Branch Location
                     </h2>
                     
-                    <form method="POST" class="space-y-5">
+                    <form method="POST" class="space-y-6">
                         <input type="hidden" name="action" value="add_branch">
-                        
-                        <!-- Hidden inputs para sa actual pangalan ng lugar (Text) na ipapasa sa database -->
                         <input type="hidden" id="regionText" name="region_text">
                         <input type="hidden" id="provinceText" name="province_text">
                         <input type="hidden" id="municipalityText" name="municipality_text">
                         <input type="hidden" id="barangayText" name="barangay_text">
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Branch Name</label>
-                            <input type="text" name="branch_name" required placeholder="e.g. Dasmariñas Main Branch" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Branch Name</label>
+                            <input type="text" name="branch_name" required placeholder="e.g. Dasmariñas Main Branch" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all">
                         </div>
 
-                        <!-- Cascading Dropdowns na kumukuha sa API -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">Region</label>
-                                <select id="regionSelect" name="region" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-orange-500">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Region</label>
+                                <select id="regionSelect" name="region" required class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-orange-500 outline-none">
                                     <option value="">Select Region</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">Province</label>
-                                <select id="provinceSelect" name="province" disabled class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-orange-500 disabled:bg-gray-100">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Province</label>
+                                <select id="provinceSelect" name="province" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-50">
                                     <option value="">Select Region first</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">City / Municipality</label>
-                                <select id="municipalitySelect" name="municipality" disabled class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-orange-500 disabled:bg-gray-100">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">City / Municipality</label>
+                                <select id="municipalitySelect" name="municipality" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-50">
                                     <option value="">Select Province first</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">Barangay</label>
-                                <select id="barangaySelect" name="barangay" disabled class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-orange-500 disabled:bg-gray-100">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Barangay</label>
+                                <select id="barangaySelect" name="barangay" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-50">
                                     <option value="">Select City / Municipality first</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Free Text Inputs for Street & Building -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">Street Name / Building / House No.</label>
-                                <input type="text" name="street_name" required placeholder="e.g. Aguinaldo Highway / Mabini St." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Street Name / Building</label>
+                                <input type="text" name="street_name" required placeholder="e.g. Aguinaldo Highway" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">Block & Lot / Unit Number <span class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-                                <input type="text" name="block_lot" placeholder="e.g. Blk 2 Lot 4" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Block & Lot / Unit Number</label>
+                                <input type="text" name="block_lot" placeholder="e.g. Blk 2 Lot 4" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
-                            <input type="text" name="contact_number" placeholder="e.g. 09123456789" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Contact Number</label>
+                            <input type="text" name="contact_number" placeholder="e.g. 09123456789" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
                         </div>
                         
-                        <div class="pt-4 border-t border-gray-100">
-                            <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold py-3 rounded-lg transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2">
-                                <i class="bi bi-check2-circle"></i> Save Nationwide Branch Location
+                        <div class="pt-6">
+                            <button type="submit" class="w-full bg-slate-900 hover:bg-orange-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2">
+                                <i class="bi bi-save2"></i> Submit & Register Branch
                             </button>
                         </div>
                     </form>
                 </div>
-
             </main>
         </div>
     </div>

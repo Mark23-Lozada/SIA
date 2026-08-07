@@ -29,7 +29,7 @@ $total_expenses = ($exp_res && $e_row = $exp_res->fetch_assoc()) ? ($e_row['tota
 // Calculate Taxable Income (Revenue - Expenses)
 $taxable_income = max(0, $total_revenue - $total_expenses);
 
-// Example tax rate (Mock rate: 8% flat rate or standard corporate percentage rate, you can modify it according to the tax bracket)
+// Example tax rate
 $tax_rate = 0.08; 
 $estimated_tax = $taxable_income * $tax_rate;
 
@@ -62,9 +62,24 @@ $deductions_result = $conn->query($deductions_query);
                 <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200">Active Fiscal Year <?php echo date('Y'); ?></span>
             </header>
 
-            <div class="p-6 flex-1 overflow-y-auto">
+            <div class="p-6 flex-1 overflow-y-auto space-y-6">
+                <!-- CUSTOM BANNER HEADER PARA SA TAX MANAGEMENT & COMPLIANCE -->
+                <div class="w-full bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                    <div class="relative z-10 space-y-2">
+                        <span class="inline-block bg-white/20 backdrop-blur-md text-emerald-100 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                            Fiscal & Tax Compliance
+                        </span>
+                        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">
+                            Annual Tax Computation & Allowable Deductions (<?php echo date('Y'); ?>)
+                        </h2>
+                        <p class="text-emerald-100 text-sm">
+                            Compute taxable income, evaluate allowable business expense deductions, and check estimated tax dues.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Tax Summary Boxes -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-orange-500">
                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Gross Revenue</p>
                         <h3 class="text-2xl font-black text-gray-800">₱<?php echo number_format($total_revenue, 2); ?></h3>
@@ -88,7 +103,7 @@ $deductions_result = $conn->query($deductions_query);
                 </div>
 
                 <!-- Section Title -->
-                <div class="mb-4">
+                <div class="mb-4 pt-2">
                     <h2 class="text-lg font-bold text-gray-800">Approved Deductible Expenses (Refill & Restock History)</h2>
                     <p class="text-xs text-gray-500">These transactions are automatically deducted from total revenue to legally lower taxable income.</p>
                 </div>

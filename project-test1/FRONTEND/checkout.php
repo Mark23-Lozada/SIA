@@ -23,9 +23,6 @@ function modifier_multiplier($value) {
 // CHECKOUT PAGE DATA (categories, menu items, and their live availability)
 // ===================================================================
 
-// Categories -> used for the sidebar tabs / tab panes
-// Only categories that actually have menu items -- excludes ingredient
-// categories, since categories is a shared table between items and ingredients.
 $categories_array = [];
 $categories_result = $conn->query(
     "SELECT DISTINCT categories.*
@@ -39,11 +36,6 @@ if ($categories_result) {
     }
 }
 
-// Every recipe line (item -> ingredient -> qty used) joined with the ingredient's
-// CURRENT stock, in one query. This is the only place ingredient stock is read
-// for display purposes. Also carries ingredient id/name/unit so the frontend
-// can offer per-order "remove" / "extra" customization limited to an item's
-// actual recipe ingredients.
 $recipe_by_item = [];
 $recipe_result = $conn->query(
     "SELECT mii.item_id, mii.ingredient_id, ing.ingredient_name, ing.unit, mii.quantity_used, ing.stock AS ingredient_stock
@@ -62,10 +54,6 @@ if ($recipe_result) {
     }
 }
 
-// Menu items. Items no longer carry their own manual stock number --
-// availability (in the ingredient sense) is computed below from recipe data.
-// is_available is a separate manual on/off switch (e.g. "86'd" items,
-// seasonal items) -- only items marked available show up at checkout.
 $products_json = [];
 $items_result = $conn->query(
     "SELECT items.id, items.item_name, items.image, items.price, categories.name AS cat_name
@@ -79,9 +67,6 @@ if ($items_result) {
         $clean_cat = strtolower(str_replace(' ', '', $item['cat_name']));
         $has_recipe = isset($recipe_by_item[$item_id]);
 
-        // No recipe defined = NOT available at checkout (0), not "unlimited".
-        // This forces every sellable item to have its ingredients mapped in
-        // recipe.php before it can actually be sold.
         $available_qty = 0;
         $recipe_for_frontend = [];
         if ($has_recipe) {
@@ -118,7 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     $cart_data = json_decode($_POST['cart_items'], true);
 
     if (empty($cart_data)) {
-        exit(); // nothing to process
+        exit();
     }
 
     $total_amount = 0;
@@ -133,7 +118,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     if ($payment_method === 'Cash') {
         $amount_tendered = isset($_POST['amount_tendered']) ? (float)$_POST['amount_tendered'] : $total_amount;
 
-        // Server-side verification for invalid cash ranges
         if ($amount_tendered < $total_amount || $amount_tendered > ($total_amount + 1000)) {
             respond_json(["status" => "error", "message" => "Invalid payment amount processed!"]);
         }
@@ -143,16 +127,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         $change = 0;
     }
 
-    // --- STEP 1: Total up how much of each ingredient this whole cart needs ---
-    // Also reject any item that has NO recipe at all -- items without a recipe
-    // are not sellable, even if someone bypasses the frontend and posts directly.
-    //
-    // Modifier multipliers (see modifier_multiplier() near the top of this file):
-    // 'remove' = 0x (skip), 'extra' = 2x, anything else = 1x (normal).
-    // A modifier is only ever applied to an ingredient_id that came from THIS
-    // item's own recipe rows (fetched from the DB below) -- client-supplied
-    // modifier keys for ingredients outside the recipe are simply never looked at.
-    $required_by_ingredient = []; // ingredient_id => total amount needed
+    $required_by_ingredient = [];
     $stmt_recipe = $conn->prepare("SELECT ingredient_id, quantity_used FROM menu_item_ingredients WHERE item_id = ?");
     $stmt_item_name = $conn->prepare("SELECT item_name FROM items WHERE id = ?");
     foreach ($cart_data as $item) {
@@ -184,14 +159,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     $stmt_recipe->close();
     $stmt_item_name->close();
 
-    // --- STEP 2: Verify enough stock exists BEFORE touching the database ---
     if (!empty($required_by_ingredient)) {
         $ids = array_keys($required_by_ingredient);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         $stmt_check = $conn->prepare("SELECT id, ingredient_name, stock FROM ingredients WHERE id IN ($placeholders)");
-        // Requires PHP 8.1+ for variadic bind_param. Tell me if your server is older
-        // and I'll swap this for a call_user_func_array-based binding instead.
         $stmt_check->bind_param(str_repeat('i', count($ids)), ...$ids);
         $stmt_check->execute();
         $check_result = $stmt_check->get_result();
@@ -205,7 +177,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         $stmt_check->close();
     }
 
-    // --- STEP 3: Record the sale and deduct ingredient stock, atomically ---
     $conn->begin_transaction();
     try {
         $stmt_sale = $conn->prepare("INSERT INTO sales (total_amount, amount_tendered, `change`, payment_method) VALUES (?, ?, ?, ?)");
@@ -219,7 +190,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         $stmt_deduct_ingredient = $conn->prepare("UPDATE ingredients SET stock = stock - ? WHERE id = ? AND stock >= ?");
         $stmt_get_prep_time     = $conn->prepare("SELECT prep_time_minutes FROM items WHERE id = ?");
 
-        $max_prep_minutes = 0; // the order is ready when its SLOWEST item finishes (kitchen works items in parallel)
+        $max_prep_minutes = 0;
 
         foreach ($cart_data as $item) {
             $qty       = (int)$item['quantity'];
@@ -236,10 +207,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             $item_prep_minutes = $prep_row ? (int)$prep_row['prep_time_minutes'] : 10;
             $max_prep_minutes = max($max_prep_minutes, $item_prep_minutes);
 
-            // Deduct every ingredient this menu item's recipe uses, respecting
-            // any remove/extra modifier chosen for this cart line.
-            // The "AND stock >= ?" is a race-condition safety net; the real
-            // sufficiency check already happened in STEP 2 above.
             $stmt_get_recipe->bind_param("i", $id);
             $stmt_get_recipe->execute();
             $recipe_rows = $stmt_get_recipe->get_result();
@@ -255,8 +222,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             }
         }
 
-        // Stamp when this order should be ready -- cooking.php / depart.php
-        // read this timestamp to decide which list an order belongs in.
         $stmt_set_ready = $conn->prepare("UPDATE sales SET ready_at = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?");
         $stmt_set_ready->bind_param("ii", $max_prep_minutes, $sale_id);
         $stmt_set_ready->execute();
@@ -289,155 +254,374 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple POS - Checkout Panel</title>
+    <title>Pannakoda - Point of Sale</title>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
-    <link href="../CSS/checkout.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --orange-primary: #f97316;
+            --bg-main: #f4f6f9;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* Top Bar Navigation */
+        .pos-topbar {
+            height: 65px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+        }
+
+        .brand-title {
+            color: var(--orange-primary);
+            letter-spacing: 0.5px;
+            font-size: 1.05rem;
+        }
+
+        /* Main Workspace Layout */
+        #main-wrapper {
+            margin-top: 75px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box {
+            position: relative;
+            max-width: 380px;
+            width: 100%;
+        }
+        .search-box input {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 14px 8px 38px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .search-box input:focus {
+            background: #fff;
+            border-color: var(--orange-primary);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        /* Category Navigation Bar directly below Search / Top Bar */
+        .pos-category-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            position: fixed;
+            top: 65px;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            padding: 10px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .category-tab-btn {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 8px 16px;
+            transition: all 0.2s ease;
+            min-width: 110px;
+            text-align: center;
+        }
+
+        .category-tab-btn:hover, .category-tab-btn.active {
+            background-color: #fff7ed;
+            color: var(--orange-primary) !important;
+            border-color: var(--orange-primary);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+        }
+
+        /* Modern Product Card Layout */
+        .product-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        }
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
+            border-color: var(--orange-primary);
+        }
+        .product-img-wrapper {
+            height: 110px;
+            background: #f8fafc;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .product-card:hover .product-img-wrapper img {
+            transform: scale(1.05);
+        }
+        .out-of-stock-card {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: grayscale(30%);
+        }
+        .out-of-stock-card:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: #e2e8f0;
+        }
+
+        /* Cart & Checkout Panel Styling (Right Column) */
+        .cart-panel-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            position: sticky;
+            top: 135px;
+        }
+
+        .receipt-card {
+            background: #fff;
+            color: #000;
+            font-family: 'Courier New', Courier, monospace;
+            border: 1px dashed #000;
+        }
+
         @media print {
             body * { visibility: hidden; }
             #checkout-receipt-pane, #checkout-receipt-pane * { visibility: visible; }
             #checkout-receipt-pane { position: absolute; left: 0; top: 0; width: 100%; }
             .no-print { display: none !important; }
         }
-        .receipt-card { background: #fff; color: #000; font-family: 'Courier New', Courier, monospace; border: 1px dashed #000; }
     </style>
 </head>
-<body>
+<body class="pb-5 mb-5">
 
-    <div id="sidebar" class="d-flex flex-column p-3 ">
-        <h4 class="text-center mb-4 fw-bold" style="color: white;"> PANNAKODA</h4>
-        <hr class="border-secondary mb-2">
-
-        <span class=" mb-2 px-2 fw-bold text-uppercase" style="color: orange;">Menu Categories</span>
-        <hr class="border-secondary mb-2">
-        <div class="nav flex-column nav-pills" id="sidebarCategoryTabs" role="tablist">
-            <?php foreach ($categories_array as $index => $cat): 
-                $target_id = strtolower(str_replace(' ', '', $cat['name']));
-            ?>
-                <button class="nav-link text-start sidebar-link <?php echo $index === 0 ? 'active' : ''; ?>" 
-                        id="<?php echo $target_id; ?>-tab" data-bs-toggle="pill" data-bs-target="#cat-<?php echo $target_id; ?>" type="button" role="tab">
-                    <i class="bi bi-tag me-2"></i> <?php echo htmlspecialchars($cat['name']); ?>
-                </button>
-            <?php endforeach; ?>
+    <!-- Top Navigation Bar -->
+    <header class="navbar pos-topbar px-4 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+           
+            <div class="d-flex align-items-center">
+                <div class="bg-warning bg-opacity-10 p-2 rounded-3 me-2 text-warning">
+                    <i class="bi bi-cup-hot-fill fs-6"></i>
+                </div>
+                <h4 class="brand-title fw-bold m-0">PANNAKODA</h4>
+            </div>
         </div>
-      
+
+        <div class="search-box mx-3">
+            <i class="bi bi-search"></i>
+            <input type="text" id="productSearch" class="form-control" placeholder="Search items here..." oninput="filterProductsByName(this.value)">
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light border btn-sm rounded-3 px-2 py-1 text-secondary" title="Network Status"><i class="bi bi-hdd-network"></i></button>
+            <button class="btn btn-light border btn-sm rounded-3 px-2 py-1 text-secondary" title="Store Info"><i class="bi bi-shop"></i></button>
+            <button class="btn btn-light border btn-sm rounded-3 px-2 py-1 text-danger" id="logoutBtn" title="Logout Staff"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+    </header>
+
+    <!-- Fixed Category Navigation Bar Directly Below Search / Top Bar -->
+    <div class="pos-category-bar">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center justify-content-start gap-2 overflow-auto py-1" id="sidebarCategoryTabs" role="tablist">
+                <?php foreach ($categories_array as $index => $cat): 
+                    $target_id = strtolower(str_replace(' ', '', $cat['name']));
+                ?>
+                    <button class="btn category-tab-btn d-flex align-items-center justify-content-center gap-2 py-2 <?php echo $index === 0 ? 'active' : ''; ?>" 
+                            id="<?php echo $target_id; ?>-tab" data-bs-toggle="pill" data-bs-target="#cat-<?php echo $target_id; ?>" type="button" role="tab">
+                        <i class="bi bi-cup-hot fs-6"></i>
+                        <span><?php echo htmlspecialchars($cat['name']); ?></span>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+        </div>
     </div>
 
-    <div id="main-wrapper">
-        <header class="navbar navbar-dark px-3 d-flex justify-content-between" style="height: 60px;">
-            <button style="background: orange;" class="btn" type="button" id="burgerToggle"><span class="navbar-toggler-icon"></span></button>
-          
-        </header>
-
-        <main class="content-body">
-            <div class="d-flex gap-3 align-items-stretch" style="min-height: calc(100vh - 110px);">
-                <div class="p-4 flex-grow-1" style="width: 60%; background: white; border-radius: 10px; border: 1px solid orange;">
+    <!-- Main Content Wrapper -->
+    <div id="main-wrapper" style="margin-top: 135px;">
+        <div class="row g-4 align-items-start">
+            
+            <!-- Menu Catalog Display Area (Left Side) -->
+            <div class="col-lg-8 pb-5">
+                <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
                     <div class="tab-content" id="categoryTabContent">
                         <?php foreach ($categories_array as $index => $cat): 
                             $target_id = strtolower(str_replace(' ', '', $cat['name']));
                         ?>
                             <div class="tab-pane fade show <?php echo $index === 0 ? 'active' : ''; ?>" id="cat-<?php echo $target_id; ?>" role="tabpanel">
-                                <h4 style="color: #911d1d;" class="mb-4"><i class="bi bi-grid-fill me-2"></i><?php echo htmlspecialchars($cat['name']); ?></h4>
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h5 class="fw-bold m-0" style="color: var(--orange-primary);"><i class="bi bi-tag-fill me-2 small"></i><?php echo htmlspecialchars($cat['name']); ?></h5>
+                                </div>
                                 <div class="row g-3" id="grid-<?php echo $target_id; ?>"></div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
+            </div>
 
-                <div class="p-3 d-flex flex-column justify-content-between" style="width: 40%; background: white; border-radius: 10px; border: 1px solid orange;">
+            <!-- Right Side: Current Active Order & Checkout Section -->
+            <div class="col-lg-4">
+                <div class="cart-panel-box p-4">
                     <div id="checkout-interactive-pane">
-                        <h4 style="color: #911d1d;" class="text-center mb-3"><i class="bi bi-receipt-cutoff me-2"></i>Current Order</h4>
-                        <div style="background: white;" id="cart-wrapper" class="p-2 rounded border border-secondary">
-                            <div id="cart-items-container" class="d-flex flex-column gap-2">
-                                <p style="color: orange;" class=" text-center small my-auto py-4">Select items to add</p>
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <h5 class="fw-bold m-0 text-dark">Checkout</h5>
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2 py-1 small fw-bold">Active POS</span>
+                        </div>
+
+                        <div class="p-2 rounded-3 bg-light border mb-3">
+                            <div class="d-flex justify-content-between text-muted fw-bold px-1 mb-2" style="font-size: 0.75rem;">
+                                <span>Name</span>
+                                <span class="text-center">QTY</span>
+                                <span class="text-end">Price</span>
                             </div>
-                            <hr class="border-secondary my-2">
-                            <div class="d-flex justify-content-between align-items-center fw-bold text-white px-1">
-                                <span class="small " style="color: orange;">TOTAL AMOUNT:</span>
-                                <span class="fs-4" style="color: orange;" id="total-amount-display">₱0.00</span>
+                            <div id="cart-items-container" class="d-flex flex-column gap-2" style="max-height: 220px; overflow-y: auto; padding-right: 4px;">
+                                <p class="text-muted text-center small my-auto py-4">No items added yet.<br>Click a menu item to start.</p>
+                            </div>
+                            <hr class="border-secondary opacity-25 my-2">
+                            
+                            <div class="d-flex justify-content-between align-items-center px-1 mb-1">
+                                <span class="small text-muted">Discount (%)</span>
+                                <span class="small fw-bold">0%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center px-1 mb-1">
+                                <span class="small text-muted">Sub Total</span>
+                                <span class="small fw-bold" id="subtotal-amount-display">₱0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center px-1 mb-2">
+                                <span class="small text-muted">Tax <span class="text-success" style="font-size: 0.7rem;">0.0%</span></span>
+                                <span class="small fw-bold">₱0.00</span>
+                            </div>
+                            <hr class="border-secondary opacity-25 my-1">
+                            <div class="d-flex justify-content-between align-items-center px-1">
+                                <span class="small fw-bold text-dark">Total</span>
+                                <span class="fs-4 fw-bold" style="color: var(--orange-primary);" id="total-amount-display">₱0.00</span>
                             </div>
                         </div>
 
-                        <div class="mt-3">
-                            <div class="dropdown mb-3">
-                                <label style="color: orange;" class=" form-label fw-bold small mb-1">SELECT PAYMENT METHOD:</label>
-                                <button class="btn btn-danger dropdown-toggle w-100" type="button" id="paymentDropdown" data-bs-toggle="dropdown"><i class="bi bi-wallet2 me-2"></i>Choose Option</button>
-                                <ul class="dropdown-menu w-100 dropdown-menu-light text-dark">
-                                    <li><a class="dropdown-item" href="#" onclick="selectPayment('Cash')">Cash</a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="selectPayment('Card')">Card Terminal</a></li>
+                        <div class="mb-3 position-relative">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">SELECT PAYMENT METHOD:</label>
+                            <div class="dropdown">
+                                <button class="btn btn-light border w-100 text-dark fw-semibold text-start d-flex justify-content-between align-items-center py-2 bg-white" type="button" id="paymentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span id="selected-payment-text"><i class="bi bi-wallet2 text-primary me-2"></i>Choose Option</span>
+                                    <i class="bi bi-chevron-down small"></i>
+                                </button>
+                                <ul class="dropdown-menu w-100 shadow-sm border py-2 mt-1" style="z-index: 1080;">
+                                    <li><a class="dropdown-item py-2 fw-medium" href="#" onclick="selectPayment('Cash')"><i class="bi bi-cash-stack text-success me-2"></i>Cash Payment</a></li>
+                                    <li><a class="dropdown-item py-2 fw-medium" href="#" onclick="selectPayment('Card')"><i class="bi bi-credit-card text-primary me-2"></i>Card Terminal</a></li>
                                 </ul>
                             </div>
-                            
-                            <div class="mb-3 d-none" id="cash-panel">
-                                <label class=" form-label fw-bold small mb-0">CASH TENDERED:</label>
-                                <input type="text" id="amount-tendered" maxlength="5" placeholder="e.g. 500" class="form-control bg-light text-dark border-secondary fw-bold fs-5" oninput="this.value = this.value.replace(/[^0-9]/g, ''); calculateChange();">
-                            </div>
-                            
-                            <div class="mb-3 d-none" id="card-panel">
-                                <label class="form-label fw-bold small mb-0 text-danger">CARD LAST 4 DIGITS:</label>
-                                <input type="text" id="card-digits" maxlength="4" placeholder="e.g. 4321" class="form-control bg-light text-dark border-secondary fw-bold fs-5 text-center" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                            </div>
-
-                            <div class="p-2 rounded bg-light border border-secondary d-flex justify-content-between align-items-center d-none" id="change-panel-wrapper">
-                                <span class="small fw-bold text-dark" id="change-label">Change Due:</span>
-                                <span class="fs-5 fw-bold text-dark" id="change-display">₱0.00</span>
+                        </div>
+                        
+                        <div class="mb-3 d-none" id="cash-panel">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size: 0.75rem;">CASH TENDERED:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0 fw-bold">₱</span>
+                                <input type="text" id="amount-tendered" maxlength="5" placeholder="0.00" class="form-control bg-light border-start-0 fw-bold fs-5" oninput="this.value = this.value.replace(/[^0-9]/g, ''); calculateChange();">
                             </div>
                         </div>
-                        <button type="button" class="btn btn-primary btn-lg w-100 mt-3" onclick="processCheckout()">Checkout & Print <i class="bi bi-arrow-right-circle-fill ms-1"></i></button>
+                        
+                        <div class="mb-3 d-none" id="card-panel">
+                            <label class="form-label fw-bold text-secondary mb-1" style="font-size: 0.75rem;">CARD LAST 4 DIGITS:</label>
+                            <input type="text" id="card-digits" maxlength="4" placeholder="e.g. 4321" class="form-control bg-light fw-bold fs-5 text-center" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                        </div>
+
+                        <div class="p-3 rounded-3 bg-light border d-flex justify-content-between align-items-center mb-3 d-none" id="change-panel-wrapper">
+                            <span class="small fw-bold text-secondary" id="change-label">Change Due:</span>
+                            <span class="fs-5 fw-bold text-dark" id="change-display">₱0.00</span>
+                        </div>
+
+                        <button type="button" class="btn btn-lg w-100 mt-2 py-3 fw-bold text-white shadow-sm rounded-3" style="background-color: var(--orange-primary); border: none;" onclick="processCheckout()">
+                            Pay <span id="pay-btn-amount">(₱0.00)</span> <i class="bi bi-arrow-right-circle-fill ms-1"></i>
+                        </button>
                     </div>
                     
                     <div id="checkout-receipt-pane" class="d-none p-3 rounded receipt-card"></div>
                 </div>
             </div>
-        </main>
+
+        </div>
     </div>
 
     <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('burgerToggle').addEventListener('click', function() {
-            document.body.classList.toggle('sidebar-hidden');
-        });
-
         let products = <?php echo json_encode($products_json); ?>;
         let cart = [], totalAmount = 0, selectedPaymentMethod = '';
 
-        function renderProductGrid() {
+        function renderProductGrid(filter = '') {
             const categories = [...new Set(products.map(p => p.category))];
             categories.forEach(cat => {
                 const grid = document.getElementById(`grid-${cat}`);
                 if(!grid) return;
                 grid.innerHTML = '';
-                const filtered = products.filter(p => p.category === cat);
+                const filtered = products.filter(p => p.category === cat && p.name.toLowerCase().includes(filter.toLowerCase()));
+                
                 filtered.forEach(prod => {
                     const col = document.createElement('div');
-                    col.className = 'col-md-4 col-sm-6';
+                    col.className = 'col-md-3 col-sm-6';
                     const isOutOfStock = prod.available <= 0;
-                    let stockLabel = '';
+                    let stockBadge = '';
                     if (!prod.has_recipe) {
-                        // Distinct from a real stock-out: this item was never configured, not just running low.
-                        stockLabel = `<p class="text-danger fw-bold small mb-0 mt-2"><i class="bi bi-exclamation-triangle"></i> No Recipe Set</p>`;
+                        stockBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1" style="font-size: 0.60rem;"><i class="bi bi-exclamation-triangle"></i> No Recipe</span>`;
                     } else if (isOutOfStock) {
-                        stockLabel = `<p class="text-danger fw-bold small mb-0 mt-2">OUT OF STOCK</p>`;
+                        stockBadge = `<span class="badge bg-danger text-light rounded-pill px-2 py-1" style="font-size: 0.60rem;">OUT OF STOCK</span>`;
                     } else {
-                        stockLabel = `<p style="color: #911d1d;" class="small mb-0 mt-2">Makeable: ${prod.available}</p>`;
+                        stockBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size: 0.60rem;">Stock: ${prod.available}</span>`;
                     }
+
                     col.innerHTML = `
-                        <div class="card product-card text-white p-3 text-center ${isOutOfStock ? 'out-of-stock-card' : ''}" ${isOutOfStock ? '' : `onclick="addToCart(${prod.id})"`}>
-                            ${prod.image ? `<img src="${prod.image}" alt="${prod.name}" class="rounded mb-2" style="width: 100%; height: 90px; object-fit: cover;">` : `<div class="rounded mb-2 d-flex align-items-center justify-content-center" style="width: 100%; height: 90px; background: rgba(145,29,29,0.08);"><i class="bi bi-image" style="font-size: 1.5rem; color: #911d1d; opacity: 0.4;"></i></div>`}
-                            <h6 style="color: #911d1d;">${prod.name}</h6>
-                            <p style="color: #911d1d;" class="fw-bold mb-0">₱${prod.price.toFixed(2)}</p>
-                            ${stockLabel}
+                        <div class="card product-card h-100 ${isOutOfStock ? 'out-of-stock-card' : ''}" ${isOutOfStock ? '' : `onclick="addToCart(${prod.id})"`}>
+                            <div class="product-img-wrapper">
+                                ${prod.image ? `<img src="${prod.image}" alt="${prod.name}">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-muted"><i class="bi bi-image fs-4 opacity-50"></i></div>`}
+                            </div>
+                            <div class="card-body p-2 d-flex flex-column justify-content-between text-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.82rem;" title="${prod.name}">${prod.name}</h6>
+                                    <div class="fw-bold mb-1" style="font-size: 0.88rem; color: var(--orange-primary);">₱${prod.price.toFixed(2)}</div>
+                                </div>
+                                <div>${stockBadge}</div>
+                            </div>
                         </div>`;
                     grid.appendChild(col);
                 });
             });
         }
 
+        function filterProductsByName(query) {
+            renderProductGrid(query);
+        }
+
         function selectPayment(method) {
             selectedPaymentMethod = method;
-            document.getElementById('paymentDropdown').innerHTML = `<i class="bi bi-wallet2 me-2"></i>${method}`;
+            const iconClass = method === 'Cash' ? 'bi-cash-stack text-success' : 'bi-credit-card text-primary';
+            document.getElementById('selected-payment-text').innerHTML = `<i class="bi ${iconClass} me-2"></i>${method}`;
             
             const cashPanel = document.getElementById('cash-panel');
             const cardPanel = document.getElementById('card-panel');
@@ -457,11 +641,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             calculateChange();
         }
 
-        let customizeExpanded = new Set(); // which cart line's ingredient panel is open
-        let nextLineId = 1; // each cart entry (a specific item + its customization) gets its own id
+        let customizeExpanded = new Set();
+        let nextLineId = 1;
 
-        // Total quantity across ALL cart lines for a given item id -- used to
-        // enforce ingredient availability across the whole item, not per-line.
         function getTotalQuantityForItem(itemId) {
             return cart.filter(i => i.id === itemId).reduce((sum, i) => sum + i.quantity, 0);
         }
@@ -472,9 +654,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             if (product.available <= 0) return;
             if (getTotalQuantityForItem(id) >= product.available) return;
 
-            // Only merge into an existing UNCUSTOMIZED line for this item.
-            // A line with any active modifier stays separate, since "2 pancakes,
-            // one with no butter" needs to print/deduct differently from a plain one.
             const existingPlainLine = cart.find(item => item.id === id && Object.keys(item.modifiers).length === 0);
             if (existingPlainLine) {
                 existingPlainLine.quantity += 1;
@@ -501,6 +680,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             renderCart();
         }
 
+        function clearCart() {
+            cart = [];
+            customizeExpanded.clear();
+            renderCart();
+        }
+
         function toggleCustomize(lineId) {
             if (customizeExpanded.has(lineId)) {
                 customizeExpanded.delete(lineId);
@@ -510,11 +695,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             renderCart();
         }
 
-        // value is 'normal' | 'remove' | 'extra'. Only ever called with an
-        // ingredient_id pulled from that item's own product.recipe array below,
-        // so there's no way to set a modifier for an ingredient that isn't
-        // actually part of the item's recipe. Changing a modifier never merges
-        // this line back into another -- it stays its own distinct cart entry.
         function setModifier(lineId, ingredientId, value) {
             const item = cart.find(i => i.lineId === lineId);
             if (!item) return;
@@ -530,9 +710,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             const container = document.getElementById('cart-items-container');
             container.innerHTML = '';
             if (cart.length === 0) {
-                container.innerHTML = '<p class="text-dark text-center small my-auto py-4">Select items to add</p>';
+                container.innerHTML = '<p class="text-muted text-center small my-auto py-4">No items added yet.<br>Click a menu item to start.</p>';
                 totalAmount = 0;
+                document.getElementById('subtotal-amount-display').innerText = '₱0.00';
                 document.getElementById('total-amount-display').innerText = '₱0.00';
+                document.getElementById('pay-btn-amount').innerText = '(₱0.00)';
                 return;
             }
             totalAmount = 0;
@@ -542,7 +724,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 const recipe = (product && product.recipe) ? product.recipe : [];
                 const isExpanded = customizeExpanded.has(item.lineId);
 
-                // Small inline summary of any active modifiers, shown even when collapsed
                 const modifierTags = Object.entries(item.modifiers || {}).map(([ingId, val]) => {
                     const ing = recipe.find(r => String(r.ingredient_id) === String(ingId));
                     if (!ing) return '';
@@ -555,40 +736,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         const current = (item.modifiers && item.modifiers[ing.ingredient_id]) || 'normal';
                         return `
                             <div class="d-flex justify-content-between align-items-center py-1">
-                                <span class="small text-dark">${ing.name}</span>
-                                <select class="form-select form-select-sm" style="width: auto;" onchange="setModifier(${item.lineId}, ${ing.ingredient_id}, this.value)">
+                                <span class="small text-secondary">${ing.name}</span>
+                                <select class="form-select form-select-sm w-auto py-0 px-2" style="font-size: 0.75rem;" onchange="setModifier(${item.lineId}, ${ing.ingredient_id}, this.value)">
                                     <option value="normal" ${current === 'normal' ? 'selected' : ''}>Normal</option>
                                     <option value="remove" ${current === 'remove' ? 'selected' : ''}>No ${ing.name}</option>
                                     <option value="extra" ${current === 'extra' ? 'selected' : ''}>Extra ${ing.name}</option>
                                 </select>
                             </div>`;
                     }).join('');
-                    customizePanel = `<div class="mt-2 p-2 rounded border border-secondary bg-white bg-opacity-50">${rows}</div>`;
+                    customizePanel = `<div class="mt-2 p-2 rounded-2 border bg-white">${rows}</div>`;
                 }
 
                 container.innerHTML += `
-                    <div class="bg-secondary bg-opacity-25 p-2 rounded text-white border border-secondary">
+                    <div class="bg-white p-2 rounded-3 border shadow-sm">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="fw-bold d-block small text-dark">${item.name}</span>
-                                ${modifierTags.length > 0 ? `<span class="d-block text-dark" style="font-size: 0.7rem; opacity: 0.75;">${modifierTags.join(', ')}</span>` : ''}
+                            <div style="max-width: 120px;">
+                                <span class="fw-bold d-block text-dark text-truncate" style="font-size: 0.80rem;" title="${item.name}">${item.name}</span>
+                                ${modifierTags.length > 0 ? `<span class="d-block text-warning" style="font-size: 0.60rem;">${modifierTags.join(', ')}</span>` : ''}
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <button class="btn btn-sm btn-danger px-2 py-0" onclick="updateQuantity(${item.lineId}, -1)">-</button>
-                                <span class="fw-bold small text-dark">${item.quantity}</span>
-                                <button class="btn btn-sm btn-success px-2 py-0" onclick="updateQuantity(${item.lineId}, 1)">+</button>
+                            <div class="d-flex align-items-center gap-1 bg-light border rounded-pill px-1 py-0">
+                                <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" onclick="updateQuantity(${item.lineId}, -1)">-</button>
+                                <span class="fw-bold small px-1">${item.quantity}</span>
+                                <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" onclick="updateQuantity(${item.lineId}, 1)">+</button>
                             </div>
                             <span class="fw-bold small text-dark">₱${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                         ${recipe.length > 0 ? `
-                            <button type="button" class="btn btn-link btn-sm p-0 mt-1 text-decoration-none" style="font-size: 0.75rem;" onclick="toggleCustomize(${item.lineId})">
-                                <i class="bi bi-sliders"></i> ${isExpanded ? 'Hide' : 'Customize'} ingredients
-                            </button>
+                            <div class="text-end mt-1">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-warning" style="font-size: 0.65rem;" onclick="toggleCustomize(${item.lineId})">
+                                    <i class="bi bi-sliders"></i> ${isExpanded ? 'Hide' : 'Customize'}
+                                </button>
+                            </div>
                         ` : ''}
                         ${customizePanel}
                     </div>`;
             });
+            document.getElementById('subtotal-amount-display').innerText = `₱${totalAmount.toFixed(2)}`;
             document.getElementById('total-amount-display').innerText = `₱${totalAmount.toFixed(2)}`;
+            document.getElementById('pay-btn-amount').innerText = `(₱${totalAmount.toFixed(2)})`;
             calculateChange();
         }
 
@@ -602,23 +787,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             
             if (change < 0) {
                 changeDisplay.innerText = 'Short Payment';
-                changeDisplay.style.color = '#ef4444';
+                changeDisplay.style.color = '#f97316';
             } else if (parsedTendered > (totalAmount + 1000)) {
                 changeDisplay.innerText = 'Excessive Amount';
-                changeDisplay.style.color = '#ef4444';
+                changeDisplay.style.color = '#f97316';
             } else {
                 changeDisplay.innerText = `₱${change.toFixed(2)}`;
-                changeDisplay.style.color = '#000000';
+                changeDisplay.style.color = '#10b981';
             }
         }
 
         function processCheckout() {
             if (cart.length === 0) {
-                Swal.fire({ icon: 'warning', title: 'Empty Cart', text: 'Please add items to your basket before checking out.', confirmButtonColor: '#911d1d' });
+                Swal.fire({ icon: 'warning', title: 'Empty Cart', text: 'Please add items to your basket before checking out.', confirmButtonColor: '#f97316' });
                 return;
             }
             if (!selectedPaymentMethod) {
-                Swal.fire({ icon: 'warning', title: 'Payment Method Required', text: 'Please choose a payment method.', confirmButtonColor: '#911d1d' });
+                Swal.fire({ icon: 'warning', title: 'Payment Method Required', text: 'Please choose a payment method.', confirmButtonColor: '#f97316' });
                 return;
             }
 
@@ -627,30 +812,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
             if (selectedPaymentMethod === 'Cash') {
                 if (!amountTendered || parseFloat(amountTendered) < totalAmount) {
-                    Swal.fire({ 
-                        icon: 'error', 
-                        title: 'Insufficient Payment', 
-                        text: `The amount entered (₱${parseFloat(amountTendered || 0).toFixed(2)}) is less than the total bill (₱${totalAmount.toFixed(2)}).`, 
-                        confirmButtonColor: '#ef4444' 
-                    });
+                    Swal.fire({ icon: 'error', title: 'Insufficient Payment', text: `Amount entered is less than the total bill.`, confirmButtonColor: '#f97316' });
                     return;
                 }
-                
-                // Block crazy numbers like the one shown in image_ad9976.png
                 if (parseFloat(amountTendered) > (totalAmount + 1000)) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Excessive Amount',
-                        text: `The entered amount is realistically too high for this transaction. Maximum allowed change is ₱1,000.`,
-                        confirmButtonColor: '#ef4444'
-                    });
+                    Swal.fire({ icon: 'error', title: 'Excessive Amount', text: `Maximum allowed change is ₱1,000.`, confirmButtonColor: '#f97316' });
                     return;
                 }
             }
 
             if (selectedPaymentMethod === 'Card') {
                 if (cardDigits.length !== 4) {
-                    Swal.fire({ icon: 'error', title: 'Card Verification Required', text: 'Please input the last 4 digits of the card before verifying.', confirmButtonColor: '#ef4444' });
+                    Swal.fire({ icon: 'error', title: 'Card Verification Required', text: 'Please input the last 4 digits of the card.', confirmButtonColor: '#f97316' });
                     return;
                 }
             }
@@ -707,13 +880,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         <hr style="border-top: 1px dashed #000;">
                         <div class="small mb-3">
                             <div class="d-flex justify-content-between"><span>TOTAL AMOUNT:</span><span class="fw-bold">₱${data.total.toFixed(2)}</span></div>
-                            <div class="d-flex justify-content-between"><span>Payment Mode:</span><span>${data.payment_method}</span></div>
+                            <div class="d-flex justify-content-between"><span>Payment Mode:<span><span>${data.payment_method}</span></div>
                             <div class="d-flex justify-content-between"><span>Amount Paid:</span><span>₱${parseFloat(data.tendered).toFixed(2)}</span></div>
                             <div class="d-flex justify-content-between"><span>Change Due:</span><span class="fw-bold">₱${parseFloat(data.change).toFixed(2)}</span></div>
                         </div>
                         <div class="text-center no-print">
                             <button class="btn btn-sm btn-dark w-100 mb-2" onclick="window.print()"><i class="bi bi-printer"></i> Print Receipt</button>
-                            <button class="btn btn-sm btn-danger w-100" onclick="window.location.reload()">Done / New Order</button>
+                            <button class="btn btn-sm btn-warning text-white w-100" onclick="window.location.reload()">Done / New Order</button>
                         </div>`;
 
                     document.getElementById('checkout-interactive-pane').classList.add('d-none');
@@ -721,33 +894,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     receiptPane.innerHTML = receiptHTML;
                     receiptPane.classList.remove('d-none');
 
-                    Swal.fire({ icon: 'success', title: 'Sale Completed', text: 'Transaction Successful!', confirmButtonColor: '#911d1d' });
+                    Swal.fire({ icon: 'success', title: 'Sale Completed', text: 'Transaction Successful!', confirmButtonColor: '#f97316' });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#ef4444' });
+                    Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#f97316' });
                 }
             })
             .catch(err => {
-                Swal.fire({ icon: 'error', title: 'Server Error', text: 'Checkout process encountered an error.', confirmButtonColor: '#ef4444' });
+                Swal.fire({ icon: 'error', title: 'Server Error', text: 'Checkout process encountered an error.', confirmButtonColor: '#f97316' });
             });
         }
 
         renderProductGrid();
-         document.getElementById('logoutBtn').addEventListener('click', function(e) {
-            e.preventDefault(); // Hinihinto ang normal na action
 
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
             Swal.fire({
-    title: 'Are you sure?',
-    text: "You will be logged out of your account.",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#911d1d',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Yes, Log out',
-    cancelButtonText: 'Cancel',
-    reverseButtons: true
+                title: 'Are you sure?',
+                text: "You will be logged out of your account.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f97316',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Log out',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = 'logout.php?role=staff'; // Redirects here to end the staff session only
+                    window.location.href = '../../PAGES/logout.php?role=staff';
                 }
             });
         });

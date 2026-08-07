@@ -103,7 +103,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_finance_promotions') {
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Promotion & Salary Adjustments Review (Finance)</h1>
-          <p class="text-sm text-gray-500">Review pending promotion tickets before forwarding them to Admin[cite: 2].</p>
+          <p class="text-sm text-gray-500">Review pending promotion tickets before forwarding them to Admin.</p>
         </div>
       </div>
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

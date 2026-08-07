@@ -150,6 +150,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
         } else {
             $row['role'] = $row['position_title'] ?? ($row['position'] ?? 'Staff');
         }
+
+        if (!isset($row['date_hired']) || empty($row['date_hired'])) {
+            $row['date_hired'] = date('Y-m-d'); 
+        }
         
         $employees[] = $row;
     }
@@ -208,30 +212,93 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     }
   </style>
 </head>
-<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+<body class="bg-[#f8fafc] font-sans antialiased h-screen overflow-hidden">
 
   <div class="flex h-screen w-full overflow-hidden">
     
     <?php include 'sidebar.php'; ?>
-    <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
+    <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0">
       
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Employee Directory & PH Payroll</h1>
-          <p class="text-sm text-gray-500">Manage candidates, profiles, statutory numbers, and Philippine-compliant payroll statements.</p>
+      <!-- MODERN DYNAMIC BANNER HEADER -->
+      <div class="relative overflow-hidden bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
+        <!-- Background Glow FX -->
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-blue-200 mb-3">
+              <i class="bi bi-people-fill"></i> HR & Admin Department
+            </div>
+            <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Employee Directory & PH Payroll</h1>
+            <p class="text-sm text-blue-100/80 max-w-2xl leading-relaxed">
+              Manage candidates, onboarding profiles, statutory numbers, department metrics, and Philippine-compliant payroll statements seamlessly.
+            </p>
+          </div>
+
+          <!-- Quick Action / Summary Indicator Pill -->
+          <div class="flex items-center gap-3">
+            <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/30 flex items-center justify-center text-blue-300">
+                <i class="bi bi-shield-lock-fill text-xl"></i>
+              </div>
+              <div>
+                <span class="block text-xs text-blue-200 font-medium">Total Workforce</span>
+                <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <!-- TABS NAVIGATION -->
-        <div class="bg-gray-200/80 p-1 rounded-xl flex gap-1 shadow-inner">
-          <button id="tabNewlyHired" class="px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
-            <i class="bi bi-person-plus text-amber-600"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-amber-500 text-white rounded-pill px-2">0</span>
-          </button>
-          <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <i class="bi bi-person-bounding-box text-[#FF8C00]"></i> Personal Details
-          </button>
-          <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <i class="bi bi-cash-stack text-emerald-600"></i> Payroll Profile
-          </button>
+
+        <!-- HR TABS NAVIGATION -->
+        <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-4">
+          <div class="text-xs text-blue-200/70 font-medium hidden sm:block">
+            <i class="bi bi-sliders mr-1"></i> Switch active directory view below
+          </div>
+          <div class="bg-black/20 backdrop-blur-md p-1 rounded-xl flex gap-1 border border-white/10 ml-auto">
+            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
+              <i class="bi bi-person-plus text-amber-600"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-amber-500 text-white rounded-pill px-2">0</span>
+            </button>
+            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white">
+              <i class="bi bi-person-bounding-box text-[#FF8C00]"></i> Personal Details
+            </button>
+            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white">
+              <i class="bi bi-cash-stack text-emerald-600"></i> Payroll Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- METRIC CARDS SECTION -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Total Active Employees -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Hired</p>
+            <h3 id="statTotalHired" class="text-2xl font-black text-gray-800">0</h3>
+          </div>
+        </div>
+
+        <!-- Onboarding Count -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
+            <i class="bi bi-person-plus-fill"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Onboarding</p>
+            <h3 id="statOnboarding" class="text-2xl font-black text-gray-800">0</h3>
+          </div>
+        </div>
+
+        <!-- Department Breakdown Box -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 md:col-span-2 flex flex-col justify-between">
+          <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Employees per Department</p>
+          <div id="deptBreakdownContainer" class="flex flex-wrap gap-2">
+            <span class="text-xs text-gray-400 italic">Calculating breakdown...</span>
+          </div>
         </div>
       </div>
 
@@ -509,9 +576,47 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       try {
         const response = await fetch(`${window.location.pathname}?action=fetch_employees`);
         allEmployees = response.ok ? await response.json() : [];
+        updateMetrics();
         renderTables();
       } catch (err) {
         console.error("Pipeline failure:", err);
+      }
+    }
+
+    function updateMetrics() {
+      let totalHired = 0;
+      let onboardingCount = 0;
+      let deptCounts = {};
+
+      allEmployees.forEach(emp => {
+        const status = String(emp.status || 'onboarding').toLowerCase();
+        if (status === 'hired') {
+          totalHired++;
+          const dept = emp.department || 'Unassigned';
+          deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+        } else {
+          onboardingCount++;
+        }
+      });
+
+      // Update Metric Values UI
+      document.getElementById('statTotalHired').innerText = totalHired;
+      document.getElementById('statOnboarding').innerText = onboardingCount;
+      document.getElementById('activeCountBadge').innerText = `${totalHired + onboardingCount} Total`;
+      document.getElementById('badgeNewlyHired').innerText = onboardingCount;
+
+      // Update Department Breakdown Badges
+      const deptContainer = document.getElementById('deptBreakdownContainer');
+      deptContainer.innerHTML = '';
+      if (Object.keys(deptCounts).length === 0) {
+        deptContainer.innerHTML = `<span class="text-xs text-gray-400 italic">No department data.</span>`;
+      } else {
+        for (const [dept, count] of Object.entries(deptCounts)) {
+          const badge = document.createElement('div');
+          badge.className = "bg-slate-100 border border-slate-200 text-gray-700 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5";
+          badge.innerHTML = `<span>${dept}:</span> <span class="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">${count}</span>`;
+          deptContainer.appendChild(badge);
+        }
       }
     }
 
@@ -645,8 +750,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         }
       });
 
-      document.getElementById('badgeNewlyHired').innerText = onboardingCount;
-
       if (onboardingCount === 0) {
         newlyHiredBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400 italic">No candidates undergoing onboarding.</td></tr>`;
       }
@@ -760,19 +863,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       }
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-      const currentPath = window.location.pathname;
-      const navLinks = document.querySelectorAll(".sidebar-link");
-      
-      navLinks.forEach(link => {
-        const linkPath = link.getAttribute("href");
-        if (linkPath && currentPath.endsWith(linkPath)) {
-          link.classList.remove("text-white/80", "hover:bg-white/10", "hover:text-white", "text-inherit");
-          link.classList.add("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
-        }
-      });
-    });
-
     function triggerDelete(dbId, name) {
       Swal.fire({
         title: 'Delete Data',
@@ -786,7 +876,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       }).then(async (result) => {
         if (result.isConfirmed) {
           try {
-            const formData = new FormData();
+            const formData = new URLSearchParams();
             formData.append('id', dbId);
 
             const response = await fetch(`${window.location.pathname}?action=delete_employee`, {
@@ -798,6 +888,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             if (resultData.success) {
               Swal.fire('Deleted!', resultData.message, 'success');
               allEmployees = allEmployees.filter(emp => emp.id != dbId);
+              updateMetrics();
               renderTables();
             } else {
               Swal.fire('Error!', resultData.message || "Failed.", 'error');
@@ -978,7 +1069,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         if (id === activeBtnId) {
           btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold";
         } else {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-600 hover:text-gray-900";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white";
         }
       });
 

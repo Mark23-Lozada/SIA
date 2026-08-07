@@ -210,6 +210,7 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
     <title>Applicant Management - HR Node</title>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <script src="../LIBRARIES/tailwind.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body class="bg-slate-50 font-sans antialiased h-screen overflow-hidden">
     <div class="flex h-screen w-full overflow-hidden">

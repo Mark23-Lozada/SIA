@@ -18,80 +18,45 @@ if ($conn->connect_error) {
     die("Connection Failed: " . $conn->connect_error);
 }
 
-// Kunin ang filter type (daily, monthly, yearly) mula sa URL, default ay monthly[cite: 2]
-$filter = isset($_GET['filter']) ? $_GET['filter'] : 'monthly';
+// Kunin ang filter type mula sa URL, default ay 'inventory'
+$filter = isset($_GET['filter']) ? $_GET['filter'] : 'inventory';
 
-// 1. Query para sa Inventory Refill / Restock at Promotion & Salary Adjustments (Parehong nanggagaling sa budget_requests)[cite: 1, 2]
-$refill_query = "SELECT request_id, title, requested_by, department, amount, status, created_at 
-                 FROM budget_requests 
-                 WHERE (title LIKE '%Restock%' OR title LIKE '%Refill%' OR title LIKE '%Promotion & Salary Adjustment%')";
+// 1. Query para sa Inventory Refill / Restock
+$inventory_query = "SELECT request_id, title, requested_by, department, amount, status, created_at 
+                    FROM budget_requests 
+                    WHERE (title LIKE '%Restock%' OR title LIKE '%Refill%')";
 
-// 2. Query para sa Salary Advances (na-approve o na-reject na)[cite: 2]
+// 2. Query para sa Promotion & Salary Adjustments
+$promo_query = "SELECT request_id, title, requested_by, department, amount, status, created_at 
+                FROM budget_requests 
+                WHERE title LIKE '%Promotion & Salary Adjustment%'";
+
+// 3. Query para sa Salary Advances
 $advance_query = "SELECT CONCAT('ADV-', sa.id) AS request_id, CONCAT('Salary Advance: ', sa.reason) AS title, 
                   e.full_name AS requested_by, e.department, sa.amount, sa.status, sa.created_at 
                   FROM salary_advances sa 
                   JOIN employees e ON sa.employee_id = e.id 
                   WHERE sa.status IN ('Approved', 'Rejected')";
 
-// Paglalapat ng Filter sa Refill/Promotion at Advance Queries[cite: 2]
-if ($filter == 'daily') {
-    $refill_query .= " AND DATE(created_at) = CURDATE()";
-    $advance_query .= " AND DATE(sa.created_at) = CURDATE()";
-} elseif ($filter == 'monthly') {
-    $refill_query .= " AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
-    $advance_query .= " AND MONTH(sa.created_at) = MONTH(CURDATE()) AND YEAR(sa.created_at) = YEAR(CURDATE())";
-} elseif ($filter == 'yearly') {
-    $refill_query .= " AND YEAR(created_at) = YEAR(CURDATE())";
-    $advance_query .= " AND YEAR(sa.created_at) = YEAR(CURDATE())";
-}
-
-$refill_query .= " ORDER BY created_at DESC";
+// Order by queries
+$inventory_query .= " ORDER BY created_at DESC";
+$promo_query .= " ORDER BY created_at DESC";
 $advance_query .= " ORDER BY created_at DESC";
 
-// Hatiin natin ang pagkuha para sa Inventory at Promotion kung gusto mo silang ihiwalay ng table, 
-// o maaari silang pagsamahin. Para mas malinaw, gagawa tayo ng hiwalay na query para sa Promotions mula sa budget_requests:
-
-// Specific Query para sa Inventory Refill / Restock lamang
-$inventory_query = "SELECT request_id, title, requested_by, department, amount, status, created_at 
-                    FROM budget_requests 
-                    WHERE (title LIKE '%Restock%' OR title LIKE '%Refill%')";
-if ($filter == 'daily') $inventory_query .= " AND DATE(created_at) = CURDATE()";
-elseif ($filter == 'monthly') $inventory_query .= " AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
-elseif ($filter == 'yearly') $inventory_query .= " AND YEAR(created_at) = YEAR(CURDATE())";
-$inventory_query .= " ORDER BY created_at DESC";
 $inventory_result = $conn->query($inventory_query);
-
-// Specific Query para sa Promotion & Salary Adjustments mula sa budget_requests[cite: 1]
-$promo_query = "SELECT request_id, title, requested_by, department, amount, status, created_at 
-                FROM budget_requests 
-                WHERE title LIKE '%Promotion & Salary Adjustment%'";
-if ($filter == 'daily') $promo_query .= " AND DATE(created_at) = CURDATE()";
-elseif ($filter == 'monthly') $promo_query .= " AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
-elseif ($filter == 'yearly') $promo_query .= " AND YEAR(created_at) = YEAR(CURDATE())";
-$promo_query .= " ORDER BY created_at DESC";
 $promo_result = $conn->query($promo_query);
-
 $advance_result = $conn->query($advance_query);
 
-// Summary Computations para sa Inventory Refill[cite: 2]
+// Summary Computations para sa Inventory Refill
 $refill_summary_q = "SELECT COUNT(*) as total_count, SUM(amount) as total_amount FROM budget_requests WHERE (title LIKE '%Restock%' OR title LIKE '%Refill%')";
-if ($filter == 'daily') $refill_summary_q .= " AND DATE(created_at) = CURDATE()";
-elseif ($filter == 'monthly') $refill_summary_q .= " AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
-elseif ($filter == 'yearly') $refill_summary_q .= " AND YEAR(created_at) = YEAR(CURDATE())";
 $refill_sum_res = $conn->query($refill_summary_q)->fetch_assoc();
 
-// Summary Computations para sa Promotions[cite: 1, 2]
+// Summary Computations para sa Promotions[cite: 1]
 $promo_summary_q = "SELECT COUNT(*) as total_count, SUM(amount) as total_amount FROM budget_requests WHERE title LIKE '%Promotion & Salary Adjustment%'";
-if ($filter == 'daily') $promo_summary_q .= " AND DATE(created_at) = CURDATE()";
-elseif ($filter == 'monthly') $promo_summary_q .= " AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
-elseif ($filter == 'yearly') $promo_summary_q .= " AND YEAR(created_at) = YEAR(CURDATE())";
 $promo_sum_res = $conn->query($promo_summary_q)->fetch_assoc();
 
-// Summary Computations para sa Salary Advance[cite: 2]
+// Summary Computations para sa Salary Advance
 $adv_summary_q = "SELECT COUNT(*) as total_count, SUM(amount) as total_amount FROM salary_advances WHERE status IN ('Approved', 'Rejected')";
-if ($filter == 'daily') $adv_summary_q .= " AND DATE(created_at) = CURDATE()";
-elseif ($filter == 'monthly') $adv_summary_q .= " AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
-elseif ($filter == 'yearly') $adv_summary_q .= " AND YEAR(created_at) = YEAR(CURDATE())";
 $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
 ?>
 <!DOCTYPE html>
@@ -117,16 +82,32 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
             </header>
 
             <div class="p-6 flex-1 overflow-y-auto space-y-8">
-                <!-- Filter Buttons (Smooth Navigation)[cite: 2] -->
+                <!-- CUSTOM BANNER HEADER PARA SA TRANSACTIONS & ACTIVITY LOGS -->
+                <div class="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                    <div class="relative z-10 space-y-2">
+                        <span class="inline-block bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                            Activity Monitoring
+                        </span>
+                        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">
+                            System Activity Logs & Transaction Tracking (<?php echo date('F d, Y'); ?>)
+                        </h2>
+                        <p class="text-orange-100 text-sm">
+                            Track inventory restocks, promotion adjustments, and salary advance workflows in real-time.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Filter Buttons (Inventory, Advance Cash, Promotion) -->
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div class="flex gap-2">
-                        <a href="transaction.php?filter=daily" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'daily') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Daily</a>
-                        <a href="transaction.php?filter=monthly" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'monthly') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Monthly</a>
-                        <a href="transaction.php?filter=yearly" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'yearly') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Yearly</a>
+                        <a href="transaction.php?filter=inventory" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'inventory') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Inventory</a>
+                        <a href="transaction.php?filter=advance_cash" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'advance_cash') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Advance Cash</a>
+                        <a href="transaction.php?filter=promotion" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'promotion') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Promotion</a>
                     </div>
                 </div>
 
                 <!-- SECTION 1: INVENTORY REFILL / RESTOCK -->
+                <?php if ($filter == 'inventory'): ?>
                 <div class="space-y-4">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -169,14 +150,16 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No inventory refill transactions found for this period.</td></tr>
+                                    <tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No inventory refill transactions found.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <!-- SECTION 2: PROMOTION & SALARY ADJUSTMENTS -->
+                <?php if ($filter == 'promotion'): ?>
                 <div class="space-y-4 pt-4">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -219,18 +202,20 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No promotion or salary adjustment records found for this period.</td></tr>
+                                    <tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No promotion or salary adjustment records found.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
+                <?php endif; ?>
 
-                <!-- SECTION 3: SALARY ADVANCES -->
+                <!-- SECTION 3: SALARY ADVANCES (ADVANCE CASH) -->
+                <?php if ($filter == 'advance_cash'): ?>
                 <div class="space-y-4 pt-4">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                            <span class="w-3 h-3 bg-cyan-500 rounded-full"></span> Salary Advance History
+                            <span class="w-3 h-3 bg-cyan-500 rounded-full"></span> Advance Cash / Salary Advance History
                         </h2>
                         <span class="text-xs font-semibold text-gray-500">Total Processed: <strong class="text-cyan-600">₱<?php echo number_format($adv_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
                     </div>
@@ -270,12 +255,13 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No salary advance history found for this period.</td></tr>
+                                    <tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No advance cash history found.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
+                <?php endif; ?>
 
             </div>
         </div>

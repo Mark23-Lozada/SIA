@@ -316,4 +316,3 @@ $ingredients_result = $ingredients_stmt->get_result();
 </body>
 </html>
 <?php $conn->close(); ?>
-```[cite: 1]

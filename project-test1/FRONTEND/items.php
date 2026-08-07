@@ -165,9 +165,7 @@ $items_result = $items_stmt->get_result();
     
     <div id="main-wrapper" class="flex-1 flex flex-col min-w-0 h-full bg-gray-50 overflow-hidden">
         <header class="navbar bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0" style="height: 60px;">
-            <button class="btn bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center p-2 rounded transition-colors duration-200" type="button" id="burgerToggle">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            
             <h1 class="text-xl font-bold text-orange-500">Manage Items</h1>
         </header>
 

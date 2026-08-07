@@ -44,7 +44,7 @@ if(isset($_POST['login'])){
             exit();
         } else {
             $message = "Incorrect password for Admin.";
-            $messageClass = "bg-red-100 border-red-400 text-red-700";
+            $messageClass = "bg-red-50 border-red-200 text-red-600";
         }
     } 
     else {
@@ -65,14 +65,12 @@ if(isset($_POST['login'])){
                 $department = strtolower(trim($emp_row['department']));
                 $_SESSION['role'] = $department; 
 
-                // Suriin kung personal/employee email o company email ang ginamit
                 $is_employee_gmail_login = ($gmail === $emp_row['email'] || $gmail === $emp_row['employee_gmail']);
 
                 if ($is_employee_gmail_login) {
                     header("Location: info.php"); 
                     exit();
                 } else {
-                    // Pag-route batay sa department kapag company_gmail ang ginamit
                     if ($department === 'admin') {
                         header("Location: ../project-test1/FORNTEND/sales_day.php"); 
                         exit();
@@ -92,11 +90,11 @@ if(isset($_POST['login'])){
                 }
             } else {
                 $message = "Incorrect password.";
-                $messageClass = "bg-red-100 border-red-400 text-red-700";
+                $messageClass = "bg-red-50 border-red-200 text-red-600";
             }
         } else {
             $message = "Gmail address not found in our records.";
-            $messageClass = "bg-red-100 border-red-400 text-red-700";
+            $messageClass = "bg-red-50 border-red-200 text-red-600";
         }
     }
 }
@@ -107,74 +105,188 @@ ob_end_flush();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Login - PannaKoda</title>
+    <title>PannaKoda Pancake House - System Login</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .wave-bg {
+            background: linear-gradient(135deg, #FF8C00 0%, #ff7200 50%, #e07b00 100%);
+            border-top-right-radius: 120px;
+            border-bottom-right-radius: 120px;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+<body class="bg-slate-50 font-sans antialiased h-screen overflow-hidden m-0 p-0">
 
-<div class="w-full max-w-md p-4">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden p-8">
+    <div class="flex h-screen w-full overflow-hidden bg-white">
         
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-xl text-white mb-3 shadow-md shadow-orange-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">PannaKoda Portal</h1>
-            <p class="text-sm text-slate-500 mt-1">Sign in as Admin or Employee</p>
-        </div>
-
-        <?php if(!empty($message)): ?>
-            <div class="border-l-4 p-4 mb-6 rounded <?php echo $messageClass; ?> relative text-sm" role="alert">
-                <span class="block sm:inline"><?php echo $message; ?></span>
-            </div>
-        <?php endif; ?>
-
-        <form method="POST" class="space-y-5">
+        <!-- LEFT SIDE: Pancake Business Features with Orange Wave Design -->
+        <div class="hidden lg:flex lg:w-5/12 wave-bg flex-col justify-between p-12 text-white relative shadow-2xl z-10">
             <div>
-                <label for="floatingGmail" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Gmail / Email Address</label>
-                <input type="email" name="gmail" id="floatingGmail" placeholder="name@example.com" required
-                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-slate-700 placeholder-slate-400 transition-all text-sm">
+                <div class="inline-flex items-center justify-center w-12 h-12 bg-white/25 backdrop-blur-md rounded-2xl text-white shadow-md mb-6 transition-all duration-300 hover:bg-white/35 hover:scale-105">
+                    <i class="bi bi-shop text-xl"></i>
+                </div>
+                <span class="text-xs uppercase tracking-widest font-bold text-orange-100/85">PannaKoda House</span>
+                <h1 class="text-4xl font-black tracking-tight mt-1 mb-3 leading-tight">Fresh Stack, Sweet Success!</h1>
             </div>
 
-            <div>
-                <label for="floatingPassword" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Password</label>
-                <input type="password" name="password" id="floatingPassword" placeholder="••••••••" required
-                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-slate-700 placeholder-slate-400 transition-all text-sm">
-            </div>
-            
-            <div class="flex items-center justify-between text-sm pt-1">
-                <label class="flex items-center text-slate-600 select-none cursor-pointer">
-                    <input type="checkbox" id="showpassword" onclick="togglePasswordVisibility()" class="rounded border-slate-300 text-orange-500 focus:ring-orange-500 h-4 w-4 mr-2">
-                    <span>Show Password</span>
-                </label>
-            </div>
+            <!-- Pancake Business Feature Highlights na may Mouse-Over / Hover Effect -->
+            <div class="space-y-6 my-auto">
+                <div class="flex items-start gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 transition-all duration-300 hover:bg-white/25 hover:border-white/30 hover:shadow-lg hover:scale-[1.02] cursor-pointer">
+                    <div class="p-3 bg-white/20 rounded-xl text-white">
+                        <i class="bi bi-egg-fried text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-wide">Daily Fresh Batters</h3>
+                        <p class="text-xs text-orange-100/80 mt-0.5">Manage daily pancake & waffle inventory</p>
+                    </div>
+                </div>
 
-            <div class="pt-2 space-y-3">
-                <button type="submit" name="login" 
-                        class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-orange-100 hover:shadow-xl transition-all duration-200 transform active:scale-[0.99]">
-                    Sign In
-                </button>
+                <div class="flex items-start gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 transition-all duration-300 hover:bg-white/25 hover:border-white/30 hover:shadow-lg hover:scale-[1.02] cursor-pointer">
+                    <div class="p-3 bg-white/20 rounded-xl text-white">
+                        <i class="bi bi-receipt text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-wide">Quick POS Orders</h3>
+                        <p class="text-xs text-orange-100/80 mt-0.5">Fast checkout for syrups, toppings & stacks</p>
+                    </div>
+                </div>
 
-                <div class="pt-2 space-y-3">
-                    <?php if (!$admin_exists): ?>
-                        <button type="button" onclick="location.href='register.php'" 
-                                class="w-full bg-slate-500 hover:bg-slate-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform active:scale-[0.99]">
-                            Register Initial Admin Account
-                        </button>
-                    <?php endif; ?>
+                <div class="flex items-start gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 transition-all duration-300 hover:bg-white/25 hover:border-white/30 hover:shadow-lg hover:scale-[1.02] cursor-pointer">
+                    <div class="p-3 bg-white/20 rounded-xl text-white">
+                        <i class="bi bi-people-fill text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-wide">Staff & Payroll</h3>
+                        <p class="text-xs text-orange-100/80 mt-0.5">Seamless crew schedules and attendance</p>
+                    </div>
                 </div>
             </div>
-        </form>      
+
+            <div class="text-xs text-orange-100/70">
+                <span>PannaKoda POS Portal &copy; 2026</span>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Login Form -->
+        <div class="w-full lg:w-7/12 h-full bg-white flex flex-col justify-between p-8 sm:p-12 lg:p-16 overflow-y-auto animate-fade-in">
+            
+            <!-- Top Right Register / Actions Header -->
+            <div class="flex justify-end items-center">
+                <?php if (!$admin_exists): ?>
+                    <button type="button" onclick="location.href='register.php'" 
+                            class="bg-orange-50 hover:bg-orange-100 text-[#FF8C00] font-bold text-xs uppercase tracking-wider py-2.5 px-5 rounded-xl border border-orange-200 transition-all shadow-sm">
+                        Register Admin
+                    </button>
+                <?php endif; ?>
+            </div>
+
+            <!-- Main Form Container -->
+            <div class="max-w-md w-full mx-auto my-auto py-6">
+                
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-14 h-14 bg-orange-50 text-[#FF8C00] rounded-2xl mb-3 shadow-inner border border-orange-100">
+                        <i class="bi bi-lock-fill text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">Login to your account</h2>
+                    <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Enter your credentials to continue</p>
+                </div>
+
+                <?php if(!empty($message)): ?>
+                    <div class="border p-3.5 mb-6 rounded-xl <?php echo $messageClass; ?> text-xs font-medium flex items-center gap-2 shadow-sm" role="alert">
+                        <i class="bi bi-exclamation-circle-fill text-sm"></i>
+                        <span><?php echo $message; ?></span>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" class="space-y-4">
+                    <div>
+                        <label for="floatingGmail" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Email Address</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                                <i class="bi bi-envelope"></i>
+                            </span>
+                            <input type="email" name="gmail" id="floatingGmail" placeholder="Enter your email address" required
+                                   class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50/50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FF8C00] focus:border-[#FF8C00] transition-all text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="floatingPassword" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Password</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input type="password" name="password" id="floatingPassword" placeholder="Enter your password" required
+                                   class="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-50/50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FF8C00] focus:border-[#FF8C00] transition-all text-sm">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                                <i id="toggleIcon" class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <label class="flex items-center text-slate-500 select-none cursor-pointer hover:text-slate-700">
+                            <input type="checkbox" id="showpassword" onclick="togglePasswordCheckbox()" class="rounded border-slate-300 text-[#FF8C00] focus:ring-[#FF8C00] h-4 w-4 mr-2">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="#" onclick="alert('Please contact your administrator to reset your password.'); return false;" class="text-slate-400 hover:text-[#FF8C00] transition-colors">Forgot password?</a>
+                    </div>
+
+                    <div class="pt-3">
+                        <button type="submit" name="login" 
+                                class="w-full bg-[#FF8C00] hover:bg-[#e07b00] text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-200 transform active:scale-[0.98] text-sm">
+                            Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer Help Section -->
+            <div class="text-center text-xs text-slate-400 pt-4">
+                <span>Need help ? <a href="#" class="text-[#FF8C00] font-bold hover:underline">Contact admin</a></span>
+            </div>
+        </div>
+
     </div>
-</div>
 
 <script>
 function togglePasswordVisibility() {
     const passwordInput = document.getElementById('floatingPassword');
-    passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+    const toggleIcon = document.getElementById('toggleIcon');
+    const checkbox = document.getElementById('showpassword');
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.className = 'bi bi-eye-slash';
+        checkbox.checked = true;
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.className = 'bi bi-eye';
+        checkbox.checked = false;
+    }
+}
+
+function togglePasswordCheckbox() {
+    const passwordInput = document.getElementById('floatingPassword');
+    const toggleIcon = document.getElementById('toggleIcon');
+    const checkbox = document.getElementById('showpassword');
+
+    if (checkbox.checked) {
+        passwordInput.type = 'text';
+        toggleIcon.className = 'bi bi-eye-slash';
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.className = 'bi bi-eye';
+    }
 }
 </script>
 </body>
