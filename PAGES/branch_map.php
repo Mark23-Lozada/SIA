@@ -54,6 +54,23 @@ $total_branches = count($branches_list);
     <title>PannaKoda - Select & Delete Branch Map</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes mapPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+            100% { transform: scale(1); }
+        }
+        .map-transition {
+            animation: mapPulse 0.4s ease-in-out;
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-sans">
     <div class="flex h-screen w-full overflow-hidden">
@@ -65,9 +82,9 @@ $total_branches = count($branches_list);
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between shrink-0 shadow-xs">
+            <header class="bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between shrink-0 shadow-xs">
                 <h1 class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-                    <span class="w-2.5 h-2.5 bg-orange-500 rounded-full ring-4 ring-orange-500/10"></span> Branch Location Map
+                    <span class="w-2.5 h-2.5 bg-purple-600 rounded-full ring-4 ring-purple-600/10 animate-pulse"></span> Branch Location Map
                 </h1>
             </header>
 
@@ -80,13 +97,13 @@ $total_branches = count($branches_list);
                     <!-- Header with Total Branches Box -->
                     <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
                         <h2 class="font-semibold text-slate-800 text-xs tracking-wider uppercase flex items-center gap-2">
-                            <i class="bi bi-shop-window text-orange-500 text-sm"></i> Branch Directory
+                            <i class="bi bi-shop-window text-purple-600 text-sm"></i> Branch Directory
                         </h2>
                         <!-- Total Branches Badge Counter -->
-                        <div class="flex items-center gap-1.5 bg-orange-50 border border-orange-200/60 px-2.5 py-1 rounded-lg text-orange-700 shadow-2xs">
-                            <i class="bi bi-layers-fill text-xs text-orange-500"></i>
+                        <div class="flex items-center gap-1.5 bg-purple-50 border border-purple-200/60 px-2.5 py-1 rounded-lg text-purple-800 shadow-2xs transition-transform hover:scale-105 duration-200">
+                            <i class="bi bi-layers-fill text-xs text-purple-600"></i>
                             <span class="text-xs font-bold"><?php echo $total_branches; ?></span>
-                            <span class="text-[10px] font-medium text-orange-600/80 uppercase tracking-tight">Total</span>
+                            <span class="text-[10px] font-medium text-purple-700/80 uppercase tracking-tight">Total</span>
                         </div>
                     </div>
                     
@@ -111,15 +128,15 @@ $total_branches = count($branches_list);
                         <?php if (count($branches_list) > 0): ?>
                             <?php foreach ($branches_list as $index => $branch): ?>
                                 <?php $encoded_address = urlencode($branch['full_address']); ?>
-                                <div class="relative group rounded-xl border border-slate-200/70 bg-white hover:bg-orange-50/30 hover:border-orange-200 transition-all duration-200 shadow-2xs hover:shadow-md">
+                                <div class="relative group rounded-xl border border-slate-200/70 bg-white hover:bg-purple-50/30 hover:border-purple-200 transition-all duration-300 shadow-2xs hover:shadow-md hover:-translate-y-0.5">
                                     <!-- Clickable area to view map -->
                                     <div onclick="changeMap('<?php echo htmlspecialchars($branch['branch_name'], ENT_QUOTES); ?>', '<?php echo $encoded_address; ?>', '<?php echo htmlspecialchars($branch['full_address'], ENT_QUOTES); ?>')" 
                                          class="p-3.5 cursor-pointer">
                                         <div class="flex justify-between items-start pr-8">
-                                            <h3 class="font-semibold text-slate-900 text-sm mb-1 group-hover:text-orange-600 transition-colors"><?php echo htmlspecialchars($branch['branch_name']); ?></h3>
+                                            <h3 class="font-semibold text-slate-900 text-sm mb-1 group-hover:text-purple-700 transition-colors"><?php echo htmlspecialchars($branch['branch_name']); ?></h3>
                                         </div>
                                         <p class="text-xs text-slate-500 leading-relaxed mb-2.5 flex items-start gap-1.5">
-                                            <i class="bi bi-geo-alt-fill text-slate-400 mt-0.5 shrink-0"></i> 
+                                            <i class="bi bi-geo-alt-fill text-slate-400 mt-0.5 shrink-0 group-hover:text-purple-600 transition-colors"></i> 
                                             <span><?php echo htmlspecialchars($branch['full_address']); ?></span>
                                         </p>
                                         <div class="inline-flex items-center gap-1.5 text-xs bg-slate-100/80 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200/60 font-medium">
@@ -131,14 +148,14 @@ $total_branches = count($branches_list);
                                     <!-- Delete Button -->
                                     <a href="branch_map.php?delete_id=<?php echo $branch['branch_id']; ?>" 
                                        onclick="return confirm('Are you sure you want to delete <?php echo htmlspecialchars($branch['branch_name'], ENT_QUOTES); ?>?');"
-                                       class="absolute top-3 right-3 text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all"
+                                       class="absolute top-3 right-3 text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all duration-200 active:scale-90"
                                        title="Delete Branch">
                                         <i class="bi bi-trash-fill text-xs"></i>
                                     </a>
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <div class="p-8 text-center">
+                            <div class="p-8 text-center animate-fade-in">
                                 <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
                                     <i class="bi bi-shop text-xl"></i>
                                 </div>
@@ -151,32 +168,32 @@ $total_branches = count($branches_list);
 
                 <!-- Map View Area (Right Side) -->
                 <div class="flex-1 flex flex-col bg-slate-100 h-full relative overflow-hidden">
-                    <div class="bg-white/90 backdrop-blur-md px-6 py-3.5 border-b border-slate-200/80 flex items-center justify-between shrink-0 shadow-2xs z-10">
+                    <div class="bg-white/95 backdrop-blur-md px-6 py-3.5 border-b border-slate-200/80 flex items-center justify-between shrink-0 shadow-2xs z-10">
                         <div>
                             <h2 id="mapTitle" class="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                <i class="bi bi-map-fill text-orange-500"></i> <span id="displayBranchName">Select a branch</span>
+                                <i class="bi bi-map-fill text-purple-600"></i> <span id="displayBranchName">Select a branch</span>
                             </h2>
-                            <p id="displayAddress" class="text-xs text-slate-500 mt-0.5">Click a branch from the list to view its precise location details</p>
+                            <p id="displayAddress" class="text-xs text-slate-500 mt-0.5 transition-all duration-300">Click a branch from the list to view its precise location details</p>
                         </div>
                         <!-- Open direct to Google Maps Route -->
-                        <a id="externalNavBtn" href="#" target="_blank" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-all items-center gap-2 shadow-sm hover:shadow active:scale-95">
+                        <a id="externalNavBtn" href="#" target="_blank" class="hidden bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-all duration-200 items-center gap-2 shadow-sm hover:shadow active:scale-95 animate-fade-in">
                             <i class="bi bi-cursor-fill"></i> Get Directions
                         </a>
                     </div>
 
                     <!-- Google Maps iframe -->
-                    <div class="flex-1 w-full bg-slate-200 relative">
+                    <div id="mapContainer" class="flex-1 w-full bg-slate-200 relative transition-all duration-300">
                         <iframe 
                             id="mapIframe"
-                            class="w-full h-full border-0"
+                            class="w-full h-full border-0 transition-opacity duration-500"
                             loading="lazy"
                             allowfullscreen
                             src="">
                         </iframe>
                         
                         <!-- Placeholder screen before selection -->
-                        <div id="mapPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 backdrop-blur-xs z-10">
-                            <div class="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-500 mb-4 shadow-xs">
+                        <div id="mapPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 backdrop-blur-xs z-10 animate-fade-in">
+                            <div class="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 mb-4 shadow-xs animate-bounce">
                                 <i class="bi bi-geo-alt text-2xl"></i>
                             </div>
                             <h2 class="text-base font-bold text-slate-700">No Branch Selected</h2>
@@ -191,6 +208,10 @@ $total_branches = count($branches_list);
 
     <script>
         function changeMap(branchName, encodedAddress, fullAddress) {
+            const container = document.getElementById('mapContainer');
+            container.classList.add('map-transition');
+            setTimeout(() => container.classList.remove('map-transition'), 400);
+
             document.getElementById('displayBranchName').innerText = branchName;
             document.getElementById('displayAddress').innerText = fullAddress;
             
@@ -202,7 +223,11 @@ $total_branches = count($branches_list);
             navBtn.classList.remove('hidden');
             navBtn.classList.add('flex');
 
-            document.getElementById('mapPlaceholder').style.display = 'none';
+            const placeholder = document.getElementById('mapPlaceholder');
+            placeholder.style.opacity = '0';
+            setTimeout(() => {
+                placeholder.style.display = 'none';
+            }, 200);
         }
 
         // Auto-load the first branch on initialization if available

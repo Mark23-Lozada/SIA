@@ -58,21 +58,21 @@ $deductions_result = $conn->query($deductions_query);
 
         <div class="flex-1 min-w-0 bg-white min-h-screen flex flex-col">
             <header class="h-[60px] bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0">
-                <h1 class="text-xl font-bold text-orange-600">Tax Management & Computations</h1>
-                <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200">Active Fiscal Year <?php echo date('Y'); ?></span>
+                <h1 class="text-xl font-bold text-purple-700">Tax Management & Computations</h1>
+                <span class="text-xs font-semibold bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-200">Active Fiscal Year <?php echo date('Y'); ?></span>
             </header>
 
             <div class="p-6 flex-1 overflow-y-auto space-y-6">
-                <!-- CUSTOM BANNER HEADER PARA SA TAX MANAGEMENT & COMPLIANCE -->
-                <div class="w-full bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                <!-- CUSTOM BANNER HEADER -->
+                <div class="w-full bg-gradient-to-r from-purple-900 via-indigo-900 to-violet-950 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
                     <div class="relative z-10 space-y-2">
-                        <span class="inline-block bg-white/20 backdrop-blur-md text-emerald-100 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                        <span class="inline-block bg-white/20 backdrop-blur-md text-purple-100 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
                             Fiscal & Tax Compliance
                         </span>
                         <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">
                             Annual Tax Computation & Allowable Deductions (<?php echo date('Y'); ?>)
                         </h2>
-                        <p class="text-emerald-100 text-sm">
+                        <p class="text-purple-100 text-sm">
                             Compute taxable income, evaluate allowable business expense deductions, and check estimated tax dues.
                         </p>
                     </div>
@@ -80,24 +80,24 @@ $deductions_result = $conn->query($deductions_query);
 
                 <!-- Tax Summary Boxes -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-orange-500">
+                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-purple-600">
                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Gross Revenue</p>
                         <h3 class="text-2xl font-black text-gray-800">₱<?php echo number_format($total_revenue, 2); ?></h3>
                         <p class="text-xs text-gray-500 mt-2">Total sales revenue generated this year</p>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-blue-500">
+                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-indigo-600">
                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Allowable Deductions</p>
-                        <h3 class="text-2xl font-black text-blue-600">₱<?php echo number_format($total_expenses, 2); ?></h3>
+                        <h3 class="text-2xl font-black text-indigo-600">₱<?php echo number_format($total_expenses, 2); ?></h3>
                         <p class="text-xs text-gray-500 mt-2">From approved restock/refill requests</p>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-amber-500">
+                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-violet-600">
                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Taxable Income</p>
-                        <h3 class="text-2xl font-black text-amber-600">₱<?php echo number_format($taxable_income, 2); ?></h3>
+                        <h3 class="text-2xl font-black text-violet-600">₱<?php echo number_format($taxable_income, 2); ?></h3>
                         <p class="text-xs text-gray-500 mt-2">Revenue minus allowable expenses</p>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-red-500">
+                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-fuchsia-600">
                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Estimated Tax Due (8%)</p>
-                        <h3 class="text-2xl font-black text-red-600">₱<?php echo number_format($estimated_tax, 2); ?></h3>
+                        <h3 class="text-2xl font-black text-fuchsia-600">₱<?php echo number_format($estimated_tax, 2); ?></h3>
                         <p class="text-xs text-gray-500 mt-2">Estimated tax payable</p>
                     </div>
                 </div>
@@ -112,7 +112,7 @@ $deductions_result = $conn->query($deductions_query);
                 <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase">
+                            <tr class="bg-purple-50 border-b border-gray-200 text-xs font-bold text-purple-800 uppercase">
                                 <th class="px-6 py-4">Request ID / Title</th>
                                 <th class="px-6 py-4">Department</th>
                                 <th class="px-6 py-4 text-right">Deducted Amount</th>
@@ -128,7 +128,7 @@ $deductions_result = $conn->query($deductions_query);
                                             <div class="text-xs text-gray-500"><?php echo htmlspecialchars($row['title']); ?></div>
                                         </td>
                                         <td class="px-6 py-4 text-gray-600"><?php echo htmlspecialchars($row['department']); ?></td>
-                                        <td class="px-6 py-4 text-right font-bold text-blue-600">-₱<?php echo number_format($row['amount'], 2); ?></td>
+                                        <td class="px-6 py-4 text-right font-bold text-purple-600">-₱<?php echo number_format($row['amount'], 2); ?></td>
                                         <td class="px-6 py-4 text-center text-xs text-gray-500 font-medium">
                                             <?php echo date('M d, Y', strtotime($row['created_at'])); ?>
                                         </td>

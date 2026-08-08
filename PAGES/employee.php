@@ -50,13 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $contract_duration_years = floatval($_POST['contract_duration_years'] ?? 1.0);
     $work_location = $conn->real_escape_string($_POST['work_location'] ?? '');
     
-    // Siguruhing hindi 0 ang salary; mag-fallback kung sakaling blangko
     $salary = floatval($_POST['salary']);
-    if ($salary <= 0) {
-        $salary = ($role === 'Manager') ? 45000.00 : 22000.00;
-    }
 
-    // Backend Strong Password Validation
     if (strlen($password_input) < 8 || 
         !preg_match('/[A-Z]/', $password_input) || 
         !preg_match('/[a-z]/', $password_input) || 
@@ -78,6 +73,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if ($emp_result && $emp_result->num_rows > 0) {
         $emp_data = $emp_result->fetch_assoc();
+        
+        if ($salary <= 0) {
+            $salary = isset($emp_data['salary']) && floatval($emp_data['salary']) > 0 ? floatval($emp_data['salary']) : (($role === 'Manager') ? 45000.00 : 22000.00);
+        }
+
         $full_name = trim($emp_data['full_name']);
         
         $name_parts = explode(' ', $full_name);
@@ -145,11 +145,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
             $row['department'] = 'Unassigned'; 
         }
 
-        if (!isset($row['role']) && !isset($row['position'])) {
-            $row['role'] = 'Staff';
-        } else {
-            $row['role'] = $row['position_title'] ?? ($row['position'] ?? 'Staff');
+        $resolved_role = trim($row['position_title'] ?? ($row['position'] ?? ($row['role'] ?? '')));
+        if (empty($resolved_role)) {
+            $resolved_role = 'Staff';
         }
+        $row['role'] = $resolved_role;
 
         if (!isset($row['date_hired']) || empty($row['date_hired'])) {
             $row['date_hired'] = date('Y-m-d'); 
@@ -210,6 +210,42 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       #printArea { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; background: white !important; color: black !important; }
       .no-print { display: none !important; }
     }
+    
+    /* Smooth Modern Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-fade-in {
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .table tbody tr {
+      animation: fadeIn 0.3s ease-out forwards;
+      transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+      transform: scale(1.002);
+      background-color: rgba(168, 85, 247, 0.04) !important;
+    }
+
+    /* Custom Modern Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
   </style>
 </head>
 <body class="bg-[#f8fafc] font-sans antialiased h-screen overflow-hidden">
@@ -217,53 +253,50 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
   <div class="flex h-screen w-full overflow-hidden">
     
     <?php include 'sidebar.php'; ?>
-    <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0">
+    <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0 animate-fade-in">
       
-      <!-- MODERN DYNAMIC BANNER HEADER -->
-      <div class="relative overflow-hidden bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
-        <!-- Background Glow FX -->
-        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none"></div>
+      <!-- MODERN DYNAMIC BANNER HEADER (PURPLE THEME) -->
+      <div class="relative overflow-hidden bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 rounded-3xl shadow-xl p-8 mb-8 text-white border border-purple-500/20">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-500/25 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-blue-200 mb-3">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 backdrop-blur-md border border-purple-400/30 text-xs font-semibold uppercase tracking-wider text-purple-200 mb-3 shadow-sm">
               <i class="bi bi-people-fill"></i> HR & Admin Department
             </div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Employee Directory & PH Payroll</h1>
-            <p class="text-sm text-blue-100/80 max-w-2xl leading-relaxed">
+            <p class="text-sm text-purple-100/80 max-w-2xl leading-relaxed">
               Manage candidates, onboarding profiles, statutory numbers, department metrics, and Philippine-compliant payroll statements seamlessly.
             </p>
           </div>
 
-          <!-- Quick Action / Summary Indicator Pill -->
           <div class="flex items-center gap-3">
             <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
-              <div class="w-10 h-10 rounded-xl bg-blue-500/30 flex items-center justify-center text-blue-300">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300">
                 <i class="bi bi-shield-lock-fill text-xl"></i>
               </div>
               <div>
-                <span class="block text-xs text-blue-200 font-medium">Total Workforce</span>
+                <span class="block text-xs text-purple-200 font-medium">Total Workforce</span>
                 <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- HR TABS NAVIGATION -->
-        <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-4">
-          <div class="text-xs text-blue-200/70 font-medium hidden sm:block">
+        <div class="relative z-10 mt-6 pt-6 border-t border-purple-500/20 flex flex-wrap justify-between items-center gap-4">
+          <div class="text-xs text-purple-200/70 font-medium hidden sm:block">
             <i class="bi bi-sliders mr-1"></i> Switch active directory view below
           </div>
-          <div class="bg-black/20 backdrop-blur-md p-1 rounded-xl flex gap-1 border border-white/10 ml-auto">
-            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
-              <i class="bi bi-person-plus text-amber-600"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-amber-500 text-white rounded-pill px-2">0</span>
+          <div class="bg-black/30 backdrop-blur-md p-1.5 rounded-xl flex gap-1.5 border border-purple-500/20 ml-auto shadow-inner">
+            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-purple-600 text-white shadow-md font-semibold transform hover:scale-[1.02]">
+              <i class="bi bi-person-plus"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-white/20 text-white rounded-pill px-2">0</span>
             </button>
-            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white">
-              <i class="bi bi-person-bounding-box text-[#FF8C00]"></i> Personal Details
+            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-purple-200 hover:text-white hover:bg-purple-500/20">
+              <i class="bi bi-person-bounding-box"></i> Personal Details
             </button>
-            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white">
-              <i class="bi bi-cash-stack text-emerald-600"></i> Payroll Profile
+            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-purple-200 hover:text-white hover:bg-purple-500/20">
+              <i class="bi bi-cash-stack"></i> Payroll Profile
             </button>
           </div>
         </div>
@@ -271,57 +304,54 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
       <!-- METRIC CARDS SECTION -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <!-- Total Active Employees -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-purple-200 group">
+          <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110">
             <i class="bi bi-people-fill"></i>
           </div>
           <div>
-            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Hired</p>
-            <h3 id="statTotalHired" class="text-2xl font-black text-gray-800">0</h3>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Hired</p>
+            <h3 id="statTotalHired" class="text-2xl font-black text-slate-800">0</h3>
           </div>
         </div>
 
-        <!-- Onboarding Count -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-purple-200 group">
+          <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110">
             <i class="bi bi-person-plus-fill"></i>
           </div>
           <div>
-            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Onboarding</p>
-            <h3 id="statOnboarding" class="text-2xl font-black text-gray-800">0</h3>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Onboarding</p>
+            <h3 id="statOnboarding" class="text-2xl font-black text-slate-800">0</h3>
           </div>
         </div>
 
-        <!-- Department Breakdown Box -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 md:col-span-2 flex flex-col justify-between">
-          <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Employees per Department</p>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 md:col-span-2 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-purple-200">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">Employees per Department</p>
           <div id="deptBreakdownContainer" class="flex flex-wrap gap-2">
-            <span class="text-xs text-gray-400 italic">Calculating breakdown...</span>
+            <span class="text-xs text-slate-400 italic">Calculating breakdown...</span>
           </div>
         </div>
       </div>
 
-      <div class="mb-4 flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="relative flex-1 max-w-md">
-          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+      <div class="mb-6 flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100 transition-all duration-300 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/10">
+        <div class="relative flex-1">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
             <i class="bi bi-search"></i>
           </span>
-          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2 rounded-xl text-sm border-gray-200 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]" placeholder="Search by ID, name, department, or role...">
+          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2.5 rounded-xl text-sm border-slate-200 focus:border-purple-500 focus:ring-0 shadow-none bg-slate-50/50" placeholder="Search by ID, name, department, or role...">
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 overflow-hidden">
         <div class="table-responsive bg-white rounded-xl overflow-hidden">
           
           <!-- 1. NEWLY HIRED / ONBOARDING TABLE -->
           <table id="newlyHiredTable" class="table table-hover align-middle mb-0 text-sm">
-            <thead class="table-dark">
+            <thead>
               <tr>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Position/Role</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Status</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Action (Onboarding Form)</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Position/Role</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Status</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action (Onboarding Form)</th>
               </tr>
             </thead>
             <tbody id="newlyHiredBody"></tbody>
@@ -329,13 +359,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
           <!-- 2. PERSONAL DETAILS TABLE (Hired) -->
           <table id="personalTable" class="table table-hover align-middle mb-0 text-sm d-none">
-            <thead class="table-dark">
+            <thead>
               <tr>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Employee ID</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Role</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Department</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Action</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Employee ID</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Role</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Department</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action</th>
               </tr>
             </thead>
             <tbody id="personalBody"></tbody>
@@ -343,16 +373,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
           <!-- 3. PAYROLL PROFILE TABLE -->
           <table id="payrollTable" class="table table-hover align-middle mb-0 text-sm d-none">
-            <thead class="table-dark">
+            <thead>
               <tr>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Role</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">SSS No.</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">PhilHealth</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Pag-IBIG No.</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">GSIS No.</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-end">Base Salary</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Action</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Role</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">SSS No.</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">PhilHealth</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Pag-IBIG No.</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">GSIS No.</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Base Salary</th>
+                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action</th>
               </tr>
             </thead>
             <tbody id="payrollBody"></tbody>
@@ -365,17 +395,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     <!-- PAYSLIP MODAL -->
     <div class="modal fade" id="payslipModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-2xl shadow-xl border-0">
-          <div class="modal-header border-0 bg-slate-50 rounded-t-2xl px-6 py-4 no-print">
-            <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2">
-              <i class="bi bi-receipt text-emerald-600"></i> Corporate Payroll Statement (PH Standards)
+        <div class="modal-content rounded-3xl shadow-2xl border-0 overflow-hidden animate-fade-in">
+          <div class="modal-header border-0 bg-slate-50 px-6 py-4 no-print">
+            <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2">
+              <i class="bi bi-receipt text-purple-600"></i> Corporate Payroll Statement (PH Standards)
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-6" id="printArea"></div>
-          <div class="modal-footer border-0 bg-slate-50 rounded-b-2xl px-6 py-3 no-print">
-            <button type="button" class="btn btn-light font-semibold border text-gray-600 px-4" data-bs-dismiss="modal">Close</button>
-            <button type="button" id="btnPrintStatement" class="btn btn-primary font-semibold bg-blue-600 border-0 px-4 flex items-center gap-1.5 shadow-sm">
+          <div class="modal-footer border-0 bg-slate-50 px-6 py-4 no-print">
+            <button type="button" class="btn btn-light font-semibold border text-slate-600 px-4 rounded-xl" data-bs-dismiss="modal">Close</button>
+            <button type="button" id="btnPrintStatement" class="btn font-semibold bg-purple-600 hover:bg-purple-700 text-white border-0 px-5 rounded-xl flex items-center gap-2 shadow-sm transition-all duration-200">
               <i class="bi bi-printer"></i> Print Statement
             </button>
           </div>
@@ -386,10 +416,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     <!-- ONBOARDING MODAL FORM -->
     <div class="modal fade" id="onboardingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-2xl shadow-xl border-0">
-          <div class="modal-header border-0 bg-slate-50 rounded-t-2xl px-6 py-4">
-            <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2">
-              <i class="bi bi-person-check text-indigo-600"></i> Complete Onboarding Details
+        <div class="modal-content rounded-3xl shadow-2xl border-0 overflow-hidden animate-fade-in">
+          <div class="modal-header border-0 bg-slate-50 px-6 py-4">
+            <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2">
+              <i class="bi bi-person-check text-purple-600"></i> Complete Onboarding Details
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
@@ -399,99 +429,99 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Full Name</label>
-                  <input type="text" id="modalName" readonly class="form-control bg-gray-100 text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Full Name</label>
+                  <input type="text" id="modalName" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contact Number</label>
-                  <input type="text" id="modalContactNumber" class="form-control text-sm" placeholder="e.g. 09123456789">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Number</label>
+                  <input type="text" id="modalContactNumber" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="e.g. 09123456789">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Name</label>
-                  <input type="text" id="modalCompanyName" class="form-control text-sm" value="PannaKoda Stores Inc.">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Name</label>
+                  <input type="text" id="modalCompanyName" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="PannaKoda Stores Inc.">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Address</label>
-                  <input type="text" id="modalCompanyAddress" class="form-control text-sm" placeholder="e.g. Dasmarinas Cavite">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Address</label>
+                  <input type="text" id="modalCompanyAddress" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="e.g. Dasmarinas Cavite">
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Date of Birth</label>
-                  <input type="date" id="modalDob" class="form-control text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date of Birth</label>
+                  <input type="date" id="modalDob" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Civil Status</label>
-                  <select id="modalCivilStatus" class="form-control text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Civil Status</label>
+                  <select id="modalCivilStatus" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                     <option value="Single">Single</option>
                     <option value="Married">Married</option>
                     <option value="Widowed">Widowed</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nationality</label>
-                  <input type="text" id="modalNationality" class="form-control text-sm" value="Filipino">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nationality</label>
+                  <input type="text" id="modalNationality" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="Filipino">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Gender</label>
-                  <select id="modalGender" class="form-control text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Gender</label>
+                  <select id="modalGender" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Work Location</label>
-                  <input type="text" id="modalWorkLocation" class="form-control text-sm" value="Main Office">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Location</label>
+                  <input type="text" id="modalWorkLocation" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="Main Office">
                 </div>
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Home Address</label>
-                <textarea id="modalAddress" readonly rows="2" class="form-control bg-gray-100 text-sm"></textarea>
+                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Home Address</label>
+                <textarea id="modalAddress" readonly rows="2" class="form-control bg-slate-100 text-sm rounded-xl border-slate-200"></textarea>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employee Gmail</label>
-                  <input type="text" id="modalEmployeeGmail" readonly class="form-control bg-gray-100 text-sm text-indigo-600 font-medium">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Employee Gmail</label>
+                  <input type="text" id="modalEmployeeGmail" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-purple-700 font-medium">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Company Gmail</label>
-                  <input type="text" id="modalCompanyGmail" readonly class="form-control bg-gray-100 text-sm text-emerald-600 font-medium">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Gmail</label>
+                  <input type="text" id="modalCompanyGmail" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-emerald-700 font-medium">
                 </div>
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Set Password</label>
-                <input type="password" id="modalPassword" required class="form-control text-sm" placeholder="Ilagay ang strong password" oninput="validatePasswordStrength(this.value)">
-                <div id="passwordFeedback" class="text-[11px] mt-1 text-gray-500">
+                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Set Password</label>
+                <input type="password" id="modalPassword" required class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="Ilagay ang strong password" oninput="validatePasswordStrength(this.value)">
+                <div id="passwordFeedback" class="text-[11px] mt-1 text-slate-400 font-medium">
                   Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Department</label>
-                  <input type="text" id="modalDepartment" required class="form-control text-sm" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Department</label>
+                  <input type="text" id="modalDepartment" required class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Role / Position Tier</label>
-                  <select id="modalRole" class="form-control text-sm" onchange="updateDefaultSalary()">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Role / Position Tier</label>
+                  <select id="modalRole" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" onchange="updateDefaultSalary()">
                     <option value="Staff">Staff</option>
                     <option value="Manager">Manager</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Employment Type</label>
-                  <select id="modalEmploymentType" class="form-control text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Employment Type</label>
+                  <select id="modalEmploymentType" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                     <option value="Regular">Regular</option>
                     <option value="Probationary">Probationary</option>
                     <option value="Part-Time">Part-Time</option>
@@ -502,61 +532,61 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Immediate Supervisor</label>
-                  <input type="text" id="modalSupervisor" class="form-control text-sm" placeholder="Supervisor Name">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Immediate Supervisor</label>
+                  <input type="text" id="modalSupervisor" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="Supervisor Name">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Base Salary (PHP)</label>
-                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm" placeholder="Base salary">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Base Salary (PHP)</label>
+                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="Base salary">
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Date Hired</label>
-                  <input type="date" id="modalDateHired" class="form-control text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date Hired</label>
+                  <input type="date" id="modalDateHired" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contract Start Date</label>
-                  <input type="date" id="modalContractStart" class="form-control text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract Start Date</label>
+                  <input type="date" id="modalContractStart" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contract End Date</label>
-                  <input type="date" id="modalContractEnd" class="form-control text-sm">
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Contract Duration (Years)</label>
-                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm" value="1.0">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract End Date</label>
+                  <input type="date" id="modalContractEnd" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">SSS No.</label>
-                  <input type="text" id="modalSss" readonly class="form-control bg-gray-100 text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract Duration (Years)</label>
+                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="1.0">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">SSS No.</label>
+                  <input type="text" id="modalSss" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">PhilHealth No.</label>
-                  <input type="text" id="modalPhilhealth" readonly class="form-control bg-gray-100 text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">PhilHealth No.</label>
+                  <input type="text" id="modalPhilhealth" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200">
                 </div>
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Pag-IBIG No.</label>
-                  <input type="text" id="modalPagibig" readonly class="form-control bg-gray-100 text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Pag-IBIG No.</label>
+                  <input type="text" id="modalPagibig" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">GSIS No.</label>
-                  <input type="text" id="modalGsis" readonly class="form-control bg-gray-100 text-sm">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">GSIS No.</label>
+                  <input type="text" id="modalGsis" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200">
                 </div>
               </div>
             </div>
-            <div class="modal-footer border-0 bg-slate-50 rounded-b-2xl px-6 py-3">
-              <button type="button" class="btn btn-light font-semibold border text-gray-600 px-4" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-dark font-semibold bg-indigo-600 hover:bg-indigo-700 border-0 px-4">Fully Hired & Save</button>
+            <div class="modal-footer border-0 bg-slate-50 px-6 py-4">
+              <button type="button" class="btn btn-light font-semibold border text-slate-600 px-4 rounded-xl" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn font-semibold bg-purple-600 hover:bg-purple-700 text-white border-0 px-5 rounded-xl shadow-sm transition-all duration-200">Fully Hired & Save</button>
             </div>
           </form>
         </div>
@@ -599,22 +629,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         }
       });
 
-      // Update Metric Values UI
       document.getElementById('statTotalHired').innerText = totalHired;
       document.getElementById('statOnboarding').innerText = onboardingCount;
       document.getElementById('activeCountBadge').innerText = `${totalHired + onboardingCount} Total`;
       document.getElementById('badgeNewlyHired').innerText = onboardingCount;
 
-      // Update Department Breakdown Badges
       const deptContainer = document.getElementById('deptBreakdownContainer');
       deptContainer.innerHTML = '';
       if (Object.keys(deptCounts).length === 0) {
-        deptContainer.innerHTML = `<span class="text-xs text-gray-400 italic">No department data.</span>`;
+        deptContainer.innerHTML = `<span class="text-xs text-slate-400 italic">No department data.</span>`;
       } else {
         for (const [dept, count] of Object.entries(deptCounts)) {
           const badge = document.createElement('div');
-          badge.className = "bg-slate-100 border border-slate-200 text-gray-700 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5";
-          badge.innerHTML = `<span>${dept}:</span> <span class="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">${count}</span>`;
+          badge.className = "bg-purple-50 border border-purple-100 text-purple-800 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 hover:bg-purple-100";
+          badge.innerHTML = `<span>${dept}:</span> <span class="bg-purple-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-bold">${count}</span>`;
           deptContainer.appendChild(badge);
         }
       }
@@ -623,7 +651,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     function updateDefaultSalary() {
       const role = document.getElementById('modalRole').value;
       const salaryInput = document.getElementById('modalSalary');
-      salaryInput.value = role === 'Manager' ? 45000 : 22000;
+      if (!salaryInput.value || parseFloat(salaryInput.value) <= 0) {
+        salaryInput.value = role === 'Manager' ? 45000 : 22000;
+      }
     }
 
     function updateModalGmailPreview() {
@@ -664,7 +694,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         feedback.className = "text-[11px] mt-1 text-emerald-600 font-semibold";
         feedback.innerHTML = '<i class="bi bi-check-circle-fill"></i> Strong password!';
       } else {
-        feedback.className = "text-[11px] mt-1 text-red-500 font-semibold";
+        feedback.className = "text-[11px] mt-1 text-rose-500 font-semibold";
         feedback.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Mahina pa ang password. Sundin ang kinakailangan.';
       }
     }
@@ -695,18 +725,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       filtered.forEach(emp => {
         const status = (emp.status || 'onboarding').toLowerCase();
         const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
-        const roleClass = emp.role === 'Manager' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+        
+        const displayRole = (emp.role && emp.role.trim() !== '') ? emp.role : 'Staff';
+        const roleClass = displayRole === 'Manager' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200';
 
         if (status !== 'hired') {
           onboardingCount++;
           const trNew = document.createElement('tr');
-          trNew.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+          trNew.className = "border-b border-slate-100 hover:bg-purple-50/40 transition-all duration-200";
           trNew.innerHTML = `
-            <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
-            <td class="py-3 px-4"><span class="${roleClass} px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role || 'Staff'}</span></td>
-            <td class="py-3 px-4"><span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Onboarding</span></td>
-            <td class="py-3 px-4 text-center">
-              <button onclick="openOnboardingModal(${emp.id})" class="btn btn-sm btn-dark py-1.5 px-3 text-xs font-semibold rounded-lg flex items-center gap-1.5 mx-auto bg-indigo-600 hover:bg-indigo-700 border-0 shadow-sm">
+            <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
+            <td class="py-3.5 px-4"><span class="${roleClass} px-3 py-1 rounded-lg text-xs font-semibold border">${displayRole}</span></td>
+            <td class="py-3.5 px-4"><span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Onboarding</span></td>
+            <td class="py-3.5 px-4 text-center">
+              <button onclick="openOnboardingModal(${emp.id})" class="btn btn-sm py-1.5 px-3.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm transition-all duration-200 hover:scale-105">
                 <i class="bi bi-person-check-fill"></i> Setup Form / Onboarding
               </button>
             </td>
@@ -715,14 +747,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         } else {
           hiredPersonalCount++;
           const trPersonal = document.createElement('tr');
-          trPersonal.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+          trPersonal.className = "border-b border-slate-100 hover:bg-purple-50/40 transition-all duration-200";
           trPersonal.innerHTML = `
-            <td class="py-3 px-4 font-mono font-semibold text-gray-700">${emp.display_emp_id || ''}</td>
-            <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
-            <td class="py-3 px-4"><span class="${roleClass} px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role}</span></td>
-            <td class="py-3 px-4 text-gray-600">${emp.department}</td>
-            <td class="py-3 px-4 text-center">
-              <button onclick="triggerDelete(${emp.id}, '${(emp.full_name || '').replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs font-semibold rounded-lg flex items-center gap-1 mx-auto">
+            <td class="px-6 py-4 font-mono text-slate-600">${emp.display_emp_id || ''}</td>
+            <td class="px-6 py-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
+            <td class="px-6 py-4"><span class="${roleClass} px-3 py-1 rounded-lg text-xs font-semibold border">${displayRole}</span></td>
+            <td class="px-6 py-4 text-slate-600">${emp.department || 'Unassigned'}</td>
+            <td class="px-6 py-4 text-center">
+              <button onclick="triggerDelete(${emp.id}, '${(emp.full_name || '').replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-danger py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1 mx-auto transition-all duration-200 hover:scale-105">
                 <i class="bi bi-trash3"></i> Delete
               </button>
             </td>
@@ -731,17 +763,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
           activePayrollCount++;
           const trPayroll = document.createElement('tr');
-          trPayroll.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+          trPayroll.className = "border-b border-slate-100 hover:bg-purple-50/40 transition-all duration-200";
           trPayroll.innerHTML = `
-            <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
-            <td class="py-3 px-4 font-semibold text-xs ${emp.role === 'Manager' ? 'text-amber-700' : 'text-blue-700'}">${emp.role}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.sss_id || '33-1234567-8'}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.philhealth_id || '12-345678901-2'}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.pagibig_id || '1210-9876-5432'}</td>
-            <td class="py-3 px-4 text-gray-600 font-mono">${emp.gsis_id || '-'}</td>
-            <td class="py-3 px-4 text-end font-bold text-gray-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-            <td class="py-3 px-4 text-center">
-              <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1 mx-auto">
+            <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
+            <td class="py-3.5 px-4 font-semibold text-xs ${displayRole === 'Manager' ? 'text-purple-700' : 'text-indigo-700'}">${displayRole}</td>
+            <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.sss_id || '33-1234567-8'}</td>
+            <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.philhealth_id || '12-345678901-2'}</td>
+            <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.pagibig_id || '1210-9876-5432'}</td>
+            <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.gsis_id || '-'}</td>
+            <td class="py-3.5 px-4 text-end font-bold text-slate-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+            <td class="py-3.5 px-4 text-center">
+              <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white border-0 transition-all duration-200">
                 <i class="bi bi-file-earmark-spreadsheet"></i> Payslip
               </button>
             </td>
@@ -751,13 +783,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       });
 
       if (onboardingCount === 0) {
-        newlyHiredBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400 italic">No candidates undergoing onboarding.</td></tr>`;
+        newlyHiredBody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400 italic">No candidates undergoing onboarding.</td></tr>`;
       }
       if (hiredPersonalCount === 0) {
-        personalBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">No hired operational records matched.</td></tr>`;
+        personalBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-400 italic">No hired operational records matched.</td></tr>`;
       }
       if (activePayrollCount === 0) {
-        payrollBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-gray-400 italic">No operational payroll records matched.</td></tr>`;
+        payrollBody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400 italic">No operational payroll records matched.</td></tr>`;
       }
     }
 
@@ -780,7 +812,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       updateModalGmailPreview();
 
       document.getElementById('modalAddress').value = emp.address || '';
-      document.getElementById('modalRole').value = emp.role || 'Staff';
+      document.getElementById('modalRole').value = (emp.role && emp.role.trim() !== '') ? emp.role : 'Staff';
       document.getElementById('modalEmploymentType').value = emp.employment_type || 'Regular';
       document.getElementById('modalSupervisor').value = emp.immediate_supervisor || '';
       document.getElementById('modalDateHired').value = emp.date_hired || new Date().toISOString().split('T')[0];
@@ -789,14 +821,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalContractDuration').value = emp.contract_duration_years || 1.0;
 
       document.getElementById('modalPassword').value = '';
-      document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-gray-500";
+      document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-slate-400 font-medium";
       document.getElementById('passwordFeedback').innerHTML = "Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.";
       document.getElementById('modalSss').value = emp.sss_id || '33-1234567-8';
       document.getElementById('modalPhilhealth').value = emp.philhealth_id || '12-345678901-2';
       document.getElementById('modalPagibig').value = emp.pagibig_id || '1210-9876-5432';
       document.getElementById('modalGsis').value = emp.gsis_id || '-';
       
-      const defaultSal = (emp.role || 'Staff') === 'Manager' ? 45000 : 22000;
+      const defaultSal = ((emp.role || 'Staff') === 'Manager') ? 45000 : 22000;
       document.getElementById('modalSalary').value = (emp.salary && parseFloat(emp.salary) > 0) ? emp.salary : defaultSal;
 
       if (!onboardingModalInstance) {
@@ -869,8 +901,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         text: `Are you sure you want to delete this data "${name}"?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
+        confirmButtonColor: '#9333ea',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Yes',
         cancelButtonText: 'Cancel'
       }).then(async (result) => {
@@ -964,91 +996,91 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const payDateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
       document.getElementById('printArea').innerHTML = `
-        <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs shadow-sm">
-          <div class="text-center border-b pb-4 mb-4">
-            <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
-            <p class="text-[11px] text-gray-500 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
-            <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
-            <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
+        <div class="border border-slate-200 p-6 bg-white rounded-2xl text-slate-800 text-xs shadow-sm">
+          <div class="text-center border-b border-slate-100 pb-4 mb-4">
+            <h3 class="font-black text-xl tracking-wide uppercase text-slate-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
+            <p class="text-[11px] text-slate-400 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
+            <p class="text-[11px] text-slate-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
+            <div class="mt-3 inline-block bg-purple-50 text-purple-800 font-mono text-[11px] font-bold px-3 py-1 rounded-lg border border-purple-100">
               OFFICIAL PAYSLIP STATEMENT | ${cutOffPeriod}
             </div>
           </div>
           
-          <div class="grid grid-cols-2 gap-4 mb-4 border-b pb-4 bg-slate-50/60 p-3 rounded-lg">
+          <div class="grid grid-cols-2 gap-4 mb-4 border-b border-slate-100 pb-4 bg-slate-50/60 p-4 rounded-xl">
              <div>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-gray-800">${emp.display_emp_id}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-gray-800">${emp.full_name}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Department:</span> <span class="font-semibold text-gray-800">${emp.department}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-gray-800">Single / S / Z</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-slate-800">${emp.display_emp_id}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-slate-800">${emp.full_name}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Department:</span> <span class="font-semibold text-slate-800">${emp.department}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-slate-800">Single / S / Z</span></p>
              </div>
              <div>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800">${emp.role}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800">${payDateStr}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-indigo-600">${emp.employment_type || 'Regular'}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-gray-600 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-slate-800">${emp.role}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-slate-800">${payDateStr}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-purple-600">${emp.employment_type || 'Regular'}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-slate-400 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
              </div>
           </div>
 
           <div class="grid grid-cols-2 gap-6 items-start mb-4">
             <div>
-              <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings (Kinsenas Breakdown)</h6>
-              <div class="space-y-1">
-                <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Basic Salary (Semi-Monthly)</span> 
-                  <span class="font-semibold font-mono">₱${f(kinsenasBase)}</span>
+              <h6 class="font-bold text-xs text-slate-800 border-b border-slate-100 pb-1.5 mb-2 uppercase tracking-wide">Earnings (Kinsenas Breakdown)</h6>
+              <div class="space-y-1.5">
+                <div class="flex justify-between py-1 border-b border-dashed border-slate-100">
+                  <span class="text-slate-500">Basic Salary (Semi-Monthly)</span> 
+                  <span class="font-semibold font-mono text-slate-800">₱${f(kinsenasBase)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Rice & Clothing Allowance</span> 
-                  <span class="font-semibold font-mono">₱${f(kinsenasAllowance)}</span>
+                <div class="flex justify-between py-1 border-b border-dashed border-slate-100">
+                  <span class="text-slate-500">Rice & Clothing Allowance</span> 
+                  <span class="font-semibold font-mono text-slate-800">₱${f(kinsenasAllowance)}</span>
                 </div>
-                <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
+                <div class="flex justify-between py-2 font-bold text-slate-900 bg-slate-50 px-2.5 rounded-lg mt-1">
                   <span>Gross Pay (Period)</span> 
-                  <span class="font-mono text-emerald-700">₱${f(kinsenasGross)}</span>
+                  <span class="font-mono text-emerald-600">₱${f(kinsenasGross)}</span>
                 </div>
               </div>
             </div>
 
             <div>
-              <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Statutory & Tax Deductions</h6>
-              <div class="space-y-1">
-                <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">SSS Contribution (Employee)</span> 
-                  <span class="font-mono text-red-600">-₱${f(kinsenasSSS)}</span>
+              <h6 class="font-bold text-xs text-slate-800 border-b border-slate-100 pb-1.5 mb-2 uppercase tracking-wide">Statutory & Tax Deductions</h6>
+              <div class="space-y-1.5">
+                <div class="flex justify-between py-1 border-b border-dashed border-slate-100">
+                  <span class="text-slate-500">SSS Contribution (Employee)</span> 
+                  <span class="font-mono text-rose-500">-₱${f(kinsenasSSS)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">PhilHealth (Employee)</span> 
-                  <span class="font-mono text-red-600">-₱${f(kinsenasPhilHealth)}</span>
+                <div class="flex justify-between py-1 border-b border-dashed border-slate-100">
+                  <span class="text-slate-500">PhilHealth (Employee)</span> 
+                  <span class="font-mono text-rose-500">-₱${f(kinsenasPhilHealth)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">Pag-IBIG Fund (Employee)</span> 
-                  <span class="font-mono text-red-600">-₱${f(kinsenasPagibig)}</span>
+                <div class="flex justify-between py-1 border-b border-dashed border-slate-100">
+                  <span class="text-slate-500">Pag-IBIG Fund (Employee)</span> 
+                  <span class="font-mono text-rose-500">-₱${f(kinsenasPagibig)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                  <span class="text-gray-600">BIR Withholding Tax</span> 
-                  <span class="font-mono text-red-600">-₱${f(kinsenasTax)}</span>
+                <div class="flex justify-between py-1 border-b border-dashed border-slate-100">
+                  <span class="text-slate-500">BIR Withholding Tax</span> 
+                  <span class="font-mono text-rose-500">-₱${f(kinsenasTax)}</span>
                 </div>
-                <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
+                <div class="flex justify-between py-2 font-bold text-slate-900 bg-slate-50 px-2.5 rounded-lg mt-1">
                   <span>Total Deductions</span> 
-                  <span class="font-mono text-red-600">-₱${f(kinsenasDeductions)}</span>
+                  <span class="font-mono text-rose-500">-₱${f(kinsenasDeductions)}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-slate-100 p-3 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-700 border border-slate-200">
-            <div><span class="font-semibold">Monthly Basic Salary:</span> ₱${f(monthlyBase)}</div>
-            <div><span class="font-semibold">Monthly Gross Earnings:</span> ₱${f(monthlyGross)}</div>
-            <div><span class="font-semibold">Monthly Total Statutory & Tax:</span> ₱${f(ph.totalDeductions)}</div>
-            <div><span class="font-semibold">Monthly Net Pay Reference:</span> ₱${f(monthlyNet)}</div>
+          <div class="bg-slate-50 p-3.5 rounded-xl mb-4 text-[11px] grid grid-cols-2 gap-2 text-slate-600 border border-slate-100">
+            <div><span class="font-semibold text-slate-700">Monthly Basic Salary:</span> ₱${f(monthlyBase)}</div>
+            <div><span class="font-semibold text-slate-700">Monthly Gross Earnings:</span> ₱${f(monthlyGross)}</div>
+            <div><span class="font-semibold text-slate-700">Monthly Total Statutory & Tax:</span> ₱${f(ph.totalDeductions)}</div>
+            <div><span class="font-semibold text-slate-700">Monthly Net Pay Reference:</span> ₱${f(monthlyNet)}</div>
           </div>
 
-          <div class="bg-[#212121] text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
+          <div class="bg-gradient-to-r from-purple-950 to-indigo-950 text-white p-4 rounded-2xl flex justify-between items-center shadow-md">
             <div>
-              <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
-              <p class="text-[10px] text-white/40">Kinsenas Payout (15-Day Cycle)</p>
+              <h4 class="text-[10px] uppercase tracking-widest text-purple-200 font-semibold">Net Pay for this Period</h4>
+              <p class="text-[10px] text-purple-300/70">Kinsenas Payout (15-Day Cycle)</p>
             </div>
             <div class="text-right">
-              <h2 class="text-2xl font-black text-[#FF8C00] font-mono">₱${f(kinsenasNet)}</h2>
+              <h2 class="text-2xl font-black text-purple-300 font-mono">₱${f(kinsenasNet)}</h2>
             </div>
           </div>
         </div>
@@ -1067,9 +1099,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       tabs.forEach(id => {
         const btn = document.getElementById(id);
         if (id === activeBtnId) {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-purple-600 text-white shadow-md font-semibold transform hover:scale-[1.02]";
         } else {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-blue-200 hover:text-white";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-purple-200 hover:text-white hover:bg-purple-500/20";
         }
       });
 
@@ -1077,6 +1109,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         const tbl = document.getElementById(id);
         if (id === activeTableId) {
           tbl.classList.remove('d-none');
+          tbl.classList.add('animate-fade-in');
         } else {
           tbl.classList.add('d-none');
         }

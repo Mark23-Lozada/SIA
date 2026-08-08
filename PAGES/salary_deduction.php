@@ -81,29 +81,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
     <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0">
       
       <!-- MODERN DYNAMIC BANNER HEADER -->
-      <div class="relative overflow-hidden bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
+      <div class="relative overflow-hidden bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
         <!-- Background Glow FX -->
-        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-600/15 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-blue-200 mb-3">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-purple-200 mb-3">
               <i class="bi bi-shield-lock-fill"></i> Finance & Payroll Engine
             </div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Salary & Statutory Deductions</h1>
-            <p class="text-sm text-blue-100/80 max-w-2xl leading-relaxed">
+            <p class="text-sm text-purple-100/80 max-w-2xl leading-relaxed">
               Real-time computation of SSS, PhilHealth, Pag-IBIG, and Withholding Tax deductions mapped dynamically across active employee files.
             </p>
           </div>
 
           <!-- Quick Action / Summary Indicator Pill -->
           <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
-            <div class="w-10 h-10 rounded-xl bg-blue-500/30 flex items-center justify-center text-blue-300">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300">
               <i class="bi bi-receipt text-xl"></i>
             </div>
             <div>
-              <span class="block text-xs text-blue-200 font-medium">Active Payroll Registry</span>
+              <span class="block text-xs text-purple-200 font-medium">Active Payroll Registry</span>
               <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
             </div>
           </div>
@@ -116,7 +116,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
           <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400">
             <i class="bi bi-search"></i>
           </span>
-          <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 rounded-xl text-sm border border-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-gray-50/50 transition-all" placeholder="Search by ID, name, department, or role...">
+          <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 rounded-xl text-sm border border-gray-200 focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 bg-gray-50/50 transition-all" placeholder="Search by ID, name, department, or role...">
         </div>
         <div class="text-xs text-gray-400 hidden sm:block font-medium px-2">
           <i class="bi bi-info-circle mr-1"></i> Automatic statutory bracket mapping active
@@ -131,15 +131,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
           <table id="financeDeductionTable" class="table table-hover align-middle mb-0 text-sm">
             <thead>
               <tr>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0">Employee ID</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0">Full Name</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0">Department</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0 text-end">Base Salary</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0 text-end">SSS (4.5%)</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0 text-end">PhilHealth</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0 text-end">Pag-IBIG</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0 text-end">Withholding Tax</th>
-                <th class="py-3.5 px-4 bg-gray-900 text-white font-semibold border-0 text-end">Total Deductions</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0">Employee ID</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0">Department</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Base Salary</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0 text-end">SSS (4.5%)</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0 text-end">PhilHealth</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Pag-IBIG</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Withholding Tax</th>
+                <th class="py-3.5 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Total Deductions</th>
               </tr>
             </thead>
             <tbody id="financeDeductionBody"></tbody>

@@ -77,13 +77,13 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
 
         <div class="flex-1 min-w-0 bg-white min-h-screen flex flex-col">
             <header class="h-[60px] bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0">
-                <h1 class="text-xl font-bold text-orange-600">Transactions & Activity History</h1>
-                <span class="text-xs font-semibold bg-orange-50 text-orange-700 px-3 py-1 rounded-full border border-orange-200">Activity Logs</span>
+                <h1 class="text-xl font-bold text-purple-700">Transactions & Activity History</h1>
+                <span class="text-xs font-semibold bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-200">Activity Logs</span>
             </header>
 
             <div class="p-6 flex-1 overflow-y-auto space-y-8">
-                <!-- CUSTOM BANNER HEADER PARA SA TRANSACTIONS & ACTIVITY LOGS -->
-                <div class="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                <!-- CUSTOM BANNER HEADER -->
+                <div class="w-full bg-gradient-to-r from-purple-800 via-indigo-800 to-violet-900 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
                     <div class="relative z-10 space-y-2">
                         <span class="inline-block bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
                             Activity Monitoring
@@ -91,18 +91,18 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                         <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">
                             System Activity Logs & Transaction Tracking (<?php echo date('F d, Y'); ?>)
                         </h2>
-                        <p class="text-orange-100 text-sm">
+                        <p class="text-purple-100 text-sm">
                             Track inventory restocks, promotion adjustments, and salary advance workflows in real-time.
                         </p>
                     </div>
                 </div>
 
-                <!-- Filter Buttons (Inventory, Advance Cash, Promotion) -->
+                <!-- Filter Buttons -->
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div class="flex gap-2">
-                        <a href="transaction.php?filter=inventory" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'inventory') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Inventory</a>
-                        <a href="transaction.php?filter=advance_cash" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'advance_cash') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Advance Cash</a>
-                        <a href="transaction.php?filter=promotion" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'promotion') ? 'bg-orange-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Promotion</a>
+                        <a href="transaction.php?filter=inventory" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'inventory') ? 'bg-purple-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Inventory</a>
+                        <a href="transaction.php?filter=advance_cash" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'advance_cash') ? 'bg-purple-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Advance Cash</a>
+                        <a href="transaction.php?filter=promotion" class="px-4 py-2 rounded-lg font-semibold text-xs transition-all <?php echo ($filter == 'promotion') ? 'bg-purple-600 text-white shadow-sm' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'; ?>">Promotion</a>
                     </div>
                 </div>
 
@@ -111,15 +111,15 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                 <div class="space-y-4">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                            <span class="w-3 h-3 bg-orange-500 rounded-full"></span> Inventory Refill & Restock Transactions
+                            <span class="w-3 h-3 bg-purple-600 rounded-full"></span> Inventory Refill & Restock Transactions
                         </h2>
-                        <span class="text-xs font-semibold text-gray-500">Total Expenses: <strong class="text-orange-600">₱<?php echo number_format($refill_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
+                        <span class="text-xs font-semibold text-gray-500">Total Expenses: <strong class="text-purple-700">₱<?php echo number_format($refill_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
                     </div>
 
                     <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-orange-50 border-b border-gray-200 text-xs font-bold text-orange-700 uppercase">
+                                <tr class="bg-purple-50 border-b border-gray-200 text-xs font-bold text-purple-800 uppercase">
                                     <th class="px-6 py-4">Request ID / Title</th>
                                     <th class="px-6 py-4">Requested By</th>
                                     <th class="px-6 py-4">Department</th>
@@ -138,7 +138,7 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                                             </td>
                                             <td class="px-6 py-4 text-gray-600 font-medium"><?php echo htmlspecialchars($row['requested_by']); ?></td>
                                             <td class="px-6 py-4 text-gray-600"><?php echo htmlspecialchars($row['department']); ?></td>
-                                            <td class="px-6 py-4 text-right font-bold text-orange-600">₱<?php echo number_format($row['amount'], 2); ?></td>
+                                            <td class="px-6 py-4 text-right font-bold text-purple-700">₱<?php echo number_format($row['amount'], 2); ?></td>
                                             <td class="px-6 py-4 text-center">
                                                 <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
                                                     <?php echo htmlspecialchars($row['status']); ?>
@@ -163,15 +163,15 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                 <div class="space-y-4 pt-4">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                            <span class="w-3 h-3 bg-emerald-500 rounded-full"></span> Promotion & Salary Adjustments Records
+                            <span class="w-3 h-3 bg-purple-600 rounded-full"></span> Promotion & Salary Adjustments Records
                         </h2>
-                        <span class="text-xs font-semibold text-gray-500">Total Salary Adjustments: <strong class="text-emerald-600">₱<?php echo number_format($promo_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
+                        <span class="text-xs font-semibold text-gray-500">Total Salary Adjustments: <strong class="text-purple-700">₱<?php echo number_format($promo_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
                     </div>
 
                     <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-emerald-50 border-b border-gray-200 text-xs font-bold text-emerald-700 uppercase">
+                                <tr class="bg-purple-50 border-b border-gray-200 text-xs font-bold text-purple-800 uppercase">
                                     <th class="px-6 py-4">Reference / Details</th>
                                     <th class="px-6 py-4">Employee Name</th>
                                     <th class="px-6 py-4">Department</th>
@@ -190,7 +190,7 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                                             </td>
                                             <td class="px-6 py-4 text-gray-600 font-medium"><?php echo htmlspecialchars($row['requested_by'] ?? 'N/A'); ?></td>
                                             <td class="px-6 py-4 text-gray-600"><?php echo htmlspecialchars($row['department'] ?? 'N/A'); ?></td>
-                                            <td class="px-6 py-4 text-right font-bold text-emerald-600">₱<?php echo number_format($row['amount'], 2); ?></td>
+                                            <td class="px-6 py-4 text-right font-bold text-purple-700">₱<?php echo number_format($row['amount'], 2); ?></td>
                                             <td class="px-6 py-4 text-center">
                                                 <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
                                                     <?php echo htmlspecialchars($row['status']); ?>
@@ -215,15 +215,15 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                 <div class="space-y-4 pt-4">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                            <span class="w-3 h-3 bg-cyan-500 rounded-full"></span> Advance Cash / Salary Advance History
+                            <span class="w-3 h-3 bg-purple-600 rounded-full"></span> Advance Cash / Salary Advance History
                         </h2>
-                        <span class="text-xs font-semibold text-gray-500">Total Processed: <strong class="text-cyan-600">₱<?php echo number_format($adv_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
+                        <span class="text-xs font-semibold text-gray-500">Total Processed: <strong class="text-purple-700">₱<?php echo number_format($adv_sum_res['total_amount'] ?? 0, 2); ?></strong></span>
                     </div>
 
                     <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-cyan-50 border-b border-gray-200 text-xs font-bold text-cyan-700 uppercase">
+                                <tr class="bg-purple-50 border-b border-gray-200 text-xs font-bold text-purple-800 uppercase">
                                     <th class="px-6 py-4">Reference ID / Details</th>
                                     <th class="px-6 py-4">Employee Name</th>
                                     <th class="px-6 py-4">Department</th>
@@ -242,7 +242,7 @@ $adv_sum_res = $conn->query($adv_summary_q)->fetch_assoc();
                                             </td>
                                             <td class="px-6 py-4 text-gray-600 font-medium"><?php echo htmlspecialchars($row['requested_by'] ?? 'N/A'); ?></td>
                                             <td class="px-6 py-4 text-gray-600"><?php echo htmlspecialchars($row['department'] ?? 'N/A'); ?></td>
-                                            <td class="px-6 py-4 text-right font-bold text-cyan-600">₱<?php echo number_format($row['amount'], 2); ?></td>
+                                            <td class="px-6 py-4 text-right font-bold text-purple-700">₱<?php echo number_format($row['amount'], 2); ?></td>
                                             <td class="px-6 py-4 text-center">
                                                 <span class="px-3 py-1 text-xs font-bold rounded-full 
                                                     <?php echo ($row['status'] === 'Approved') ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'; ?>">

@@ -40,7 +40,7 @@ if(isset($_POST['login'])){
             session_unset();
             $_SESSION['admin_id'] = $admin_row['id']; 
             $_SESSION['role'] = 'admin';
-            header("Location: dashboard.php");
+            header("Location: admin_home.php");
             exit();
         } else {
             $message = "Incorrect password for Admin.";

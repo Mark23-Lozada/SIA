@@ -1,22 +1,43 @@
 <?php
-
 include('../BACKEND/db_inventory.php');
 
 date_default_timezone_set('Asia/Manila');
 
-// Small helper so every JSON error response is consistent and short to write.
 function respond_json($payload) {
     header('Content-Type: application/json');
     echo json_encode($payload);
     exit();
 }
 
-// Converts a cart line's per-ingredient modifier choice into a quantity multiplier.
-// 'remove' = 0x (skip entirely), 'extra' = 2x, anything else = 1x (normal).
 function modifier_multiplier($value) {
     if ($value === 'remove') return 0;
     if ($value === 'extra') return 2;
     return 1;
+}
+
+// ===================================================================
+// FETCH BEST SELLERS FROM SALES HISTORY
+// ===================================================================
+$best_sellers_array = [];
+$best_sellers_query = "
+    SELECT items.id, items.item_name, items.image, items.price, SUM(sales_items.quantity) as total_qty
+    FROM sales_items
+    JOIN items ON sales_items.item_id = items.id
+    WHERE items.is_available = 1
+    GROUP BY sales_items.item_id
+    ORDER BY total_qty DESC
+    LIMIT 6";
+$best_sellers_result = $conn->query($best_sellers_query);
+if ($best_sellers_result) {
+    while ($row = $best_sellers_result->fetch_assoc()) {
+        $best_sellers_array[] = [
+            'id'    => (int)$row['id'],
+            'name'  => $row['item_name'],
+            'image' => $row['image'] ? '../' . $row['image'] : null,
+            'price' => (float)$row['price'],
+            'qty'   => (int)$row['total_qty']
+        ];
+    }
 }
 
 // ===================================================================
@@ -97,7 +118,7 @@ if ($items_result) {
 }
 
 // ===================================================================
-// PROCESS A SALE (deduct ingredient stock, record the sale)
+// PROCESS A SALE
 // ===================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] == 'deduct_stock') {
     $cart_data = json_decode($_POST['cart_items'], true);
@@ -261,8 +282,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --orange-primary: #f97316;
-            --bg-main: #f4f6f9;
+            --purple-primary: #8b5cf6;
+            --purple-hover: #7c3aed;
+            --purple-light: #f5f3ff;
+            --purple-border: #ddd6fe;
+            --bg-main: #f8fafc;
         }
 
         body {
@@ -285,12 +309,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         }
 
         .brand-title {
-            color: var(--orange-primary);
+            color: var(--purple-primary);
             letter-spacing: 0.5px;
             font-size: 1.05rem;
         }
 
-        /* Main Workspace Layout */
         #main-wrapper {
             margin-top: 75px;
             padding: 20px;
@@ -305,15 +328,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         .search-box input {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 8px 14px 8px 38px;
             font-size: 0.85rem;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .search-box input:focus {
             background: #fff;
-            border-color: var(--orange-primary);
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+            border-color: var(--purple-primary);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
         }
         .search-box i {
             position: absolute;
@@ -323,7 +346,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             color: #94a3b8;
         }
 
-        /* Category Navigation Bar directly below Search / Top Bar */
+        /* Category Navigation Bar */
         .pos-category-bar {
             background: #ffffff;
             border-bottom: 1px solid #e2e8f0;
@@ -343,49 +366,175 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             color: #64748b;
             font-weight: 600;
             font-size: 0.85rem;
-            padding: 8px 16px;
-            transition: all 0.2s ease;
+            padding: 8px 18px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             min-width: 110px;
             text-align: center;
         }
 
         .category-tab-btn:hover, .category-tab-btn.active {
-            background-color: #fff7ed;
-            color: var(--orange-primary) !important;
-            border-color: var(--orange-primary);
-            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+            background-color: var(--purple-light);
+            color: var(--purple-primary) !important;
+            border-color: var(--purple-primary);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+            transform: translateY(-1px);
         }
 
-        /* Modern Product Card Layout */
+        /* --- TACO BELL STYLE BANNER (OPTIMIZED IMAGES) --- */
+        .bestseller-hero-wrapper {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%);
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(76, 29, 149, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .bestseller-hero-wrapper:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(76, 29, 149, 0.25);
+        }
+
+        /* Left Side Text Content */
+        .bestseller-banner-content {
+            flex: 1.2;
+            padding: 35px;
+            color: #ffffff;
+            z-index: 2;
+        }
+
+        /* Right Side Image Container (Fixed Scaling) */
+        .bestseller-banner-img-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 15px;
+        }
+        .bestseller-hero-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bestseller-hero-wrapper:hover .bestseller-hero-img {
+            transform: scale(1.06) rotate(1deg);
+        }
+
+        .bestseller-order-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #d97706;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 50rem;
+            border: none;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+            margin-top: 15px;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .bestseller-order-btn:hover {
+            background-color: #b45309;
+            transform: scale(1.02);
+        }
+
+        /* Dots styling for switching items */
+        .dots-container {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .dot {
+            height: 8px;
+            width: 8px;
+            background-color: #cbd5e1;
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dot.active {
+            width: 24px;
+            border-radius: 4px;
+            background-color: var(--purple-primary);
+        }
+        .dot:hover {
+            background-color: var(--purple-primary);
+        }
+
+        /* Modern Product Card Layout (Optimized Images) */
         .product-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            transition: all 0.25s ease;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            position: relative;
         }
         .product-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
-            border-color: var(--orange-primary);
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px -6px rgba(139, 92, 246, 0.15);
+            border-color: var(--purple-border);
         }
+        
         .product-img-wrapper {
-            height: 110px;
-            background: #f8fafc;
+            height: 135px;
+            background: radial-gradient(circle, #fbf7ff 0%, #f3e8ff 100%);
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
         }
         .product-img-wrapper img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s;
+            object-fit: contain; /* Prevents stretching and cropping */
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.06));
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .product-card:hover .product-img-wrapper img {
-            transform: scale(1.05);
+            transform: scale(1.1);
         }
+
+        .card-action-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--purple-light);
+            border: 1px solid var(--purple-border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--purple-primary);
+            transition: all 0.2s ease;
+        }
+        .product-card:hover .card-action-btn {
+            background: var(--purple-primary);
+            color: #fff;
+            transform: scale(1.1);
+        }
+
         .out-of-stock-card {
             opacity: 0.55;
             cursor: not-allowed;
@@ -397,14 +546,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             border-color: #e2e8f0;
         }
 
-        /* Cart & Checkout Panel Styling (Right Column) */
+        /* Cart & Checkout Panel Styling */
         .cart-panel-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
             position: sticky;
             top: 135px;
+            transition: all 0.3s ease;
         }
 
         .receipt-card {
@@ -427,9 +577,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     <!-- Top Navigation Bar -->
     <header class="navbar pos-topbar px-4 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-3">
-           
             <div class="d-flex align-items-center">
-                <div class="bg-warning bg-opacity-10 p-2 rounded-3 me-2 text-warning">
+                <div class="bg-purple bg-opacity-10 p-2 rounded-3 me-2 text-purple" style="background-color: var(--purple-light); color: var(--purple-primary);">
                     <i class="bi bi-cup-hot-fill fs-6"></i>
                 </div>
                 <h4 class="brand-title fw-bold m-0">PANNAKODA</h4>
@@ -438,7 +587,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
         <div class="search-box mx-3">
             <i class="bi bi-search"></i>
-            <input type="text" id="productSearch" class="form-control" placeholder="Search items here..." oninput="filterProductsByName(this.value)">
+            <input type="text" id="productSearch" class="form-control" placeholder="Search menu items..." oninput="filterProductsByName(this.value)">
         </div>
 
         <div class="d-flex align-items-center gap-2">
@@ -448,7 +597,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
         </div>
     </header>
 
-    <!-- Fixed Category Navigation Bar Directly Below Search / Top Bar -->
+    <!-- Fixed Category Navigation Bar -->
     <div class="pos-category-bar">
         <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-start gap-2 overflow-auto py-1" id="sidebarCategoryTabs" role="tablist">
@@ -457,7 +606,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 ?>
                     <button class="btn category-tab-btn d-flex align-items-center justify-content-center gap-2 py-2 <?php echo $index === 0 ? 'active' : ''; ?>" 
                             id="<?php echo $target_id; ?>-tab" data-bs-toggle="pill" data-bs-target="#cat-<?php echo $target_id; ?>" type="button" role="tab">
-                        <i class="bi bi-cup-hot fs-6"></i>
+                        <i class="bi bi-grid fs-6"></i>
                         <span><?php echo htmlspecialchars($cat['name']); ?></span>
                     </button>
                 <?php endforeach; ?>
@@ -471,6 +620,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             
             <!-- Menu Catalog Display Area (Left Side) -->
             <div class="col-lg-8 pb-5">
+                
+                <!-- Bestseller Banner Section (Taco Bell Style Layout) -->
+                <?php if (!empty($best_sellers_array)): ?>
+                <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="fw-bold m-0" style="color: var(--purple-primary);">
+                            <i class="bi bi-fire text-danger me-2"></i>Popular Picks & Best Sellers
+                        </h5>
+                        <span class="badge bg-light text-secondary border fw-semibold px-2 py-1" style="font-size: 0.7rem;">Click dots to switch items</span>
+                    </div>
+                    
+                    <div id="bestseller-widget-wrapper">
+                        <!-- Rendered dynamically via JS below -->
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
                     <div class="tab-content" id="categoryTabContent">
                         <?php foreach ($categories_array as $index => $cat): 
@@ -478,7 +644,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         ?>
                             <div class="tab-pane fade show <?php echo $index === 0 ? 'active' : ''; ?>" id="cat-<?php echo $target_id; ?>" role="tabpanel">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h5 class="fw-bold m-0" style="color: var(--orange-primary);"><i class="bi bi-tag-fill me-2 small"></i><?php echo htmlspecialchars($cat['name']); ?></h5>
+                                    <h5 class="fw-bold m-0" style="color: var(--purple-primary);"><i class="bi bi-bookmark-fill me-2 small"></i><?php echo htmlspecialchars($cat['name']); ?></h5>
                                 </div>
                                 <div class="row g-3" id="grid-<?php echo $target_id; ?>"></div>
                             </div>
@@ -492,13 +658,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 <div class="cart-panel-box p-4">
                     <div id="checkout-interactive-pane">
                         <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                            <h5 class="fw-bold m-0 text-dark">Checkout</h5>
-                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2 py-1 small fw-bold">Active POS</span>
+                            <h5 class="fw-bold m-0 text-dark">Current Order</h5>
+                            <span class="badge rounded-pill px-2 py-1 small fw-bold" style="background-color: var(--purple-light); color: var(--purple-primary);">Active POS</span>
                         </div>
 
                         <div class="p-2 rounded-3 bg-light border mb-3">
                             <div class="d-flex justify-content-between text-muted fw-bold px-1 mb-2" style="font-size: 0.75rem;">
-                                <span>Name</span>
+                                <span>Item Name</span>
                                 <span class="text-center">QTY</span>
                                 <span class="text-end">Price</span>
                             </div>
@@ -522,7 +688,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                             <hr class="border-secondary opacity-25 my-1">
                             <div class="d-flex justify-content-between align-items-center px-1">
                                 <span class="small fw-bold text-dark">Total</span>
-                                <span class="fs-4 fw-bold" style="color: var(--orange-primary);" id="total-amount-display">₱0.00</span>
+                                <span class="fs-4 fw-bold" style="color: var(--purple-primary);" id="total-amount-display">₱0.00</span>
                             </div>
                         </div>
 
@@ -530,7 +696,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                             <label class="form-label fw-bold text-secondary mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">SELECT PAYMENT METHOD:</label>
                             <div class="dropdown">
                                 <button class="btn btn-light border w-100 text-dark fw-semibold text-start d-flex justify-content-between align-items-center py-2 bg-white" type="button" id="paymentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <span id="selected-payment-text"><i class="bi bi-wallet2 text-primary me-2"></i>Choose Option</span>
+                                    <span id="selected-payment-text"><i class="bi bi-wallet2 text-purple me-2"></i>Choose Option</span>
                                     <i class="bi bi-chevron-down small"></i>
                                 </button>
                                 <ul class="dropdown-menu w-100 shadow-sm border py-2 mt-1" style="z-index: 1080;">
@@ -558,7 +724,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                             <span class="fs-5 fw-bold text-dark" id="change-display">₱0.00</span>
                         </div>
 
-                        <button type="button" class="btn btn-lg w-100 mt-2 py-3 fw-bold text-white shadow-sm rounded-3" style="background-color: var(--orange-primary); border: none;" onclick="processCheckout()">
+                        <button type="button" class="btn btn-lg w-100 mt-2 py-3 fw-bold text-white shadow-sm rounded-3" style="background-color: var(--purple-primary); border: none; transition: all 0.2s ease;" onclick="processCheckout()">
                             Pay <span id="pay-btn-amount">(₱0.00)</span> <i class="bi bi-arrow-right-circle-fill ms-1"></i>
                         </button>
                     </div>
@@ -573,7 +739,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
     <script>
         let products = <?php echo json_encode($products_json); ?>;
+        let bestSellers = <?php echo json_encode($best_sellers_array); ?>;
         let cart = [], totalAmount = 0, selectedPaymentMethod = '';
+        
+        let currentBestSellerIndex = 0;
+
+        function renderBestSellerWidget() {
+            const container = document.getElementById('bestseller-widget-wrapper');
+            if (!container || bestSellers.length === 0) return;
+
+            const bs = bestSellers[currentBestSellerIndex];
+            const matched_prod = products.find(p => p.id === bs.id);
+            const isOut = matched_prod ? (matched_prod.available <= 0) : true;
+
+            let dotsHTML = '';
+            bestSellers.forEach((item, idx) => {
+                const activeClass = idx === currentBestSellerIndex ? 'active' : '';
+                dotsHTML += `<span class="dot ${activeClass}" onclick="switchBestSeller(${idx})"></span>`;
+            });
+
+            container.innerHTML = `
+                <div class="bestseller-hero-wrapper ${isOut ? 'out-of-stock-card' : ''}" ${isOut ? '' : `onclick="addToCart(${bs.id})"`} style="cursor: ${isOut ? 'not-allowed' : 'pointer'};">
+                    <!-- Left Side Text & Action -->
+                    <div class="bestseller-banner-content">
+                        <h3 class="fw-bold text-white mb-1 text-uppercase" style="letter-spacing: 0.5px; font-size: 1.4rem;">${bs.name}</h3>
+                        <div class="fs-4 fw-bold text-warning mb-2">₱${parseFloat(bs.price).toFixed(2)}</div>
+                        <p class="text-light opacity-75 small mb-3">Your favorites, made better. Click to add directly to order.</p>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="bestseller-order-btn m-0">
+                                Order Now <i class="bi bi-arrow-right"></i>
+                            </button>
+                            <span class="badge bg-dark bg-opacity-25 text-light border border-light border-opacity-25 ms-2"><i class="bi bi-bag-check-fill text-success me-1"></i>${bs.qty} sold</span>
+                        </div>
+                    </div>
+
+                    <!-- Right Side Big Image -->
+                    <div class="bestseller-banner-img-container">
+                        ${bs.image ? `<img src="${bs.image}" alt="${bs.name}" class="bestseller-hero-img">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted bg-light"><i class="bi bi-cup-hot fs-1 opacity-50"></i></div>`}
+                    </div>
+                </div>
+                <div class="dots-container">${dotsHTML}</div>
+            `;
+        }
+
+        function switchBestSeller(index) {
+            currentBestSellerIndex = index;
+            renderBestSellerWidget();
+        }
 
         function renderProductGrid(filter = '') {
             const categories = [...new Set(products.map(p => p.category))];
@@ -599,12 +811,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     col.innerHTML = `
                         <div class="card product-card h-100 ${isOutOfStock ? 'out-of-stock-card' : ''}" ${isOutOfStock ? '' : `onclick="addToCart(${prod.id})"`}>
                             <div class="product-img-wrapper">
-                                ${prod.image ? `<img src="${prod.image}" alt="${prod.name}">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-muted"><i class="bi bi-image fs-4 opacity-50"></i></div>`}
+                                ${prod.image ? `<img src="${prod.image}" alt="${prod.name}">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-cup-hot fs-2 opacity-50"></i></div>`}
                             </div>
-                            <div class="card-body p-2 d-flex flex-column justify-content-between text-center">
-                                <div>
-                                    <h6 class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.82rem;" title="${prod.name}">${prod.name}</h6>
-                                    <div class="fw-bold mb-1" style="font-size: 0.88rem; color: var(--orange-primary);">₱${prod.price.toFixed(2)}</div>
+                            <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <div class="fw-bold mb-1" style="font-size: 0.9rem; color: var(--purple-primary);">₱${prod.price.toFixed(2)}</div>
+                                        <h6 class="fw-semibold text-dark text-truncate m-0" style="font-size: 0.82rem; max-width: 120px;" title="${prod.name}">${prod.name}</h6>
+                                    </div>
+                                    <div class="card-action-btn shadow-sm">
+                                        <i class="bi bi-plus-lg fs-6"></i>
+                                    </div>
                                 </div>
                                 <div>${stockBadge}</div>
                             </div>
@@ -680,12 +897,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             renderCart();
         }
 
-        function clearCart() {
-            cart = [];
-            customizeExpanded.clear();
-            renderCart();
-        }
-
         function toggleCustomize(lineId) {
             if (customizeExpanded.has(lineId)) {
                 customizeExpanded.delete(lineId);
@@ -752,7 +963,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         <div class="d-flex justify-content-between align-items-center">
                             <div style="max-width: 120px;">
                                 <span class="fw-bold d-block text-dark text-truncate" style="font-size: 0.80rem;" title="${item.name}">${item.name}</span>
-                                ${modifierTags.length > 0 ? `<span class="d-block text-warning" style="font-size: 0.60rem;">${modifierTags.join(', ')}</span>` : ''}
+                                ${modifierTags.length > 0 ? `<span class="d-block text-purple" style="font-size: 0.60rem; color: var(--purple-primary);">${modifierTags.join(', ')}</span>` : ''}
                             </div>
                             <div class="d-flex align-items-center gap-1 bg-light border rounded-pill px-1 py-0">
                                 <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" onclick="updateQuantity(${item.lineId}, -1)">-</button>
@@ -763,7 +974,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         </div>
                         ${recipe.length > 0 ? `
                             <div class="text-end mt-1">
-                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-warning" style="font-size: 0.65rem;" onclick="toggleCustomize(${item.lineId})">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size: 0.65rem; color: var(--purple-primary);" onclick="toggleCustomize(${item.lineId})">
                                     <i class="bi bi-sliders"></i> ${isExpanded ? 'Hide' : 'Customize'}
                                 </button>
                             </div>
@@ -787,10 +998,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             
             if (change < 0) {
                 changeDisplay.innerText = 'Short Payment';
-                changeDisplay.style.color = '#f97316';
+                changeDisplay.style.color = '#ef4444';
             } else if (parsedTendered > (totalAmount + 1000)) {
                 changeDisplay.innerText = 'Excessive Amount';
-                changeDisplay.style.color = '#f97316';
+                changeDisplay.style.color = '#ef4444';
             } else {
                 changeDisplay.innerText = `₱${change.toFixed(2)}`;
                 changeDisplay.style.color = '#10b981';
@@ -799,11 +1010,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
         function processCheckout() {
             if (cart.length === 0) {
-                Swal.fire({ icon: 'warning', title: 'Empty Cart', text: 'Please add items to your basket before checking out.', confirmButtonColor: '#f97316' });
+                Swal.fire({ icon: 'warning', title: 'Empty Cart', text: 'Please add items to your basket before checking out.', confirmButtonColor: '#8b5cf6' });
                 return;
             }
             if (!selectedPaymentMethod) {
-                Swal.fire({ icon: 'warning', title: 'Payment Method Required', text: 'Please choose a payment method.', confirmButtonColor: '#f97316' });
+                Swal.fire({ icon: 'warning', title: 'Payment Method Required', text: 'Please choose a payment method.', confirmButtonColor: '#8b5cf6' });
                 return;
             }
 
@@ -812,18 +1023,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
             if (selectedPaymentMethod === 'Cash') {
                 if (!amountTendered || parseFloat(amountTendered) < totalAmount) {
-                    Swal.fire({ icon: 'error', title: 'Insufficient Payment', text: `Amount entered is less than the total bill.`, confirmButtonColor: '#f97316' });
+                    Swal.fire({ icon: 'error', title: 'Insufficient Payment', text: `Amount entered is less than the total bill.`, confirmButtonColor: '#8b5cf6' });
                     return;
                 }
                 if (parseFloat(amountTendered) > (totalAmount + 1000)) {
-                    Swal.fire({ icon: 'error', title: 'Excessive Amount', text: `Maximum allowed change is ₱1,000.`, confirmButtonColor: '#f97316' });
+                    Swal.fire({ icon: 'error', title: 'Excessive Amount', text: `Maximum allowed change is ₱1,000.`, confirmButtonColor: '#8b5cf6' });
                     return;
                 }
             }
 
             if (selectedPaymentMethod === 'Card') {
                 if (cardDigits.length !== 4) {
-                    Swal.fire({ icon: 'error', title: 'Card Verification Required', text: 'Please input the last 4 digits of the card.', confirmButtonColor: '#f97316' });
+                    Swal.fire({ icon: 'error', title: 'Card Verification Required', text: 'Please input the last 4 digits of the card.', confirmButtonColor: '#8b5cf6' });
                     return;
                 }
             }
@@ -886,7 +1097,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         </div>
                         <div class="text-center no-print">
                             <button class="btn btn-sm btn-dark w-100 mb-2" onclick="window.print()"><i class="bi bi-printer"></i> Print Receipt</button>
-                            <button class="btn btn-sm btn-warning text-white w-100" onclick="window.location.reload()">Done / New Order</button>
+                            <button class="btn btn-sm text-white w-100" style="background-color: var(--purple-primary);" onclick="window.location.reload()">Done / New Order</button>
                         </div>`;
 
                     document.getElementById('checkout-interactive-pane').classList.add('d-none');
@@ -894,17 +1105,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     receiptPane.innerHTML = receiptHTML;
                     receiptPane.classList.remove('d-none');
 
-                    Swal.fire({ icon: 'success', title: 'Sale Completed', text: 'Transaction Successful!', confirmButtonColor: '#f97316' });
+                    Swal.fire({ icon: 'success', title: 'Sale Completed', text: 'Transaction Successful!', confirmButtonColor: '#8b5cf6' });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#f97316' });
+                    Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#8b5cf6' });
                 }
             })
             .catch(err => {
-                Swal.fire({ icon: 'error', title: 'Server Error', text: 'Checkout process encountered an error.', confirmButtonColor: '#f97316' });
+                Swal.fire({ icon: 'error', title: 'Server Error', text: 'Checkout process encountered an error.', confirmButtonColor: '#8b5cf6' });
             });
         }
 
         renderProductGrid();
+        renderBestSellerWidget();
 
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
@@ -913,7 +1125,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 text: "You will be logged out of your account.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#f97316',
+                confirmButtonColor: '#8b5cf6',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Yes, Log out',
                 cancelButtonText: 'Cancel',

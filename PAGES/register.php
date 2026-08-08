@@ -18,12 +18,37 @@ $messageType = "";
 
 // REGISTRATION PROCESS (DIRECT TO DATABASE, NO OTP Required)
 if (isset($_POST['register'])) {
+    $name = trim($_POST['name'] ?? '');
     $gmail = trim($_POST['gmail']); 
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
+    
+    // Image Upload Handling
+    $image_path = "";
+    if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+        $file_tmp = $_FILES['profile_image']['tmp_name'];
+        $file_name = $_FILES['profile_image']['name'];
+        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+        
+        $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+        if (in_array($file_ext, $allowed_extensions)) {
+            // Create uploads directory if it doesn't exist
+            $upload_dir = 'uploads/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+            
+            $new_file_name = uniqid('admin_', true) . '.' . $file_ext;
+            $destination = $upload_dir . $new_file_name;
+            
+            if (move_uploaded_file($file_tmp, $destination)) {
+                $image_path = $destination;
+            }
+        }
+    }
 
     // PHP Backend Fallback Validations (For Security)
-    if (empty($gmail) || empty($password) || empty($confirm_password)) {
+    if (empty($name) || empty($gmail) || empty($password) || empty($confirm_password)) {
         $message = "All fields are required. Please fill them up.";
         $messageType = "error";
     }
@@ -49,9 +74,12 @@ if (isset($_POST['register'])) {
             $messageType = "error";
         } else {
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-            $query = "INSERT INTO admin (gmail, password) VALUES ('$gmail', '$hashed_password')";
             
-            if (mysqli_query($con, $query)) {
+            // Updated query to include name and image_path columns
+            $stmt = $con->prepare("INSERT INTO admin (name, gmail, password, image_path) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("ssss", $name, $gmail, $hashed_password, $image_path);
+            
+            if ($stmt->execute()) {
                 $_SESSION['swal_success'] = "Admin registered successfully!";
                 header("Location: login.php");
                 exit();
@@ -59,6 +87,7 @@ if (isset($_POST['register'])) {
                 $message = "Database Error: " . mysqli_error($con);
                 $messageType = "error";
             }
+            $stmt->close();
         }
     }
 }
@@ -86,10 +115,20 @@ if (isset($_POST['register'])) {
                     </div>
 
                     <!-- Added form ID for JS validation interception -->
-                    <form method="POST" id="regForm" novalidate>
+                    <form method="POST" id="regForm" enctype="multipart/form-data" novalidate>
+                        <div class="form-floating mb-3">
+                            <input type="text" id="name" name="name" class="form-control" placeholder="Full Name" value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>">
+                            <label class="text-secondary">Full Name</label>
+                        </div>
+
                         <div class="form-floating mb-3">
                             <input type="text" id="gmail" name="gmail" class="form-control" placeholder="name@example.com" value="<?php echo isset($_POST['gmail']) ? htmlspecialchars($_POST['gmail']) : ''; ?>">
                             <label class="text-secondary">Gmail Address</label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="profile_image" class="form-label text-secondary small fw-bold">Profile Image</label>
+                            <input type="file" id="profile_image" name="profile_image" class="form-control" accept="image/*">
                         </div>
 
                         <div class="form-floating mb-1">
@@ -139,6 +178,7 @@ document.addEventListener("DOMContentLoaded", function() {
     <?php endif; ?>
 
     const form = document.getElementById('regForm');
+    const nameInput = document.getElementById('name');
     const gmailInput = document.getElementById('gmail');
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirm_password');
@@ -163,6 +203,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 3. JAVASCRIPT VALIDATION (Triggers before form submission)
     form.addEventListener('submit', function(e) {
+        const name = nameInput.value.trim();
         const gmail = gmailInput.value.trim();
         const password = passwordInput.value;
         const confirmPassword = confirmPasswordInput.value;
@@ -171,15 +212,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         
         // Regex for Strong Password policy:
-        // - Min. 8 characters long
-        // - At least 1 Uppercase letter (?=.*[A-Z])
-        // - At least 1 Lowercase letter (?=.*[a-z])
-        // - At least 1 Number (?=.*\d)
-        // - At least 1 Special Character (?=.*[@$!%*?&])
         const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
         // Check for Empty Fields
-        if (gmail === "" || password === "" || confirmPassword === "") {
+        if (name === "" || gmail === "" || password === "" || confirmPassword === "") {
             e.preventDefault(); // Blocks form submission to the server
             Swal.fire({
                 icon: 'warning',

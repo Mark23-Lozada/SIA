@@ -63,7 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_finance_promotions') {
     header('Content-Type: application/json');
 
-    $query = "SELECT pr.*, COALESCE(e.full_name, 'Unknown Employee') as full_name, e.employee_id as custom_emp_id, COALESCE(e.department, 'Unassigned') as department, 0 as current_salary, COALESCE(e.position_title, 'Staff') as current_position 
+    // Kunin nang tama ang current_salary mula sa table ng employees sa halip na i-hardcode na 0
+    $query = "SELECT pr.*, COALESCE(e.full_name, 'Unknown Employee') as full_name, e.employee_id as custom_emp_id, COALESCE(e.department, 'Unassigned') as department, COALESCE(e.salary, 0) as current_salary, COALESCE(e.position_title, 'Staff') as current_position 
               FROM promotion_requests pr 
               LEFT JOIN employees e ON pr.employee_id = e.id 
               WHERE pr.finance_status = 'Pending' OR pr.status = 'Pending' OR pr.status = 'Pending Finance'

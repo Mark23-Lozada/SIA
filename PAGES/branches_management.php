@@ -64,11 +64,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        .glass-header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+        .glass-header { background: linear-gradient(135deg, #3b0764 0%, #6b21a8 100%); }
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-slide {
+            animation: fadeInSlide 0.4s ease-out forwards;
+        }
     </style>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // (Keep existing JS logic here)
             const regionSelect = document.getElementById("regionSelect");
             const provinceSelect = document.getElementById("provinceSelect");
             const municipalitySelect = document.getElementById("municipalitySelect");
@@ -192,30 +198,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         <div class="flex-1 flex flex-col overflow-y-auto">
             <!-- Modern Header -->
-            <header class="glass-header text-white px-8 py-8 flex items-center justify-between shadow-lg m-6 rounded-3xl">
+            <header class="glass-header text-white px-8 py-8 flex items-center justify-between shadow-lg m-6 rounded-3xl animate-fade-in-slide">
                 <div>
                     <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-2 inline-block">Branches Overview</span>
                     <h1 class="text-3xl font-extrabold tracking-tight">Company Branch Management (National Footprint)</h1>
-                    <p class="text-blue-100 mt-1 opacity-90">Manage and configure all corporate branches across regions seamlessly.</p>
+                    <p class="text-purple-100 mt-1 opacity-90">Manage and configure all corporate branches across regions seamlessly.</p>
                 </div>
-                
             </header>
 
-            <main class="px-6 pb-12 max-w-5xl mx-auto w-full">
+            <main class="px-6 pb-12 max-w-5xl mx-auto w-full animate-fade-in-slide" style="animation-delay: 0.1s;">
                 <?php if (!empty($message)): ?>
-                    <div class="bg-emerald-500 text-white px-6 py-4 rounded-2xl flex items-center gap-3 mb-6 shadow-md">
+                    <div class="bg-emerald-500 text-white px-6 py-4 rounded-2xl flex items-center gap-3 mb-6 shadow-md transition-all duration-300">
                         <i class="bi bi-check-circle-fill text-xl"></i> <?php echo htmlspecialchars($message); ?>
                     </div>
                 <?php endif; ?>
                 <?php if (!empty($error)): ?>
-                    <div class="bg-red-500 text-white px-6 py-4 rounded-2xl flex items-center gap-3 mb-6 shadow-md">
+                    <div class="bg-red-500 text-white px-6 py-4 rounded-2xl flex items-center gap-3 mb-6 shadow-md transition-all duration-300">
                         <i class="bi bi-x-circle-fill text-xl"></i> <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
 
-                <div class="bg-white border border-slate-200 rounded-3xl shadow-xl p-8">
+                <div class="bg-white border border-slate-200 rounded-3xl shadow-xl p-8 transition-all duration-300 hover:shadow-2xl">
                     <h2 class="text-xl font-bold text-slate-900 mb-8 flex items-center gap-3">
-                        <i class="bi bi-plus-circle text-orange-500"></i> Register New Branch Location
+                        <i class="bi bi-plus-circle text-purple-600 animate-spin" style="animation-duration: 10s;"></i> Register New Branch Location
                     </h2>
                     
                     <form method="POST" class="space-y-6">
@@ -227,31 +232,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-2">Branch Name</label>
-                            <input type="text" name="branch_name" required placeholder="e.g. Dasmariñas Main Branch" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all">
+                            <input type="text" name="branch_name" required placeholder="e.g. Dasmariñas Main Branch" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-600 focus:border-purple-600 outline-none transition-all duration-200">
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">Region</label>
-                                <select id="regionSelect" name="region" required class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-orange-500 outline-none">
+                                <select id="regionSelect" name="region" required class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-purple-600 outline-none transition-all duration-200">
                                     <option value="">Select Region</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">Province</label>
-                                <select id="provinceSelect" name="province" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-50">
+                                <select id="provinceSelect" name="province" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-purple-600 outline-none disabled:opacity-50 transition-all duration-200">
                                     <option value="">Select Region first</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">City / Municipality</label>
-                                <select id="municipalitySelect" name="municipality" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-50">
+                                <select id="municipalitySelect" name="municipality" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-purple-600 outline-none disabled:opacity-50 transition-all duration-200">
                                     <option value="">Select Province first</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">Barangay</label>
-                                <select id="barangaySelect" name="barangay" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-orange-500 outline-none disabled:opacity-50">
+                                <select id="barangaySelect" name="barangay" disabled class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:ring-2 focus:ring-purple-600 outline-none disabled:opacity-50 transition-all duration-200">
                                     <option value="">Select City / Municipality first</option>
                                 </select>
                             </div>
@@ -260,21 +265,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">Street Name / Building</label>
-                                <input type="text" name="street_name" required placeholder="e.g. Aguinaldo Highway" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                                <input type="text" name="street_name" required placeholder="e.g. Aguinaldo Highway" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-600 outline-none transition-all duration-200">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">Block & Lot / Unit Number</label>
-                                <input type="text" name="block_lot" placeholder="e.g. Blk 2 Lot 4" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                                <input type="text" name="block_lot" placeholder="e.g. Blk 2 Lot 4" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-600 outline-none transition-all duration-200">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-2">Contact Number</label>
-                            <input type="text" name="contact_number" placeholder="e.g. 09123456789" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                            <input type="text" name="contact_number" placeholder="e.g. 09123456789" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-600 outline-none transition-all duration-200">
                         </div>
                         
                         <div class="pt-6">
-                            <button type="submit" class="w-full bg-slate-900 hover:bg-orange-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2">
+                            <button type="submit" class="w-full bg-slate-900 hover:bg-purple-700 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-lg shadow-slate-200 hover:shadow-purple-500/20 active:scale-[0.99] flex items-center justify-center gap-2">
                                 <i class="bi bi-save2"></i> Submit & Register Branch
                             </button>
                         </div>

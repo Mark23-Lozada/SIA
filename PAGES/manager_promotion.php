@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
 
-$stmt = $conn->prepare("INSERT INTO promotion_requests (employee_id, request_type, effective_date, proposed_position, reason_for_promotion, increase_reason, increase_type, increase_value, new_salary, status, finance_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending Finance', 'Pending')");
+    $stmt = $conn->prepare("INSERT INTO promotion_requests (employee_id, request_type, effective_date, proposed_position, reason_for_promotion, increase_reason, increase_type, increase_value, new_salary, status, finance_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending Finance', 'Pending')");
     
     if (!$stmt) {
         echo json_encode(["success" => false, "message" => "Database prepare error: " . $conn->error]);
@@ -94,7 +94,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hired_employees') {
     while($row = $result->fetch_assoc()) {
         $row['id'] = isset($row['id']) ? intval($row['id']) : 0;
         $row['display_emp_id'] = isset($row['employee_id']) && !empty($row['employee_id']) ? $row['employee_id'] : 'EMP-' . $row['id'];
-        $row['role'] = $row['position_title'] ?? ($row['position'] ?? 'Staff');
+        $row['role'] = $row['position_title'] ?? ($row['position'] ?? ($row['role'] ?? 'Staff'));
         $row['salary'] = isset($row['salary']) ? floatval($row['salary']) : 22000.00;
         $row['date_hired'] = isset($row['date_hired']) && !empty($row['date_hired']) ? $row['date_hired'] : date('Y-m-d');
         $employees[] = $row;
@@ -386,7 +386,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hired_employees') {
       if (diffYears < 0) diffYears = 0;
       document.getElementById('infoYearsOfService').value = diffYears.toFixed(1) + ' Years';
 
-      const currentSalary = emp.salary ? parseFloat(emp.salary) : 22000.00;
+      // Siguraduhing tama at hindi nagiging zero ang kasalukuyang sweldo ng employee bago i-promote
+      const currentSalary = emp.salary && parseFloat(emp.salary) > 0 ? parseFloat(emp.salary) : 22000.00;
       document.getElementById('infoCurrentSalaryDisplay').value = '₱' + currentSalary.toLocaleString('en-US', {minimumFractionDigits: 2});
       document.getElementById('infoCurrentSalaryVal').value = currentSalary;
 

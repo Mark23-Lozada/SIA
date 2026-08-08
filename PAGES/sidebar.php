@@ -23,10 +23,10 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
 </script>
 
 <style>
-    /* Modern 50-Year Enterprise Software Developer Aesthetics (White Sidebar / Orange Theme) */
+    /* Custom Scrollbar & Theme Colors */
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(249, 115, 22, 0.2); border-radius: 20px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(126, 34, 206, 0.2); border-radius: 20px; }
     
     .nav-item-container {
         position: relative;
@@ -36,15 +36,30 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
         position: relative;
         transition: all 0.2s ease-in-out;
     }
+
+    /* Inactive Link Hover State: Text and icon turn purple, FORCE transparent background */
+    .nav-link-pill:not(.nav-link-active):hover {
+        color: var(--purple-primary) !important;
+        background-color: transparent !important;
+    }
+
+    .nav-link-pill:not(.nav-link-active):hover i {
+        color: var(--purple-primary, #7e22ce) !important;
+    }
   
+    /* Active Link State: Using var(--purple-primary) with White Text/Icon */
     .nav-link-active {
-        background-color: #f8fafc !important; 
-        color: #f97316 !important; 
+        background-color: var(--purple-primary, #7e22ce) !important; 
+        color: #ffffff !important; 
         font-weight: 600;
         border-top-left-radius: 9999px;
         border-bottom-left-radius: 9999px;
         margin-right: -8px; 
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05);
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 4px 12px rgba(126,34,206,0.25);
+    }
+
+    .nav-link-active i {
+        color: #ffffff !important;
     }
 
     .nav-link-active::before,
@@ -58,11 +73,11 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
     }
     .nav-link-active::before {
         top: -12px;
-        background: radial-gradient(circle at 0 0, transparent 70%, #f8fafc 71%);
+        background: radial-gradient(circle at 0 0, transparent 70%, var(--purple-primary, #7e22ce) 71%);
     }
     .nav-link-active::after {
         bottom: -12px;
-        background: radial-gradient(circle at 0 100%, transparent 70%, #f8fafc 71%);
+        background: radial-gradient(circle at 0 100%, transparent 70%, var(--purple-primary, #7e22ce) 71%);
     }
 
     /* HIGH-PERFORMANCE SMOOTH ANIMATION STYLES */
@@ -131,20 +146,20 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
 </style>
 
 <div id="sidebar" 
-     class="bg-white text-slate-600 pl-3 pr-2 py-4 flex flex-col shadow-2xl flex-shrink-0 z-20 border-r border-slate-200">
+     class="bg-white text-black pl-3 pr-2 py-4 flex flex-col shadow-2xl flex-shrink-0 z-20 border-r border-slate-200">
    
   <!-- Enterprise Branding Header & Burger Toggle -->
-  <div id="sidebarHeader" class="flex items-center justify-between mb-3 pr-1 text-slate-800 flex-shrink-0 transition-all duration-300">
+  <div id="sidebarHeader" class="flex items-center justify-between mb-3 pr-1 text-black flex-shrink-0 transition-all duration-300">
     <div class="flex items-center gap-1 overflow-hidden">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
-        <i class="bi bi-cpu-fill text-sm text-white"></i>
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--purple-primary,#7e22ce)] to-[#a855f7] flex items-center justify-center shadow-lg shadow-purple-900/20 flex-shrink-0">
+        <i class="bi bi-cake2-fill text-sm text-white"></i>
       </div>
       <div class="hide-on-collapse whitespace-nowrap">
-        <span class="font-bold text-xs tracking-wider block text-slate-900 uppercase font-mono">PannaKoda</span>
+        <span class="font-bold text-xs tracking-wider block text-black uppercase font-mono">Pannakoda</span>
       </div>
     </div>
     <!-- Burger Toggle Button -->
-    <button type="button" id="sidebarToggleBtn" class="text-slate-400 hover:text-orange-600 p-1.5 rounded-lg hover:bg-slate-100 transition flex-shrink-0">
+    <button type="button" id="sidebarToggleBtn" class="text-black hover:text-[var(--purple-primary,#7e22ce)] p-1.5 rounded-lg transition flex-shrink-0">
       <i class="bi bi-list text-lg"></i>
     </button>
   </div>
@@ -152,18 +167,19 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
   <nav class="flex-grow overflow-y-auto pr-1 space-y-1 custom-scrollbar">
     <style>
         .compact-link { font-size: 11.5px !important; padding-top: 6px !important; padding-bottom: 6px !important; padding-left: 10px !important; }
-        .section-title { font-size: 9.5px !important; margin-top: 14px !important; margin-bottom: 4px !important; font-family: monospace; letter-spacing: 0.05em; }
+        .section-title { font-size: 11px !important; margin-top: 14px !important; margin-bottom: 4px !important; font-family: monospace; font-weight: 800 !important; letter-spacing: 0.08em; color: var(--purple-primary, #7e22ce) !important; text-decoration: underline; text-underline-offset: 3px; }
+        .section-title i { color: var(--purple-primary, #7e22ce) !important; }
     </style>
     <?php
       function renderCompactLink($url, $label, $icon, $current) {
           $isActive = (basename($url) === $current);
-          $activeClass = $isActive ? 'nav-link-active' : 'hover:bg-slate-100 hover:text-slate-900 text-slate-500';
-          $iconColor = $isActive ? 'text-orange-500' : 'text-slate-400 group-hover:text-orange-500';
+          $activeClass = $isActive ? 'nav-link-active' : 'text-black';
+          $iconColor = $isActive ? 'text-white' : 'text-black'; 
           
           echo "<div class='nav-item-container' title='$label'>
                   <a href='$url' class='compact-link nav-link-pill group flex items-center gap-2.5 rounded-l-xl transition-all duration-150 $activeClass'>
-                    <i class='$icon $iconColor text-xs transition-colors'></i> 
-                    <span class='truncate tracking-tight hide-on-collapse'>$label</span>
+                    <i class='$icon $iconColor text-xs'></i> 
+                    <span class='truncate tracking-tight hide-on-collapse font-medium'>$label</span>
                   </a>
                 </div>";
       }
@@ -171,22 +187,21 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
       // 1. ADMIN MENU
       if ($current_role === 'admin'): 
     ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-terminal text-[8px]"></i> <span class="hide-on-collapse">System Control</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-shield-check text-[10px]"></i> <span class="hide-on-collapse">AUTHORIZATION</span>
         </div>
         <?php
-          renderCompactLink($hrmsPrefix. 'dashboard.php', 'Applicant Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'pos_dash.php', 'POS Dashboard', 'bi-speedometer2', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'admin_home.php', 'Admin Home', 'bi bi-house-door-fill', $exact_current_page);
+       renderCompactLink($hrmsPrefix . 'budget_list.php', 'Company Budget', 'bi bi-diagram-3-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'all_sales.php', 'Sale Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'employee.php', 'Employee Management', 'bi bi-people-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'profit_and_loss.php', 'Profit & Loss', 'bi bi-graph-up-arrow', $exact_current_page);
-          renderCompactLink($hrmsPrefix . 'transaction.php', 'Transaction', 'bi bi-diagram-3-fill', $exact_current_page);
+        
           renderCompactLink($hrmsPrefix . 'branches_management.php', 'Add Branch', 'bi bi-diagram-3-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'branch_map.php', 'Branch Map', 'bi bi-map-fill', $exact_current_page);
         ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-shield-check text-[8px]"></i> <span class="hide-on-collapse">Authorization</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-gear-fill text-[10px]"></i> <span class="hide-on-collapse">SYSTEM CONTROL</span>
         </div>
         <?php
           renderCompactLink($hrmsPrefix . 'admin_budget_approve.php', 'Budget Approval', 'bi bi-cash-stack', $exact_current_page);
@@ -202,16 +217,16 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
       // 2. HR MENU
       if ($current_role === 'hr'): 
     ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-people text-[8px]"></i> <span class="hide-on-collapse">Human Resources</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-people text-[10px]"></i> <span class="hide-on-collapse">HUMAN RESOURCES</span>
         </div>
         <?php
           renderCompactLink($hrmsPrefix . 'dashboard.php', 'Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'recruitment.php', 'Recruitment', 'bi bi-file-earmark-person-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'employee.php', 'Employees', 'bi bi-people-fill', $exact_current_page);
         ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-check2-square text-[8px]"></i> <span class="hide-on-collapse">HR Compliance</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-check2-square text-[10px]"></i> <span class="hide-on-collapse">HR COMPLIANCE</span>
         </div>
         <?php
           renderCompactLink($hrmsPrefix . 'Applicant.php', 'HR Applicants', 'bi bi-person-vcard', $exact_current_page);
@@ -224,15 +239,15 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
       // 3. MANAGER MENU
       if ($current_role === 'manager'): 
     ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-box-seam text-[8px]"></i> <span class="hide-on-collapse">Inventory Analytics</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-box-seam text-[10px]"></i> <span class="hide-on-collapse">INVENTORY ANALYTICS</span>
         </div>
         <?php
           renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
           renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
         ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-gear text-[8px]"></i> <span class="hide-on-collapse">Plant Operations</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-gear text-[10px]"></i> <span class="hide-on-collapse">PLANT OPERATIONS</span>
         </div>
         <?php
           renderCompactLink($frontendPrefix . 'cooking.php', 'Cooking', 'bi bi-egg-fried', $exact_current_page);
@@ -251,13 +266,11 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
       // 4. FINANCE MENU
       if ($current_role === 'finance'): 
     ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-wallet2 text-[8px]"></i> <span class="hide-on-collapse">Financial Ledgers</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-wallet2 text-[10px]"></i> <span class="hide-on-collapse">FINANCIAL LEDGERS</span>
         </div>
         <?php
-          renderCompactLink($frontendPrefix . 'pos_dash.php', 'POS Dashboard', 'bi-speedometer2', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
+           renderCompactLink($hrmsPrefix . 'all_sales.php', 'Sale Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'budget_list.php', 'Company Budget', 'bi bi-diagram-3-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'salary_deduction.php', 'Salary Deductions', 'bi bi-dash-circle', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'profit_and_loss.php', 'Profit & Loss', 'bi bi-graph-up-arrow', $exact_current_page);
@@ -265,8 +278,8 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($hrmsPrefix . 'tax.php', 'Tax Management', 'bi bi-diagram-3-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'employee_salary.php' , 'Employee Salary', 'bi bi-cash-coin', $exact_current_page);
         ?>
-        <div class="section-title uppercase text-orange-600 font-bold px-2 flex items-center gap-1">
-          <i class="bi bi-file-earmark-medical text-[8px]"></i> <span class="hide-on-collapse">Financial Review</span>
+        <div class="section-title uppercase px-2 flex items-center gap-1.5">
+          <i class="bi bi-file-earmark-medical text-[10px]"></i> <span class="hide-on-collapse">FINANCIAL REVIEW</span>
         </div>
         <?php
           renderCompactLink($hrmsPrefix . 'finance_promotion.php', 'Promotion Review', 'bi bi-person-badge', $exact_current_page);
@@ -276,9 +289,9 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
   </nav>
 
   <!-- Developer Footer Action -->
-  <button type="button" id="sidebarLogoutBtn" title="Log out" class="w-full flex items-center gap-2.5 px-3 py-2 mt-0 rounded-lg text-slate-500 hover:bg-rose-500/10 hover:text-rose-600 transition text-[11px] border border-slate-200 flex-shrink-0 group">
-    <i class="bi bi-box-arrow-right text-slate-400 group-hover:text-rose-600 transition-colors"></i> 
-    <span class="font-mono hide-on-collapse">Log out</span>
+  <button type="button" id="sidebarLogoutBtn" title="Log out" class="w-full flex items-center gap-2.5 px-3 py-2 mt-0 rounded-lg text-black hover:text-[var(--purple-primary,#7e22ce)] hover:bg-transparent transition text-[11px] border border-slate-200 flex-shrink-0 group" style="margin-bottom: 10px;">
+    <i class="bi bi-box-arrow-right text-black group-hover:text-[var(--purple-primary,#7e22ce)]"></i> 
+    <span class="font-mono hide-on-collapse font-semibold">Log out</span>
   </button>
 </div>
 
@@ -310,7 +323,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     text: "Are you sure you want to log out?",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#f97316', 
+                    confirmButtonColor: 'var(--purple-primary, #7e22ce)', 
                     cancelButtonColor: '#e11d48',
                     confirmButtonText: 'Yes',
                     cancelButtonText: 'Cancel',

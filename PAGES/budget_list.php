@@ -55,14 +55,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     $yearly_orders = $conn->query($yearly_orders_query)->fetch_assoc()['total_orders'] ?? 0;
     $yearly_cust = $conn->query($yearly_cust_query)->fetch_assoc()['total_cust'] ?? 0;
 
-    // Philippine Market-Based Multi-Tier Budget Splits (50% Needs / Essentials, 30% Operations/Wants, 20% Emergency Savings/Reserve)
     $active_baseline = ($view === 'year') ? $total_company_budget : (($view === 'month') ? $monthly_total : $daily_total);
     
-    $alloc_needs = $active_baseline * 0.50;  // 50% Essentials & Core Operations
-    $alloc_wants = $active_baseline * 0.30;  // 30% Discretionary / Expansion
-    $alloc_savings = $active_baseline * 0.20; // 20% Buffer & Savings Reserve
+    $alloc_needs = $active_baseline * 0.50;  
+    $alloc_wants = $active_baseline * 0.30;  
+    $alloc_savings = $active_baseline * 0.20; 
 
-    // Weekly Estimated Slice derived from monthly/yearly context
     $weekly_estimated = $monthly_total > 0 ? ($monthly_total / 4.33) : ($daily_total * 7);
 
     if ($view === 'year') {
@@ -110,11 +108,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     }
     ?>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-amber-500">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-500">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Total Company Budget (Net)</div>
-                <div class="h-3 w-3 rounded-full bg-amber-500/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                <div class="h-3 w-3 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-purple-500"></div>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800 mt-1">₱<?php echo number_format($total_company_budget, 2); ?></div>
@@ -123,11 +121,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-blue-600">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-600">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Daily Revenue (Today)</div>
-                <div class="h-3 w-3 rounded-full bg-blue-600/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></div>
+                <div class="h-3 w-3 rounded-full bg-purple-600/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-purple-600"></div>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800 mt-1">₱<?php echo number_format($daily_total, 2); ?></div>
@@ -137,11 +135,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-blue-500">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-400">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Monthly Revenue</div>
-                <div class="h-3 w-3 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                <div class="h-3 w-3 rounded-full bg-purple-400/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-purple-400"></div>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800 mt-1">₱<?php echo number_format($monthly_total, 2); ?></div>
@@ -151,14 +149,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-emerald-500">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-700">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Yearly Revenue</div>
-                <div class="h-3 w-3 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <div class="h-3 w-3 rounded-full bg-purple-700/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-purple-700"></div>
                 </div>
             </div>
-            <div class="text-3xl font-bold text-emerald-600 mt-1">₱<?php echo number_format($yearly_total, 2); ?></div>
+            <div class="text-3xl font-bold text-purple-700 mt-1">₱<?php echo number_format($yearly_total, 2); ?></div>
             <div class="flex justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
                 <span>Orders: <strong class="text-slate-700"><?php echo number_format($yearly_orders); ?></strong></span>
                 <span>Customers: <strong class="text-slate-700"><?php echo number_format($yearly_cust); ?></strong></span>
@@ -166,9 +164,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         </div>
     </div>
 
-    <!-- Philippine Market Based Balance Split Breakdown Section -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-        <h5 class="text-md font-bold text-slate-800 mb-2 flex items-center"><i class="bi bi-pie-chart-fill text-blue-600 me-2"></i>Philippine Standard Split Breakdown (Based on Active Scope Balance)</h5>
+        <h5 class="text-md font-bold text-slate-800 mb-2 flex items-center"><i class="bi bi-pie-chart-fill text-purple-600 me-2"></i>Philippine Standard Split Breakdown (Based on Active Scope Balance)</h5>
         <p class="text-xs text-slate-400 mb-6">Allocated systematically based on standard market percentages (50% Operational Needs, 30% Flexible Operations/Wants, 20% Reserve Fund).</p>
         
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -177,26 +174,26 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                 <h4 class="text-xl font-bold text-slate-700 mt-1">₱<?php echo number_format($weekly_estimated, 2); ?></h4>
                 <p class="text-[11px] text-slate-500 mt-1">Computed baseline weekly run rate.</p>
             </div>
-            <div class="bg-blue-50/60 p-4 rounded-xl border border-blue-100">
-                <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Needs / Core (50%)</span>
-                <h4 class="text-xl font-bold text-blue-900 mt-1">₱<?php echo number_format($alloc_needs, 2); ?></h4>
-                <p class="text-[11px] text-blue-600 mt-1">Essential utilities, stock replenishment & baseline.</p>
+            <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-100">
+                <span class="text-xs font-bold text-purple-600 uppercase tracking-wider">Needs / Core (50%)</span>
+                <h4 class="text-xl font-bold text-purple-900 mt-1">₱<?php echo number_format($alloc_needs, 2); ?></h4>
+                <p class="text-[11px] text-purple-600 mt-1">Essential utilities, stock replenishment & baseline.</p>
             </div>
-            <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-100">
-                <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Wants / Growth (30%)</span>
-                <h4 class="text-xl font-bold text-amber-900 mt-1">₱<?php echo number_format($alloc_wants, 2); ?></h4>
-                <p class="text-[11px] text-amber-600 mt-1">Marketing, improvements & discretionary operations.</p>
+            <div class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
+                <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Wants / Growth (30%)</span>
+                <h4 class="text-xl font-bold text-indigo-900 mt-1">₱<?php echo number_format($alloc_wants, 2); ?></h4>
+                <p class="text-[11px] text-indigo-600 mt-1">Marketing, improvements & discretionary operations.</p>
             </div>
-            <div class="bg-emerald-50/60 p-4 rounded-xl border border-emerald-100">
-                <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Savings / Buffer (20%)</span>
-                <h4 class="text-xl font-bold text-emerald-900 mt-1">₱<?php echo number_format($alloc_savings, 2); ?></h4>
-                <p class="text-[11px] text-emerald-600 mt-1">Emergency fund and risk mitigation reserve.</p>
+            <div class="bg-violet-50/60 p-4 rounded-xl border border-violet-100">
+                <span class="text-xs font-bold text-violet-600 uppercase tracking-wider">Savings / Buffer (20%)</span>
+                <h4 class="text-xl font-bold text-violet-900 mt-1">₱<?php echo number_format($alloc_savings, 2); ?></h4>
+                <p class="text-[11px] text-violet-600 mt-1">Emergency fund and risk mitigation reserve.</p>
             </div>
         </div>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-        <h5 class="text-md font-bold text-slate-700 mb-4 flex items-center"><i class="bi bi-graph-up text-blue-600 me-2"></i>Budget Wave Performance Graph</h5>
+        <h5 class="text-md font-bold text-slate-700 mb-4 flex items-center"><i class="bi bi-graph-up text-purple-600 me-2"></i>Budget Wave Performance Graph</h5>
         <div class="relative h-[280px] w-full">
             <canvas id="salesChart" 
                     data-labels="<?php echo htmlspecialchars(json_encode($chart_labels)); ?>" 
@@ -230,12 +227,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
         <div class="flex-1 overflow-y-auto p-6 md:p-8">
             <div class="max-w-7xl mx-auto">
-                <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 p-8 rounded-3xl shadow-sm text-white mb-8">
-                    <span class="inline-block bg-white/10 text-blue-200 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
+                <div class="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 p-8 rounded-3xl shadow-sm text-white mb-8">
+                    <span class="inline-block bg-white/10 text-purple-200 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
                         Analytics Overview
                     </span>
                     <h1 class="text-3xl font-extrabold tracking-tight" id="report-title"><?php echo $report_title; ?></h1>
-                    <p class="text-blue-100 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
+                    <p class="text-purple-100 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
                 </div>
 
                 <div class="flex flex-col md:flex-row md:items-center md:justify-end gap-4 mb-6">
@@ -254,7 +251,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
                 <div id="live-sales-container">
                     <div class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
-                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mb-3"></div>
+                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-purple-600 border-t-transparent mb-3"></div>
                         <p class="text-sm text-slate-400 font-medium">Loading budget data...</p>
                     </div>
                 </div>
@@ -287,8 +284,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             }
 
             let gradient = ctx.createLinearGradient(0, 0, 0, 280);
-            gradient.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
-            gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+            gradient.addColorStop(0, 'rgba(147, 51, 234, 0.4)');
+            gradient.addColorStop(1, 'rgba(147, 51, 234, 0.0)');
 
             salesChartInstance = new Chart(ctx, {
                 type: 'line', 
@@ -297,13 +294,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                     datasets: [{
                         label: 'Revenue (₱)',
                         data: values,
-                        borderColor: '#2563eb',
+                        borderColor: '#9333ea',
                         backgroundColor: gradient,
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
                         pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#2563eb',
+                        pointBorderColor: '#9333ea',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6
@@ -312,10 +309,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: {
-                        duration: 1200,
-                        easing: 'easeOutQuart'
-                    }, 
                     plugins: { legend: { display: false } },
                     scales: {
                         y: {
@@ -342,25 +335,25 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                 .catch(error => console.error('Error fetching data:', error));
         }
 
-        function switchView(viewType) {
-            currentView = viewType;
-            const btnToday = document.getElementById('btn-today');
-            const btnMonth = document.getElementById('btn-month');
-            const btnYear = document.getElementById('btn-year');
-            
-            [btnToday, btnMonth, btnYear].forEach(btn => {
-                if(btn) btn.className = 'px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all flex items-center gap-2';
-            });
+    function switchView(viewType) {
+        currentView = viewType;
+        const btnToday = document.getElementById('btn-today');
+        const btnMonth = document.getElementById('btn-month');
+        const btnYear = document.getElementById('btn-year');
+        
+        [btnToday, btnMonth, btnYear].forEach(btn => {
+            if(btn) btn.className = 'px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all flex items-center gap-2';
+        });
 
-            if(viewType === 'year') {
-                if(btnYear) btnYear.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
-            } else if(viewType === 'month') {
-                if(btnMonth) btnMonth.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
-            } else {
-                if(btnToday) btnToday.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
-            }
-            fetchSalesData();
+        if(viewType === 'year') {
+            if(btnYear) btnYear.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
+        } else if(viewType === 'month') {
+            if(btnMonth) btnMonth.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
+        } else {
+            if(btnToday) btnToday.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
         }
+        fetchSalesData();
+    }
 
         document.addEventListener("DOMContentLoaded", function() {
             switchView(currentView);

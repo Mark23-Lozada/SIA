@@ -63,13 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $conn->begin_transaction();
 
         try {
-            // 1. Update employee salary and position[cite: 1]
-            $updateEmp = $conn->prepare("UPDATE employees SET position_title = ?, salary = ? WHERE id = ?");
-            $updateEmp->bind_param("sdi", $proposed_position, $new_salary, $employee_id);
-            $updateEmp->execute();
-            $updateEmp->close();
-
-            // 2. Update promotion request status (Inalis ang admin_approval_date para maiwasan ang error)
+            // 1. Update employee salary and position, at tiyakin na pananatilihin ang tamang role/position title[cite: 1]
+            // 1. Update employee salary and position
+           // 1. I-update lamang ang position_title at salary. Hayaang manatili ang role bilang 'Staff'.
+$updateEmp = $conn->prepare("UPDATE employees SET position_title = ?, salary = ? WHERE id = ?");
+$updateEmp->bind_param("sdi", $proposed_position, $new_salary, $employee_id);
+$updateEmp->execute();
+$updateEmp->close();
+            // 2. Update promotion request status
             $updateReq = $conn->prepare("UPDATE promotion_requests SET status = 'Approved', admin_status = 'Approved' WHERE id = ?");
             $updateReq->bind_param("i", $request_id);
             $updateReq->execute();
@@ -82,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $insertTrans->bind_param("ssssd", $transId, $transTitle, $employee_name, $department, $new_salary);
             $insertTrans->execute();
             $insertTrans->close();
+            
             $conn->commit();
             echo json_encode(["success" => true, "message" => "Promotion approved successfully! Employee salary/position updated and recorded in transactions."]);
         } catch (Exception $e) {
@@ -104,37 +106,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // FETCH PENDING ADMIN PROMOTION REQUESTS ENDPOINT
+// FETCH PENDING ADMIN PROMOTION REQUESTS ENDPOINT
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
-    if (ob_get_length()) ob_clean();
-    header('Content-Type: application/json');
+    // Linisin ang anumang naunang output o warnings
+    if (ob_get_length()) {
+        ob_clean();
+    }
+    header('Content-Type: application/json; charset=utf-8');
 
-    $query = "SELECT pr.*, 
-                     COALESCE(e.full_name, 'Unknown Employee') as full_name, 
-                     COALESCE(e.department, 'Unassigned') as department, 
-                     COALESCE(e.salary, 0) as current_salary,
-                     COALESCE(e.position_title, 'Staff') as current_position 
-              FROM promotion_requests pr
-              LEFT JOIN employees e ON pr.employee_id = e.id 
-              WHERE pr.finance_status = 'Approved' 
-                AND pr.status = 'Pending Admin'
-              ORDER BY pr.id DESC";
-              
-    $result = $conn->query($query);
-    
-    if (!$result) {
-        echo json_encode(["error" => $conn->error]);
-        $conn->close();
-        exit;
+    // I-on ang error reporting bilang exception para mahuli ng try-catch
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+    try {
+      $query = "SELECT pr.*, 
+                         COALESCE(e.full_name, 'Unknown Employee') as full_name, 
+                         COALESCE(e.department, 'Unassigned') as department, 
+                         COALESCE(e.salary, 0) as current_salary,
+                         COALESCE(e.position_title, 'Staff') as current_position 
+                  FROM promotion_requests pr
+                  LEFT JOIN employees e ON pr.employee_id = e.id 
+                  WHERE pr.finance_status = 'Approved' 
+                    AND (pr.status = 'Pending Admin' OR pr.admin_status = 'Pending')
+                  ORDER BY pr.id DESC";
+        $result = $conn->query($query);
+        
+        $requests = [];
+        while ($row = $result->fetch_assoc()) {
+            $row['current_salary'] = floatval($row['current_salary'] ?? 0);
+            $row['new_salary'] = floatval($row['new_salary'] ?? 0);
+            $requests[] = $row;
+        }
+
+        echo json_encode($requests);
+    } catch (Exception $e) {
+        echo json_encode(["error" => true, "message" => $e->getMessage()]);
     }
 
-    $requests = [];
-    while ($row = $result->fetch_assoc()) {
-        $row['current_salary'] = floatval($row['current_salary'] ?? 0);
-        $row['new_salary'] = floatval($row['new_salary'] ?? 0);
-        $requests[] = $row;
-    }
-
-    echo json_encode($requests);
     $conn->close();
     exit;
 }
@@ -156,8 +163,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
     <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Admin Promotion Approvals</h1>
-          <p class="text-sm text-gray-500">Review and authorize employee promotions and salary adjustments pre-approved by Finance.</p>
+          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Promotion & Salary Approvals (Admin)</h1>
+          <p class="text-sm text-gray-500">Review and give final approval for promotion requests forwarded by Finance.</p>
         </div>
       </div>
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -169,7 +176,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Department</th>
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Current Role & Salary</th>
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Proposed Role & New Salary</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Reason / Details</th>
+                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Reason</th>
                 <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Action</th>
               </tr>
             </thead>
@@ -181,44 +188,46 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
   </div>
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
   <script>
-    let promotionRequests = [];
+    let adminPromotionRequests = [];
+    const adminEndpointUrl = 'admin_promotion.php';
 
-    async function loadPromotionRequests() {
+    async function loadAdminPromotionRequests() {
       try {
-        const baseUrl = window.location.href.split('?')[0];
-        const res = await fetch(`${baseUrl}?action=fetch_admin_promotions`);
+        const res = await fetch(`${adminEndpointUrl}?action=fetch_admin_promotions`);
         const rawText = await res.text();
+        
         try {
-          const data = JSON.parse(rawText);
-          promotionRequests = Array.isArray(data) ? data : [];
+          adminPromotionRequests = JSON.parse(rawText);
+          renderAdminTable();
         } catch (jsonErr) {
-          promotionRequests = [];
+          console.error("JSON Parse Error:", jsonErr);
+          adminPromotionRequests = [];
+          renderAdminTable();
         }
-        renderTable();
       } catch (err) {
         console.error("Failed to load requests:", err);
       }
     }
 
-    function renderTable() {
+    function renderAdminTable() {
       const tbody = document.getElementById('adminPromotionTableBody');
       tbody.innerHTML = '';
-      if (promotionRequests.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No finance-approved promotion requests requiring admin approval.</td></tr>`;
+      if (!Array.isArray(adminPromotionRequests) || adminPromotionRequests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No pending promotion requests requiring admin approval.</td></tr>`;
         return;
       }
-      promotionRequests.forEach(req => {
+      adminPromotionRequests.forEach(req => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
         tr.innerHTML = `
-          <td class="py-3 px-4 font-semibold text-gray-800">${req.full_name} <br><small class="text-gray-400 font-mono font-normal">ID: ${req.employee_id || ''}</small></td>
+          <td class="py-3 px-4 font-semibold text-gray-800">${req.full_name || 'N/A'}</td>
           <td class="py-3 px-4 text-gray-600">${req.department || 'Unassigned'}</td>
           <td class="py-3 px-4">
             <span class="text-xs text-gray-700 font-semibold block">${req.current_position || 'Staff'}</span>
             <span class="text-xs font-mono font-bold text-gray-900">₱${Number(req.current_salary || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
           </td>
           <td class="py-3 px-4">
-            <span class="text-xs text-amber-700 font-semibold block">${req.proposed_position}</span>
+            <span class="text-xs text-amber-700 font-semibold block">${req.proposed_position || 'N/A'}</span>
             <span class="text-xs font-mono font-bold text-emerald-600">₱${Number(req.new_salary || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
           </td>
           <td class="py-3 px-4 text-xs text-gray-600 max-w-xs truncate" title="${req.reason_for_promotion || ''}">
@@ -226,10 +235,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
           </td>
           <td class="py-3 px-4 text-center">
             <div class="flex items-center justify-center gap-1.5">
-              <button onclick="processDecision(${req.id}, 'Approved')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg">
+              <button onclick="processAdminDecision(${req.id}, 'Approved')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg">
                 <i class="bi bi-check-lg"></i> Approve
               </button>
-              <button onclick="processDecision(${req.id}, 'Rejected')" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs font-semibold rounded-lg">
+              <button onclick="processAdminDecision(${req.id}, 'Rejected')" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs font-semibold rounded-lg">
                 <i class="bi bi-x-lg"></i> Reject
               </button>
             </div>
@@ -239,10 +248,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
       });
     }
 
-    async function processDecision(requestId, decision) {
+    async function processAdminDecision(requestId, decision) {
       Swal.fire({
-        title: `${decision} Request?`,
-        text: `Are you sure you want to ${decision === 'Approved' ? 'approve this promotion and update the employee salary' : 'reject this promotion'}?`,
+        title: `${decision} Promotion Request?`,
+        text: `Are you sure you want to ${decision.toLowerCase()} this promotion? This will update employee salary, position, and record the transaction.`,
         icon: decision === 'Approved' ? 'question' : 'warning',
         showCancelButton: true,
         confirmButtonColor: decision === 'Approved' ? '#198754' : '#d33',
@@ -256,14 +265,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
           formData.append('decision', decision);
 
           try {
-            const baseUrl = window.location.href.split('?')[0];
-            const res = await fetch(baseUrl, { method: 'POST', body: formData });
-            const data = await res.json();
-            if (data.success) {
-              Swal.fire({ icon: 'success', title: 'Success!', text: data.message, timer: 1500, showConfirmButton: false });
-              loadPromotionRequests();
+            const res = await fixedFetch(adminEndpointUrl, formData);
+            if (res.success) {
+              Swal.fire({ icon: 'success', title: 'Success!', text: res.message, timer: 1800, showConfirmButton: false });
+              loadAdminPromotionRequests();
             } else {
-              Swal.fire('Error', data.message, 'error');
+              Swal.fire('Error', res.message || 'Action failed.', 'error');
             }
           } catch (err) {
             Swal.fire('Error', 'Failed to communicate with server.', 'error');
@@ -272,7 +279,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
       });
     }
 
-    window.addEventListener('DOMContentLoaded', loadPromotionRequests);
+    async function fixedFetch(url, formData) {
+      const response = await fetch(url, { method: 'POST', body: formData });
+      return await response.json();
+    }
+
+    window.addEventListener('DOMContentLoaded', loadAdminPromotionRequests);
   </script>
 </body>
 </html>
