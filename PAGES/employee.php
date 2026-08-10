@@ -347,11 +347,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           <!-- 1. NEWLY HIRED / ONBOARDING TABLE -->
           <table id="newlyHiredTable" class="table table-hover align-middle mb-0 text-sm">
             <thead>
-              <tr>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Position/Role</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Status</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action (Onboarding Form)</th>
+              <tr class="border-b border-slate-200">
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Position/Role</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Status</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0 text-center">Action (Onboarding Form)</th>
               </tr>
             </thead>
             <tbody id="newlyHiredBody"></tbody>
@@ -360,12 +360,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           <!-- 2. PERSONAL DETAILS TABLE (Hired) -->
           <table id="personalTable" class="table table-hover align-middle mb-0 text-sm d-none">
             <thead>
-              <tr>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Employee ID</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Role</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Department</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action</th>
+              <tr class="border-b border-slate-200">
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Employee ID</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Role</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Department</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0 text-center">Action</th>
               </tr>
             </thead>
             <tbody id="personalBody"></tbody>
@@ -374,15 +374,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           <!-- 3. PAYROLL PROFILE TABLE -->
           <table id="payrollTable" class="table table-hover align-middle mb-0 text-sm d-none">
             <thead>
-              <tr>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Role</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">SSS No.</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">PhilHealth</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Pag-IBIG No.</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">GSIS No.</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Base Salary</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action</th>
+              <tr class="border-b border-slate-200">
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Role</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">SSS No.</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">PhilHealth</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Pag-IBIG No.</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">GSIS No.</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0 text-end">Base Salary</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0 text-center">Action</th>
               </tr>
             </thead>
             <tbody id="payrollBody"></tbody>
@@ -1119,10 +1119,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     document.getElementById('tabNewlyHired').addEventListener('click', () => switchTab('tabNewlyHired', 'newlyHiredTable'));
     document.getElementById('tabPersonal').addEventListener('click', () => switchTab('tabPersonal', 'personalTable'));
     document.getElementById('tabPayroll').addEventListener('click', () => switchTab('tabPayroll', 'payrollTable'));
-
     document.getElementById('searchInput').addEventListener('input', renderTables);
     document.getElementById('btnPrintStatement').addEventListener('click', () => window.print());
-
     window.addEventListener('DOMContentLoaded', loadEmployees);
   </script>
 </body>

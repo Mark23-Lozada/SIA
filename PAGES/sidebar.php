@@ -151,8 +151,8 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
   <!-- Enterprise Branding Header & Burger Toggle -->
   <div id="sidebarHeader" class="flex items-center justify-between mb-3 pr-1 text-black flex-shrink-0 transition-all duration-300">
     <div class="flex items-center gap-1 overflow-hidden">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--purple-primary,#7e22ce)] to-[#a855f7] flex items-center justify-center shadow-lg shadow-purple-900/20 flex-shrink-0">
-        <i class="bi bi-cake2-fill text-sm text-white"></i>
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--purple-primary,#7e22ce)] to-[#a855f7] flex items-center justify-center shadow-lg shadow-purple-900/20 flex-shrink-0">
+         <img src="../LIBRARIES/5501d331-f1e5-4dcc-ab9b-8fd56a2b5ea5.png" alt="image" style="width: 40px; height: 40px; border-radius: 20%;">
       </div>
       <div class="hide-on-collapse whitespace-nowrap">
         <span class="font-bold text-xs tracking-wider block text-black uppercase font-mono">Pannakoda</span>

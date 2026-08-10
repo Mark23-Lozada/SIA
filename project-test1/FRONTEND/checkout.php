@@ -1105,9 +1105,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     receiptPane.innerHTML = receiptHTML;
                     receiptPane.classList.remove('d-none');
 
-                    Swal.fire({ icon: 'success', title: 'Sale Completed', text: 'Transaction Successful!', confirmButtonColor: '#8b5cf6' });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sale Completed',
+                        html: `<div class="receipt-card p-2 rounded text-start">${receiptHTML}</div>`,
+                        confirmButtonColor: '#911d1d',
+                        confirmButtonText: 'Close',
+                        width: '360px'
+                    });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#8b5cf6' });
+                    Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#ef4444' });
                 }
             })
             .catch(err => {
