@@ -151,7 +151,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_form_submissions') {
     exit;
 }
 
-// 1b. FETCH SALARY PER DEPARTMENT (from Recruitment job postings)
+// 1b. FETCH SALARY PER DEPARTMENT
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_job_salaries') {
     header('Content-Type: application/json');
     $conn = new mysqli($host, $user, $pass, $dbname);
@@ -354,44 +354,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'proceed_onboarding' && $_SERV
             $email = $row['email'] ?? '';
             $phone = $row['phone'] ?? '';
             $address = $row['address'] ?? '';
-            $department = $row['department'] ?? 'Unassigned';
             $position = $row['position_applied'] ?? ($row['position'] ?? 'Staff');
             
             $employee_id = "EMP-" . date("Y") . "-" . str_pad($id, 4, "0", STR_PAD_LEFT);
             $status = "onboarding"; 
-            $date_hired = date("Y-m-d");
             
-            $company_name = "Pannakoda";
-            $company_address = "Bagong Bayan Dasmarinas Cavite";
-            $contact_number = $phone ?: "09000000000";
             $company_email = "Pannakoda@gmail.com";
-            $employment_type = "Probationary";
-            $contract_duration_years = 1.0;
-            $work_location = "Main Office";
             $employee_gmail = $email;
             $gsis_id = $row['gsis_id'] ?? 'N/A';
             $sss_id = $row['sss_id'] ?? 'N/A';
             $philhealth_id = $row['philhealth_id'] ?? 'N/A';
             $pagibig_id = $row['pagibig_id'] ?? 'N/A';
-            $salary = $contract_salary > 0 ? $contract_salary : (stripos($position, 'manager') !== false ? 45000.00 : 22000.00);
+
+            $company_name = trim($_POST['company_name'] ?? '') ?: 'Pannakoda';
+            $company_address = trim($_POST['company_address'] ?? '') ?: 'Bagong Bayan, Dasmarinas, Cavite';
+            $contact_number = trim($_POST['contact_number'] ?? '') ?: ($phone ?: '09000000000');
+            $department = trim($_POST['department'] ?? '') ?: ($row['department'] ?? 'Unassigned');
+            $role_tier = trim($_POST['role'] ?? '') ?: (stripos($position, 'manager') !== false ? 'Manager' : 'Staff');
+            $employment_type = trim($_POST['employment_type'] ?? '') ?: 'Probationary';
+            $date_hired = trim($_POST['date_hired'] ?? '') ?: date('Y-m-d');
+            $contract_duration_years = ($_POST['contract_duration_years'] ?? '') !== '' ? floatval($_POST['contract_duration_years']) : 1.0;
+            $contract_start_date = trim($_POST['contract_start_date'] ?? '') ?: null;
+            $contract_end_date = trim($_POST['contract_end_date'] ?? '') ?: null;
+            $work_location = trim($_POST['work_location'] ?? '') ?: 'Main Office';
+            $date_of_birth = trim($_POST['date_of_birth'] ?? '') ?: null;
+            $civil_status = trim($_POST['civil_status'] ?? '') ?: 'Single';
+            $nationality = trim($_POST['nationality'] ?? '') ?: 'Filipino';
+            $gender = trim($_POST['gender'] ?? '') ?: null;
+            $immediate_supervisor = trim($_POST['immediate_supervisor'] ?? '') ?: null;
+
+            $salary = $contract_salary > 0 ? $contract_salary : ($role_tier === 'Manager' ? 45000.00 : 22000.00);
 
             $insert_stmt = $conn->prepare("
                 INSERT INTO employees (
                     company_name, company_address, contact_number, company_email,
                     employee_id, full_name, address, phone, email,
                     position_title, department, employment_type, date_hired,
-                    contract_duration_years, work_location, employee_gmail,
-                    gsis_id, sss_id, philhealth_id, pagibig_id, status, position, salary
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    contract_duration_years, contract_start_date, contract_end_date, work_location, employee_gmail,
+                    gsis_id, sss_id, philhealth_id, pagibig_id, status, position, salary,
+                    date_of_birth, civil_status, nationality, gender, immediate_supervisor
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
+            $bind_types = str_repeat('s', 13) . 'd' . str_repeat('s', 10) . 'd' . str_repeat('s', 5);
             $insert_stmt->bind_param(
-                "sssssssssssssdssssssssd", 
+                $bind_types, 
                 $company_name, $company_address, $contact_number, $company_email,
                 $employee_id, $full_name, $address, $phone, $email,
-                $position, $department, $employment_type, $date_hired,
-                $contract_duration_years, $work_location, $employee_gmail,
-                $gsis_id, $sss_id, $philhealth_id, $pagibig_id, $status, $position, $salary
+                $role_tier, $department, $employment_type, $date_hired,
+                $contract_duration_years, $contract_start_date, $contract_end_date, $work_location, $employee_gmail,
+                $gsis_id, $sss_id, $philhealth_id, $pagibig_id, $status, $position, $salary,
+                $date_of_birth, $civil_status, $nationality, $gender, $immediate_supervisor
             );
             
             if ($insert_stmt->execute()) {
@@ -454,38 +467,105 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
   <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
   <script src="../LIBRARIES/tailwind.js"></script> 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
+  <script src="../LIBRARIES/AOS/AOS.js"></script>
+
+  <style>
+      @keyframes floatSlow {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-5px); }
+      }
+      @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 15px rgba(255, 107, 74, 0.15); }
+          50% { box-shadow: 0 0 25px rgba(255, 107, 74, 0.35); }
+      }
+      .animate-float-1 { animation: floatSlow 4s ease-in-out infinite; }
+      .animate-float-2 { animation: floatSlow 5s ease-in-out infinite 1s; }
+      .animate-float-3 { animation: floatSlow 6s ease-in-out infinite 2s; }
+      .feature-box-glow:hover {
+          animation: pulseGlow 2s infinite;
+      }
+      .admin-card-glow {
+          transition: all 0.4s ease-in-out;
+      }
+      .admin-card-glow:hover {
+          box-shadow: 0 0 35px rgba(255, 107, 74, 0.25);
+          border-color: rgba(255, 107, 74, 0.5);
+      }
+      @media print {
+          body * {
+              visibility: hidden;
+          }
+          #resumeViewerFrame, #resumeViewerFrame * {
+              visibility: visible;
+          }
+          #resumeModal {
+              position: absolute;
+              left: 0;
+              top: 0;
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: 100%;
+              background: white !important;
+          }
+      }
+  </style>
 </head>
-<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+<body class="bg-white text-slate-800 font-sans antialiased h-screen overflow-hidden">
   <div class="flex h-screen w-full overflow-hidden">
     <?php include 'sidebar.php'; ?>
-    <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
-      <div class="flex justify-between items-center mb-6">
+    <div class="flex-1 h-screen overflow-y-auto p-8 bg-white min-w-0">
+      
+      <!-- Top Header & Live Philippine Time Clock Widget -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4" data-aos="fade-down" data-aos-duration="800">
         <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Applicant Management</h1>
-          <p class="text-sm text-gray-500">Manage interviews, review contracts, and transfer newly hired applicants.</p>
+          <h1 class="text-2xl font-extrabold text-[#ff6b4a] tracking-tight">APPLICANT MANAGEMENT</h1>
+          <p class="text-sm text-slate-500 mt-1">Manage interviews, review contracts, and transfer newly hired applicants.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-2xl shadow-sm border border-slate-200/80">
+            <i class="bi bi-clock text-[#ff6b4a]"></i> 
+            <span class="text-slate-700 font-medium text-xs" id="phTimeDisplay">Loading PH Time...</span>
+          </div>
+          <div class="flex items-center gap-3 bg-orange-50/60 px-4 py-2 rounded-2xl shadow-sm border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-105">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-700">System Active</span>
+          </div>
         </div>
       </div>
       
-      <div class="mb-4 flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="relative flex-1 max-w-md">
-          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><i class="bi bi-search"></i></span>
-          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2 rounded-xl text-sm border-gray-200" placeholder="Search applicants...">
+      <!-- Search & Filter Bar -->
+      <div class="mb-6 flex items-center gap-3 bg-slate-50 p-4 rounded-3xl shadow-sm border border-slate-200/80 admin-card-glow" data-aos="fade-up" data-aos-duration="900">
+        <div class="relative flex-1">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400"><i class="bi bi-search"></i></span>
+          <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/30 focus:border-[#ff6b4a] transition-all duration-300" placeholder="Search applicants by name, email, or position...">
         </div>
       </div>
 
       <!-- MAIN APPLICANTS TABLE -->
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-        <h3 class="text-md font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="bi bi-people-fill text-orange-500"></i> Main Applicants List</h3>
-        <div class="table-responsive bg-white rounded-xl overflow-hidden">
+      <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 admin-card-glow" data-aos="fade-up" data-aos-duration="1000">
+        <h3 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div class="p-2 bg-[#ff6b4a]/10 text-[#ff6b4a] rounded-xl border border-[#ff6b4a]/20">
+            <i class="bi bi-people-fill"></i>
+          </div> 
+          Main Applicants List
+        </h3>
+        <div class="table-responsive bg-white rounded-2xl overflow-hidden border border-slate-100">
           <table id="applicantsTable" class="table table-hover align-middle mb-0 text-sm">
             <thead class="table-dark">
               <tr>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Applicant ID</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Email</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Position Applied</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Status</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Actions</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Applicant ID</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Email</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Position Applied</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Resume</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Status</th>
+                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0 text-center">Actions</th>
               </tr>
             </thead>
             <tbody id="applicantsBody"></tbody>
@@ -494,14 +574,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       </div>
 
       <!-- SECOND CONDITIONAL TABLE: FORM SUBMISSIONS (admin_form_applications) -->
-      <div id="formSubmissionsSection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hidden">
+      <div id="formSubmissionsSection" class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 admin-card-glow hidden" data-aos="fade-up" data-aos-duration="1100">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-md font-bold text-gray-800 flex items-center gap-2">
-            <i class="bi bi-file-earmark-person-fill text-amber-500"></i> Direct Form Application Submissions
+          <h3 class="text-md font-bold text-slate-800 flex items-center gap-2">
+            <div class="p-2 bg-amber-500/10 text-amber-600 rounded-xl border border-amber-500/20">
+              <i class="bi bi-file-earmark-person-fill"></i>
+            </div>
+            Direct Form Application Submissions
           </h3>
-          <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full">New Incoming Data</span>
+          <span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full border border-amber-200">New Incoming Data</span>
         </div>
-        <div class="table-responsive bg-white rounded-xl overflow-hidden">
+        <div class="table-responsive bg-white rounded-2xl overflow-hidden border border-slate-100">
           <table id="formSubmissionsTable" class="table table-hover align-middle mb-0 text-sm">
             <thead class="table-light">
               <tr>
@@ -520,40 +603,153 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
     </div>
   </div>
 
+  <!-- Resume Viewer Modal (Only Resume content with Print & Close buttons) -->
+  <div class="modal fade" id="resumeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
+        <div class="modal-header bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] text-white px-6 py-4 flex items-center justify-between">
+          <h5 class="modal-title font-bold text-base flex items-center gap-2">
+            <i class="bi bi-file-earmark-pdf-fill text-[#ff6b4a]"></i> <span id="resumeModalTitle">Applicant Resume Preview</span>
+          </h5>
+          <div class="flex items-center gap-2">
+            <button type="button" class="btn btn-sm btn-orange rounded-xl px-3 py-1.5 text-xs font-semibold bg-[#ff6b4a] hover:bg-[#e05638] text-white flex items-center gap-1.5 border-0 shadow-sm" onclick="printResumeFromModal()">
+              <i class="bi bi-printer-fill"></i> Print
+            </button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body p-0 bg-slate-100 h-[75vh]">
+          <iframe id="resumeViewerFrame" src="" class="w-full h-full border-0 bg-white"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- CONTRACT MODAL -->
   <div class="modal fade" id="contractModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content rounded-2xl border-0 shadow-lg">
-        <div class="modal-header bg-dark text-white rounded-t-2xl">
-          <h5 class="modal-title font-bold text-base"><i class="bi bi-file-earmark-text-fill text-warning me-2"></i> Employment Contract Agreement</h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
+        <div class="modal-header bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] text-white px-6 py-4">
+          <h5 class="modal-title font-bold text-base flex items-center gap-2">
+            <i class="bi bi-file-earmark-text-fill text-[#ff6b4a]"></i> Employment Contract Agreement
+          </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body p-6 bg-light">
-          <div class="bg-white p-6 rounded-xl border shadow-sm">
-            <h4 class="font-bold text-gray-800 text-center mb-3">OFFER OF EMPLOYMENT & CONTRACT TERMS</h4>
-            <div class="row g-2 mb-3 text-sm bg-gray-50 p-3 rounded-lg border">
-              <div class="col-md-6"><strong>Applicant Name:</strong> <span id="modalApplicantName" class="text-primary font-semibold"></span></div>
-              <div class="col-md-6"><strong>Email:</strong> <span id="modalApplicantEmail" class="text-muted"></span></div>
-              <div class="col-md-6"><strong>Position:</strong> <span id="modalApplicantPosition" class="text-dark font-semibold"></span></div>
-              <div class="col-md-6"><strong>Stage:</strong> <span class="badge bg-primary">Contract Verification</span></div>
+        <div class="modal-body p-6 bg-white max-h-[75vh] overflow-y-auto">
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+            <h4 class="font-extrabold text-slate-800 text-center mb-4 tracking-tight">OFFER OF EMPLOYMENT & CONTRACT TERMS</h4>
+            <div class="row g-2 mb-4 text-sm bg-white p-4 rounded-2xl border border-slate-200">
+              <div class="col-md-6"><strong>Applicant Name:</strong> <span id="modalApplicantName" class="text-[#ff6b4a] font-semibold"></span></div>
+              <div class="col-md-6"><strong>Email:</strong> <span id="modalApplicantEmail" class="text-slate-500"></span></div>
+              <div class="col-md-6"><strong>Position Applied:</strong> <span id="modalApplicantPosition" class="text-slate-800 font-semibold"></span></div>
+              <div class="col-md-6"><strong>Stage:</strong> <span class="badge bg-[#ff6b4a]">Contract Verification</span></div>
             </div>
-            <div class="mb-1">
-              <label class="form-label text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Offered Monthly Salary (₱)</label>
-              <input type="number" min="0" step="0.01" id="modalContractSalary" class="form-control form-control-sm rounded-lg">
-              <div id="modalSalarySourceNote" class="text-[11px] text-gray-400 mt-1"></div>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contact Number</label>
+                <input type="text" id="modalContactNumber" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Company Name</label>
+                <input type="text" id="modalCompanyName" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Company Address</label>
+                <input type="text" id="modalCompanyAddress" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Date of Birth</label>
+                <input type="date" id="modalDob" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Civil Status</label>
+                <select id="modalCivilStatus" class="form-control form-control-sm rounded-xl py-2">
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Widowed">Widowed</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Nationality</label>
+                <input type="text" id="modalNationality" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Gender</label>
+                <select id="modalGender" class="form-control form-control-sm rounded-xl py-2">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Work Location</label>
+                <input type="text" id="modalWorkLocation" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Department</label>
+                <input type="text" id="modalContractDepartment" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Role / Position Tier</label>
+                <select id="modalRole" class="form-control form-control-sm rounded-xl py-2" onchange="suggestSalaryForRole()">
+                  <option value="Staff">Staff</option>
+                  <option value="Manager">Manager</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Employment Type</label>
+                <select id="modalEmploymentType" class="form-control form-control-sm rounded-xl py-2">
+                  <option value="Probationary">Probationary</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Part-Time">Part-Time</option>
+                  <option value="Full-Time">Full-Time</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Immediate Supervisor</label>
+                <input type="text" id="modalSupervisor" class="form-control form-control-sm rounded-xl py-2" placeholder="Supervisor name">
+              </div>
+
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Date Hired</label>
+                <input type="date" id="modalDateHired" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contract Start Date</label>
+                <input type="date" id="modalContractStart" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contract End Date</label>
+                <input type="date" id="modalContractEnd" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+
+              <div class="col-md-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contract Duration (Years)</label>
+                <input type="number" step="0.1" min="0" id="modalContractDuration" class="form-control form-control-sm rounded-xl py-2">
+              </div>
+              <div class="col-md-8">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Offered Monthly Salary (₱)</label>
+                <input type="number" min="0" step="0.01" id="modalContractSalary" class="form-control form-control-sm rounded-xl py-2">
+                <div id="modalSalarySourceNote" class="text-[11px] text-slate-400 mt-1"></div>
+              </div>
             </div>
-            <div class="form-check bg-amber-50 border border-amber-200 p-3 rounded-xl mt-3">
+
+            <div class="form-check bg-orange-50 border border-orange-200 p-3.5 rounded-2xl mt-4">
               <input class="form-check-input mt-1" type="checkbox" id="agreeContractCheck" onchange="toggleOnboardingButton()">
-              <label class="form-check-label text-xs font-semibold text-amber-900 cursor-pointer" for="agreeContractCheck">
+              <label class="form-check-label text-xs font-semibold text-orange-900 cursor-pointer" for="agreeContractCheck">
                 I verify that the applicant has reviewed and agreed to the terms of this contract.
               </label>
             </div>
           </div>
         </div>
-        <div class="modal-footer bg-white border-0">
+        <div class="modal-footer bg-slate-50 border-0 px-6 py-4">
           <input type="hidden" id="modalApplicantId">
-          <button type="button" class="btn btn-secondary btn-sm rounded-lg" data-bs-dismiss="modal">Close</button>
-          <button type="button" id="proceedOnboardingBtn" class="btn btn-success btn-sm rounded-lg px-4" disabled onclick="confirmProceedOnboarding()">
+          <button type="button" class="btn btn-secondary btn-sm rounded-xl px-4" data-bs-dismiss="modal">Close</button>
+          <button type="button" id="proceedOnboardingBtn" class="btn btn-success btn-sm rounded-xl px-5 font-semibold bg-emerald-600 hover:bg-emerald-700 border-0 shadow-lg shadow-emerald-600/20" disabled onclick="confirmProceedOnboarding()">
             <i class="bi bi-person-check-fill me-1"></i> Proceed to Onboarding
           </button>
         </div>
@@ -563,6 +759,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
 
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
   <script>
+    function updatePhilippineTime() {
+        const options = {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        const formatter = new Intl.DateTimeFormat([], options);
+        const timeString = formatter.format(new Date());
+        const displayElem = document.getElementById('phTimeDisplay');
+        if (displayElem) {
+            displayElem.textContent = timeString;
+        }
+    }
+    setInterval(updatePhilippineTime, 1000);
+    updatePhilippineTime();
+
     let allApplicants = [];
     let formSubmissions = [];
     let activeContractModal = null;
@@ -614,7 +831,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No applicant records found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 italic">No applicant records found.</td></tr>`;
         return;
       }
 
@@ -628,37 +845,64 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         const safeDept = (app.department || 'Unassigned').replace(/'/g, "\\'");
 
         if (rawStatus === 'pending') {
-          statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Pending Review</span>';
-          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-check-lg"></i> Approve Final Interview</button>`;
+          statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Pending Review</span>';
+          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 border-0 shadow-sm"><i class="bi bi-check-lg"></i> Admin Approve</button>`;
         } else if (rawStatus === 'for final interview') {
-          statusBadge = '<span class="bg-indigo-50 text-indigo-700 border-indigo-200 px-2.5 py-1 rounded-md text-xs font-semibold border">For Final Interview</span>';
-          actionButtons = `<button onclick="proceedContract(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}', '${safeDept}')" class="btn btn-sm btn-primary py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-file-earmark-text"></i> Proceed to Contract</button>`;
+          statusBadge = '<span class="bg-indigo-50 text-indigo-700 border-indigo-200 px-3 py-1 rounded-lg text-xs font-semibold border">For Final Interview</span>';
+          actionButtons = `<button onclick="proceedContract(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}', '${safeDept}')" class="btn btn-sm btn-primary py-1.5 px-3 text-xs font-semibold rounded-xl bg-[#ff6b4a] hover:bg-[#e05638] border-0 shadow-sm"><i class="bi bi-file-earmark-text"></i> Proceed to Contract</button>`;
         } else if (rawStatus === 'contract') {
-          statusBadge = '<span class="bg-blue-50 text-blue-700 border-blue-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Contract Stage</span>';
-          actionButtons = `<button onclick="openContractModal(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}', '${safeDept}')" class="btn btn-sm btn-outline-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-file-earmark-text"></i> Open Contract</button>`;
+          statusBadge = '<span class="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1 rounded-lg text-xs font-semibold border">Contract Stage</span>';
+          actionButtons = `<button onclick="openContractModal(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}', '${safeDept}')" class="btn btn-sm btn-outline-success py-1.5 px-3 text-xs font-semibold rounded-xl border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white"><i class="bi bi-file-earmark-text"></i> Open Contract</button>`;
         } else {
-          statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-2.5 py-1 rounded-md text-xs font-semibold border">Pending Review</span>';
-          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg"><i class="bi bi-check-lg"></i> Approve Final Interview</button>`;
+          statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Pending Review</span>';
+          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 border-0 shadow-sm"><i class="bi bi-check-lg"></i> Admin Approve</button>`;
+        }
+
+        let resumeHtml = '';
+        if (app.resume_path && app.resume_path.trim() !== '') {
+          const safeResumePath = app.resume_path.replace(/'/g, "\\'");
+          resumeHtml = `<button onclick="openResumeModal('${safeResumePath}', '${safeName}')" class="btn btn-sm btn-outline-orange py-1 px-2.5 text-xs font-semibold rounded-lg border border-[#ff6b4a] text-[#ff6b4a] hover:bg-[#ff6b4a] hover:text-white"><i class="bi bi-file-earmark-pdf"></i> View</button>`;
+        } else {
+          resumeHtml = `<span class="text-slate-400 text-xs italic">No Resume</span>`;
         }
 
         const tr = document.createElement('tr');
-        tr.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+        tr.className = "border-b border-slate-100 hover:bg-orange-50/20 transition-colors";
         tr.innerHTML = `
-          <td class="py-3 px-4 font-mono font-bold text-gray-700">#${app.id}</td>
-          <td class="py-3 px-4 font-semibold text-gray-800">${app.full_name || ''}</td>
-          <td class="py-3 px-4 text-gray-600">${app.email || ''}</td>
-          <td class="py-3 px-4 text-gray-600">${app.position_applied || app.position || 'Staff'}</td>
-          <td class="py-3 px-4">${statusBadge}</td>
-          <td class="py-3 px-4 text-center flex justify-center items-center gap-2">
+          <td class="py-3.5 px-4 font-mono font-bold text-slate-700">#${app.id}</td>
+          <td class="py-3.5 px-4 font-semibold text-slate-800">${app.full_name || ''}</td>
+          <td class="py-3.5 px-4 text-slate-600">${app.email || ''}</td>
+          <td class="py-3.5 px-4 text-slate-600">${app.position_applied || app.position || 'Staff'}</td>
+          <td class="py-3.5 px-4">${resumeHtml}</td>
+          <td class="py-3.5 px-4">${statusBadge}</td>
+          <td class="py-3.5 px-4 text-center flex justify-center items-center gap-2">
             ${actionButtons}
-            <button onclick="deleteApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs font-semibold rounded-lg"><i class="bi bi-trash3"></i></button>
+            <button onclick="deleteApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-outline-danger py-1.5 px-2.5 text-xs font-semibold rounded-xl border-red-500 text-red-500 hover:bg-red-500 hover:text-white"><i class="bi bi-trash3"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    // RENDER SECOND CONDITIONAL TABLE
+    function openResumeModal(resumePath, applicantName) {
+      document.getElementById('resumeModalTitle').textContent = `Resume Preview — ${applicantName}`;
+      document.getElementById('resumeViewerFrame').src = resumePath;
+      const resumeModal = new bootstrap.Modal(document.getElementById('resumeModal'));
+      resumeModal.show();
+    }
+
+    function printResumeFromModal() {
+      const iframe = document.getElementById('resumeViewerFrame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }
+    }
+
+    document.getElementById('resumeModal').addEventListener('hidden.bs.modal', function () {
+      document.getElementById('resumeViewerFrame').src = '';
+    });
+
     function renderFormSubmissionsTable() {
       const section = document.getElementById('formSubmissionsSection');
       const tbody = document.getElementById('formSubmissionsBody');
@@ -674,14 +918,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       formSubmissions.forEach(sub => {
         const safeName = (sub.full_name || '').replace(/'/g, "\\'");
         const tr = document.createElement('tr');
-        tr.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+        tr.className = "border-b border-slate-100 hover:bg-amber-50/20 transition-colors";
         tr.innerHTML = `
-          <td class="py-3 px-4 font-mono font-bold text-gray-700">#${sub.id}</td>
-          <td class="py-3 px-4 font-semibold text-gray-800">${sub.full_name || ''}</td>
-          <td class="py-3 px-4 text-gray-600 font-medium"><span class="badge bg-orange-100 text-orange-800">${sub.department || 'N/A'}</span></td>
-          <td class="py-3 px-4 text-gray-600 text-xs">${sub.email || ''} <br> <span class="text-gray-400">${sub.phone || ''}</span></td>
-          <td class="py-3 px-4 text-center">
-            <button onclick="approveFormSubmission(${sub.id}, '${safeName}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-bold rounded-lg shadow-sm">
+          <td class="py-3.5 px-4 font-mono font-bold text-slate-700">#${sub.id}</td>
+          <td class="py-3.5 px-4 font-semibold text-slate-800">${sub.full_name || ''}</td>
+          <td class="py-3.5 px-4 text-slate-600 font-medium"><span class="badge bg-orange-100 text-orange-800 px-2.5 py-1 rounded-lg">${sub.department || 'N/A'}</span></td>
+          <td class="py-3.5 px-4 text-slate-600 text-xs">${sub.email || ''} <br> <span class="text-slate-400">${sub.phone || ''}</span></td>
+          <td class="py-3.5 px-4 text-center">
+            <button onclick="approveFormSubmission(${sub.id}, '${safeName}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-bold rounded-xl shadow-sm bg-emerald-600 hover:bg-emerald-700 border-0">
               <i class="bi bi-check-circle-fill me-1"></i> Approve & Proceed to Onboarding
             </button>
           </td>
@@ -695,6 +939,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         title: 'Processing Onboarding...',
         text: `Approving ${name} and moving to onboarding system.`,
         allowOutsideClick: false,
+        background: '#09090b',
+        color: '#ffffff',
+        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl backdrop-blur-xl' },
         didOpen: () => { Swal.showLoading(); }
       });
 
@@ -708,12 +955,37 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         if (data.success) {
           formSubmissions = formSubmissions.filter(sub => String(sub.id) !== String(id));
           renderFormSubmissionsTable();
-          Swal.fire({ title: 'Success!', text: data.message, icon: 'success', timer: 1200, showConfirmButton: false });
+          Swal.fire({ 
+            title: 'Success!', 
+            text: data.message, 
+            icon: 'success', 
+            timer: 1200, 
+            showConfirmButton: false,
+            background: '#09090b',
+            color: '#ffffff',
+            customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+          });
         } else {
-          Swal.fire('Error!', data.message || 'Failed processing request.', 'error');
+          Swal.fire({
+            title: 'Error!',
+            text: data.message || 'Failed processing request.',
+            icon: 'error',
+            confirmButtonColor: '#ff6b4a',
+            background: '#09090b',
+            color: '#ffffff',
+            customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+          });
         }
       } catch (e) {
-        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+        Swal.fire({
+          title: 'Error!',
+          text: 'An unexpected error occurred.',
+          icon: 'error',
+          confirmButtonColor: '#ff6b4a',
+          background: '#09090b',
+          color: '#ffffff',
+          customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+        });
       }
     }
 
@@ -746,6 +1018,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       document.getElementById('modalApplicantEmail').textContent = email;
       document.getElementById('modalApplicantPosition').textContent = position;
 
+      const app = allApplicants.find(a => String(a.id) === String(id)) || {};
+
+      document.getElementById('modalContactNumber').value = app.phone || '';
+      document.getElementById('modalCompanyName').value = 'Pannakoda';
+      document.getElementById('modalCompanyAddress').value = 'Bagong Bayan, Dasmarinas, Cavite';
+      document.getElementById('modalDob').value = '';
+      document.getElementById('modalCivilStatus').value = 'Single';
+      document.getElementById('modalNationality').value = 'Filipino';
+      document.getElementById('modalGender').value = 'Male';
+      document.getElementById('modalWorkLocation').value = 'Main Office';
+      document.getElementById('modalContractDepartment').value = department || app.department || 'Unassigned';
+
+      const guessedRole = /manager/i.test(position || '') ? 'Manager' : 'Staff';
+      document.getElementById('modalRole').value = guessedRole;
+      document.getElementById('modalEmploymentType').value = 'Probationary';
+      document.getElementById('modalSupervisor').value = '';
+
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('modalDateHired').value = today;
+      document.getElementById('modalContractStart').value = today;
+      document.getElementById('modalContractEnd').value = '';
+      document.getElementById('modalContractDuration').value = '1.0';
+
       const salaryField = document.getElementById('modalContractSalary');
       const note = document.getElementById('modalSalarySourceNote');
       const deptKey = (department || '').toLowerCase();
@@ -754,8 +1049,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         salaryField.value = suggested;
         note.textContent = `Suggested from the "${department}" job posting — you can adjust it.`;
       } else {
-        salaryField.value = '';
-        note.textContent = `No matching Recruitment posting found for "${department || 'this department'}" — enter the salary manually.`;
+        salaryField.value = guessedRole === 'Manager' ? 45000 : 22000;
+        note.textContent = `No matching Recruitment posting found for "${department || 'this department'}" — using a role-based default, adjust as needed.`;
       }
 
       const checkbox = document.getElementById('agreeContractCheck');
@@ -764,6 +1059,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
 
       activeContractModal = new bootstrap.Modal(document.getElementById('contractModal'));
       activeContractModal.show();
+    }
+
+    function suggestSalaryForRole() {
+      const role = document.getElementById('modalRole').value;
+      const deptKey = document.getElementById('modalContractDepartment').value.toLowerCase();
+      if (deptSalaryMap[deptKey] !== undefined && deptSalaryMap[deptKey] !== null) return;
+      document.getElementById('modalContractSalary').value = role === 'Manager' ? 45000 : 22000;
     }
 
     function toggleOnboardingButton() {
@@ -778,12 +1080,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         title: 'Processing Onboarding...',
         text: 'Please wait a moment.',
         allowOutsideClick: false,
+        background: '#09090b',
+        color: '#ffffff',
+        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl backdrop-blur-xl' },
         didOpen: () => { Swal.showLoading(); }
       });
       
       const fd = new FormData(); 
       fd.append('id', applicantId);
       fd.append('salary', document.getElementById('modalContractSalary').value || '');
+      fd.append('contact_number', document.getElementById('modalContactNumber').value);
+      fd.append('company_name', document.getElementById('modalCompanyName').value);
+      fd.append('company_address', document.getElementById('modalCompanyAddress').value);
+      fd.append('date_of_birth', document.getElementById('modalDob').value);
+      fd.append('civil_status', document.getElementById('modalCivilStatus').value);
+      fd.append('nationality', document.getElementById('modalNationality').value);
+      fd.append('gender', document.getElementById('modalGender').value);
+      fd.append('work_location', document.getElementById('modalWorkLocation').value);
+      fd.append('department', document.getElementById('modalContractDepartment').value);
+      fd.append('role', document.getElementById('modalRole').value);
+      fd.append('employment_type', document.getElementById('modalEmploymentType').value);
+      fd.append('immediate_supervisor', document.getElementById('modalSupervisor').value);
+      fd.append('date_hired', document.getElementById('modalDateHired').value);
+      fd.append('contract_start_date', document.getElementById('modalContractStart').value);
+      fd.append('contract_end_date', document.getElementById('modalContractEnd').value);
+      fd.append('contract_duration_years', document.getElementById('modalContractDuration').value);
       
       try {
         const res = await fetch(`${phpEndpoint}?action=proceed_onboarding`, { method: 'POST', body: fd });
@@ -792,17 +1113,54 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         if (data.success) {
           allApplicants = allApplicants.filter(app => String(app.id) !== String(applicantId));
           renderTable();
-          Swal.fire({ title: 'Success!', text: data.message, icon: 'success', timer: 1000, showConfirmButton: false });
+          Swal.fire({ 
+            title: 'Success!', 
+            text: data.message, 
+            icon: 'success', 
+            timer: 1000, 
+            showConfirmButton: false,
+            background: '#09090b',
+            color: '#ffffff',
+            customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+          });
         } else {
-          Swal.fire('Error!', data.message || 'Failed.', 'error');
+          Swal.fire({
+            title: 'Error!',
+            text: data.message || 'Failed.',
+            icon: 'error',
+            confirmButtonColor: '#ff6b4a',
+            background: '#09090b',
+            color: '#ffffff',
+            customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+          });
         }
       } catch (e) {
-        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+        Swal.fire({
+          title: 'Error!',
+          text: 'An unexpected error occurred.',
+          icon: 'error',
+          confirmButtonColor: '#ff6b4a',
+          background: '#09090b',
+          color: '#ffffff',
+          customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+        });
       }
     }
 
     async function deleteApplicant(id, name) {
-      if (!(await Swal.fire({ title: 'Delete?', text: `Delete ${name}?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' })).isConfirmed) return;
+      if (!(await Swal.fire({ 
+        title: 'Delete Applicant?', 
+        text: `Are you sure you want to delete ${name}?`, 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Delete',
+        background: '#09090b',
+        color: '#ffffff',
+        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+      })).isConfirmed) return;
+
       const fd = new FormData(); fd.append('id', id);
       const res = await fetch(`${phpEndpoint}?action=delete_applicant`, { method: 'POST', body: fd });
       const data = await res.json();
@@ -819,6 +1177,52 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       loadFormSubmissions();
       loadJobSalaries();
       setInterval(loadFormSubmissions, 10000); 
+    });
+
+    document.addEventListener('click', function(e) {
+        const logoutBtn = e.target.closest('#sidebarLogoutBtn, .logout-btn, a[href*="logout.php"]');
+        
+        if (logoutBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') {
+                e.stopImmediatePropagation();
+            }
+
+            const logoutUrl = logoutBtn.getAttribute('href') || "logout.php";
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'System Sign Out',
+                    text: "Are you sure you want to end your current session?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ff6b4a', 
+                    cancelButtonColor: '#ef4444',
+                    confirmButtonText: 'Yes, Sign Out',
+                    cancelButtonText: 'Cancel',
+                    background: '#09090b',
+                    color: '#ffffff',
+                    customClass: {
+                        popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl backdrop-blur-xl'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed && logoutUrl && logoutUrl !== '#') {
+                        window.location.href = logoutUrl; 
+                    }
+                });
+            } else {
+                if (confirm("Are you sure you want to log out?")) {
+                    window.location.href = logoutUrl;
+                }
+            }
+        }
+    }, true);
+
+    AOS.init({
+        once: true,
+        offset: 50,
+        duration: 800,
     });
   </script>
 </body>

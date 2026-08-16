@@ -11,7 +11,7 @@ if (!isset($_SESSION['role'])) {
 $current_role = strtolower($_SESSION['role']);
 
 // 3. Harangin kung HINDI siya admin at HINDI rin hr
-if ($current_role !== 'admin' && $current_role !== 'hr') {
+if ($current_role !== 'admin' && $current_role !== 'hr' && $current_role !== 'finance') {
     header("Location: login.php"); // Pwedeng palitan ng unauthorized.php
     exit();
 }

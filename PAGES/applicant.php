@@ -43,10 +43,8 @@ function sendApplicantEmail($recipient_email, $recipient_name, $subject, $messag
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         
-        // --- FIXED GMAIL AND APP PASSWORD ---
         $mail->Username   = 'markjosephlozada251@gmail.com'; 
         $mail->Password   = 'rhjd rqed rhdh qkbd';    
-        // ------------------------------------
 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
@@ -125,7 +123,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'reject' && isset($_GET['id']))
     exit;
 }
 
-// SET HR INTERVIEW SCHEDULE
 if (isset($_GET['action']) && $_GET['action'] == 'schedule_hr' && $_SERVER['REQUEST_METHOD'] == 'POST') {
     $id = intval($_POST['id']);
     $interview_date = $_POST['interview_date'];
@@ -157,7 +154,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'schedule_hr' && $_SERVER['REQU
     exit;
 }
 
-// APPROVE HR INTERVIEW
 if (isset($_GET['action']) && $_GET['action'] == 'approve_hr' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     
@@ -173,7 +169,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'approve_hr' && isset($_GET['id
     exit;
 }
 
-// SET FINAL INTERVIEW
 if (isset($_GET['action']) && $_GET['action'] == 'schedule_final' && $_SERVER['REQUEST_METHOD'] == 'POST') {
     $id = intval($_POST['id']);
     $final_interview_date = $_POST['final_interview_date'];
@@ -211,6 +206,26 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #resumeViewerFrame, #resumeViewerFrame * {
+                visibility: visible;
+            }
+            #resumeModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                background: white !important;
+            }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 font-sans antialiased h-screen overflow-hidden">
     <div class="flex h-screen w-full overflow-hidden">
@@ -252,7 +267,7 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
                                     </td>
                                     <td class="p-4">
                                         <?php if (!empty($row['resume_path'])): ?>
-                                            <a href="<?= htmlspecialchars($row['resume_path']) ?>" target="_blank" class="inline-flex items-center gap-2 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold no-underline">Resume</a>
+                                            <button onclick="openResumeModal('<?= htmlspecialchars($row['resume_path'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['full_name'], ENT_QUOTES) ?>')" class="inline-flex items-center gap-2 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold border-0 cursor-pointer shadow-sm">Resume</button>
                                         <?php else: ?>
                                             <span class="text-slate-400 text-xs">No Resume</span>
                                         <?php endif; ?>
@@ -276,6 +291,22 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resume Viewer Modal (Only Resume and Print/Close Buttons) -->
+    <div id="resumeModal" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+            <div class="flex justify-between items-center px-6 py-4 bg-slate-900 text-white">
+                <h3 id="resumeModalTitle" class="text-base font-bold">Applicant Resume</h3>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="printResume()" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"><i class="bi bi-printer-fill"></i> Print</button>
+                    <button type="button" onclick="closeModal('resumeModal')" class="text-slate-300 hover:text-white text-lg font-bold px-2"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 bg-slate-100 p-2 overflow-hidden">
+                <iframe id="resumeViewerFrame" src="" class="w-full h-full rounded-lg border-0 bg-white"></iframe>
             </div>
         </div>
     </div>
@@ -320,6 +351,18 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
 
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
     <script>
+        function openResumeModal(resumePath, applicantName) {
+            document.getElementById('resumeModalTitle').innerText = "Resume Preview: " + applicantName;
+            document.getElementById('resumeViewerFrame').src = resumePath;
+            document.getElementById('resumeModal').classList.remove('hidden');
+        }
+        function printResume() {
+            const iframe = document.getElementById('resumeViewerFrame');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            }
+        }
         function openHRModal(id, name) {
             document.getElementById('hr_id').value = id;
             document.getElementById('modalApplicantName').innerText = "Applicant Profile: " + name;
@@ -332,6 +375,9 @@ $applicants = $conn->query("SELECT * FROM applicants WHERE status IN ('Pending',
         }
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
+            if (modalId === 'resumeModal') {
+                document.getElementById('resumeViewerFrame').src = '';
+            }
         }
         function validateDate(event, inputId) {
             const dateInput = document.getElementById(inputId).value;

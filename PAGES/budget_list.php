@@ -11,13 +11,13 @@ $view = isset($_GET['view']) ? $_GET['view'] : 'today';
 
 if ($view === 'year') {
     $date_condition = "YEAR(sales.created_at) = YEAR(CURDATE())";
-    $report_title = "This Year's Budget & Philippine-Standard Allocation Report (" . date('Y') . ")";
+    $report_title = "This Year's Budget & Philippine-Standard Allocation Report ";
 } elseif ($view === 'month') {
     $date_condition = "MONTH(sales.created_at) = MONTH(CURDATE()) AND YEAR(sales.created_at) = YEAR(CURDATE())";
-    $report_title = "This Month's Budget & Philippine-Standard Allocation Report (" . date('F Y') . ")";
+    $report_title = "This Month's Budget & Philippine-Standard Allocation Report ";
 } else {
     $date_condition = "DATE(sales.created_at) = CURDATE()";
-    $report_title = "Today's Budget & Philippine-Standard Allocation Report (" . date('F d, Y') . ")";
+    $report_title = "Today's Budget & Philippine-Standard Allocation Report ";
 }
 
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
@@ -108,11 +108,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     }
     ?>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-500">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-[#ff6b4a] transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Total Company Budget (Net)</div>
-                <div class="h-3 w-3 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-purple-500"></div>
+                <div class="h-3 w-3 rounded-full bg-[#ff6b4a]/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-[#ff6b4a]"></div>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800 mt-1">₱<?php echo number_format($total_company_budget, 2); ?></div>
@@ -121,11 +121,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-600">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-[#ff6b4a] transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Daily Revenue (Today)</div>
-                <div class="h-3 w-3 rounded-full bg-purple-600/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-purple-600"></div>
+                <div class="h-3 w-3 rounded-full bg-[#ff6b4a]/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-[#ff6b4a]"></div>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800 mt-1">₱<?php echo number_format($daily_total, 2); ?></div>
@@ -135,11 +135,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-400">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-[#ff6b4a] transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Monthly Revenue</div>
-                <div class="h-3 w-3 rounded-full bg-purple-400/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-purple-400"></div>
+                <div class="h-3 w-3 rounded-full bg-[#ff6b4a]/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-[#ff6b4a]"></div>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800 mt-1">₱<?php echo number_format($monthly_total, 2); ?></div>
@@ -149,14 +149,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-purple-700">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-[#ff6b4a] transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div class="flex items-center justify-between">
                 <div class="text-slate-400 text-xs uppercase font-bold tracking-wider">Yearly Revenue</div>
-                <div class="h-3 w-3 rounded-full bg-purple-700/20 flex items-center justify-center">
-                    <div class="h-1.5 w-1.5 rounded-full bg-purple-700"></div>
+                <div class="h-3 w-3 rounded-full bg-[#ff6b4a]/20 flex items-center justify-center">
+                    <div class="h-1.5 w-1.5 rounded-full bg-[#ff6b4a]"></div>
                 </div>
             </div>
-            <div class="text-3xl font-bold text-purple-700 mt-1">₱<?php echo number_format($yearly_total, 2); ?></div>
+            <div class="text-3xl font-bold text-[#ff6b4a] mt-1">₱<?php echo number_format($yearly_total, 2); ?></div>
             <div class="flex justify-between text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
                 <span>Orders: <strong class="text-slate-700"><?php echo number_format($yearly_orders); ?></strong></span>
                 <span>Customers: <strong class="text-slate-700"><?php echo number_format($yearly_cust); ?></strong></span>
@@ -164,36 +164,36 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         </div>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-        <h5 class="text-md font-bold text-slate-800 mb-2 flex items-center"><i class="bi bi-pie-chart-fill text-purple-600 me-2"></i>Philippine Standard Split Breakdown (Based on Active Scope Balance)</h5>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 transition-all duration-300 hover:shadow-md">
+        <h5 class="text-md font-bold text-slate-800 mb-2 flex items-center"><i class="bi bi-pie-chart-fill text-[#ff6b4a] me-2"></i>Philippine Standard Split Breakdown (Based on Active Scope Balance)</h5>
         <p class="text-xs text-slate-400 mb-6">Allocated systematically based on standard market percentages (50% Operational Needs, 30% Flexible Operations/Wants, 20% Reserve Fund).</p>
         
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 transition-transform duration-300 hover:-translate-y-1">
                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estimated Weekly Slice</span>
                 <h4 class="text-xl font-bold text-slate-700 mt-1">₱<?php echo number_format($weekly_estimated, 2); ?></h4>
                 <p class="text-[11px] text-slate-500 mt-1">Computed baseline weekly run rate.</p>
             </div>
-            <div class="bg-purple-50/60 p-4 rounded-xl border border-purple-100">
-                <span class="text-xs font-bold text-purple-600 uppercase tracking-wider">Needs / Core (50%)</span>
-                <h4 class="text-xl font-bold text-purple-900 mt-1">₱<?php echo number_format($alloc_needs, 2); ?></h4>
-                <p class="text-[11px] text-purple-600 mt-1">Essential utilities, stock replenishment & baseline.</p>
+            <div class="bg-orange-50/60 p-4 rounded-xl border border-orange-100 transition-transform duration-300 hover:-translate-y-1">
+                <span class="text-xs font-bold text-[#ff6b4a] uppercase tracking-wider">Needs / Core (50%)</span>
+                <h4 class="text-xl font-bold text-slate-900 mt-1">₱<?php echo number_format($alloc_needs, 2); ?></h4>
+                <p class="text-[11px] text-[#ff6b4a]/80 mt-1">Essential utilities, stock replenishment & baseline.</p>
             </div>
-            <div class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
-                <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Wants / Growth (30%)</span>
-                <h4 class="text-xl font-bold text-indigo-900 mt-1">₱<?php echo number_format($alloc_wants, 2); ?></h4>
-                <p class="text-[11px] text-indigo-600 mt-1">Marketing, improvements & discretionary operations.</p>
+            <div class="bg-orange-50/40 p-4 rounded-xl border border-orange-100/80 transition-transform duration-300 hover:-translate-y-1">
+                <span class="text-xs font-bold text-[#ff6b4a] uppercase tracking-wider">Wants / Growth (30%)</span>
+                <h4 class="text-xl font-bold text-slate-900 mt-1">₱<?php echo number_format($alloc_wants, 2); ?></h4>
+                <p class="text-[11px] text-[#ff6b4a]/80 mt-1">Marketing, improvements & discretionary operations.</p>
             </div>
-            <div class="bg-violet-50/60 p-4 rounded-xl border border-violet-100">
-                <span class="text-xs font-bold text-violet-600 uppercase tracking-wider">Savings / Buffer (20%)</span>
-                <h4 class="text-xl font-bold text-violet-900 mt-1">₱<?php echo number_format($alloc_savings, 2); ?></h4>
-                <p class="text-[11px] text-violet-600 mt-1">Emergency fund and risk mitigation reserve.</p>
+            <div class="bg-amber-50/60 p-4 rounded-xl border border-amber-100 transition-transform duration-300 hover:-translate-y-1">
+                <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Savings / Buffer (20%)</span>
+                <h4 class="text-xl font-bold text-amber-900 mt-1">₱<?php echo number_format($alloc_savings, 2); ?></h4>
+                <p class="text-[11px] text-amber-600 mt-1">Emergency fund and risk mitigation reserve.</p>
             </div>
         </div>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-        <h5 class="text-md font-bold text-slate-700 mb-4 flex items-center"><i class="bi bi-graph-up text-purple-600 me-2"></i>Budget Wave Performance Graph</h5>
+        <h5 class="text-md font-bold text-slate-700 mb-4 flex items-center"><i class="bi bi-graph-up text-[#ff6b4a] me-2"></i>Budget Wave Performance Graph</h5>
         <div class="relative h-[280px] w-full">
             <canvas id="salesChart" 
                     data-labels="<?php echo htmlspecialchars(json_encode($chart_labels)); ?>" 
@@ -206,7 +206,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-100">
+<html lang="en" class="h-full bg-white">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -214,29 +214,70 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- AOS Library CSS & JS -->
+    <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
+    <script src="../LIBRARIES/AOS/AOS.js"></script>
+    <style>
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 107, 74, 0.15); }
+            50% { box-shadow: 0 0 25px rgba(255, 107, 74, 0.35); }
+        }
+        .animate-float-1 { animation: floatSlow 4s ease-in-out infinite; }
+        .feature-box-glow:hover {
+            animation: pulseGlow 2s infinite;
+        }
+        .profile-banner-glow {
+            transition: all 0.4s ease-in-out;
+        }
+        .profile-banner-glow:hover {
+            box-shadow: 0 0 35px rgba(255, 107, 74, 0.45), inset 0 0 20px rgba(255, 107, 74, 0.15);
+            border-color: rgba(255, 107, 74, 0.7);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body class="h-full flex overflow-hidden font-sans text-slate-800 antialiased">
+<body class="h-full flex overflow-hidden font-sans text-slate-800 antialiased bg-white">
    <div class="flex h-screen w-full overflow-hidden">
      <?php include 'sidebar.php'; ?>
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
         <header class="bg-white border-b border-slate-100 h-16 flex items-center px-6 shrink-0 md:hidden">
             <button class="p-2 -ml-2 rounded-xl text-slate-600 hover:bg-slate-100" type="button" id="burgerToggle">
                 <i class="bi bi-list text-2xl"></i>
             </button>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-6 md:p-8">
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 bg-white">
             <div class="max-w-7xl mx-auto">
-                <div class="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 p-8 rounded-3xl shadow-sm text-white mb-8">
-                    <span class="inline-block bg-white/10 text-purple-200 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2">
-                        Analytics Overview
-                    </span>
-                    <h1 class="text-3xl font-extrabold tracking-tight" id="report-title"><?php echo $report_title; ?></h1>
-                    <p class="text-purple-100 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
+                <!-- Modern Top Hero Banner matching admin_home style with live PH time widget -->
+                <div data-aos="fade-down" data-aos-duration="800" class="bg-gradient-to-br from-[#1a1010] via-[#1f1212] to-[#09090b] p-8 rounded-3xl shadow-xl text-white mb-8 border border-[#ff6b4a]/30 relative overflow-hidden profile-banner-glow">
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-[#ff6b4a]/10 rounded-full blur-2xl pointer-events-none"></div>
+                    
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                        <div>
+                            <span class="inline-block bg-[#ff6b4a]/20 backdrop-blur-md text-[white] text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2 border border-[#ff6b4a]/30">
+                                Analytics Overview
+                            </span>
+                            <h1 class="text-3xl font-extrabold tracking-tight" id="report-title"><?php echo $report_title; ?></h1>
+                            <p class="text-slate-300 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
+                        </div>
+                        
+                        <!-- Live Philippine Time Clock Widget -->
+                        <div class="flex items-center gap-2 bg-white/5 px-4 py-2.5 w-100 rounded-2xl border border-white/10 backdrop-blur-md self-start lg:self-auto animate-float-1 feature-box-glow">
+                            <i class="bi bi-clock text-[#ff6b4a] text-lg"></i> 
+                            <div>
+                              
+                                <div class="text-slate-200 font-semibold text-xs" id="phTimeDisplay">Loading PH Time...</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex flex-col md:flex-row md:items-center md:justify-end gap-4 mb-6">
-                    <div class="inline-flex bg-slate-200/60 p-1 rounded-xl self-start md:self-auto">
+                <div data-aos="fade-up" data-aos-duration="800" data-aos-delay="100" class="flex flex-col md:flex-row md:items-center md:justify-end gap-4 mb-6">
+                    <div class="inline-flex bg-slate-100 p-1 rounded-xl self-start md:self-auto border border-slate-200">
                         <button onclick="switchView('today')" id="btn-today" class="px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2">
                             <i class="bi bi-calendar-event"></i>Today
                         </button>
@@ -251,7 +292,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
                 <div id="live-sales-container">
                     <div class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
-                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-purple-600 border-t-transparent mb-3"></div>
+                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-[#ff6b4a] border-t-transparent mb-3"></div>
                         <p class="text-sm text-slate-400 font-medium">Loading budget data...</p>
                     </div>
                 </div>
@@ -260,6 +301,28 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     </div>
 
     <script>
+        // Real-time Philippine Time Clock Function
+        function updatePhilippineTime() {
+            const options = {
+                timeZone: 'Asia/Manila',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            const formatter = new Intl.DateTimeFormat([], options);
+            const timeString = formatter.format(new Date());
+            const displayElem = document.getElementById('phTimeDisplay');
+            if (displayElem) {
+                displayElem.textContent = timeString;
+            }
+        }
+        setInterval(updatePhilippineTime, 1000);
+        updatePhilippineTime();
+
         const burger = document.getElementById('burgerToggle');
         if (burger) {
             burger.addEventListener('click', function() {
@@ -284,8 +347,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             }
 
             let gradient = ctx.createLinearGradient(0, 0, 0, 280);
-            gradient.addColorStop(0, 'rgba(147, 51, 234, 0.4)');
-            gradient.addColorStop(1, 'rgba(147, 51, 234, 0.0)');
+            gradient.addColorStop(0, 'rgba(255, 107, 74, 0.4)');
+            gradient.addColorStop(1, 'rgba(255, 107, 74, 0.0)');
 
             salesChartInstance = new Chart(ctx, {
                 type: 'line', 
@@ -294,13 +357,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                     datasets: [{
                         label: 'Revenue (₱)',
                         data: values,
-                        borderColor: '#9333ea',
+                        borderColor: '#ff6b4a',
                         backgroundColor: gradient,
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
                         pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#9333ea',
+                        pointBorderColor: '#ff6b4a',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6
@@ -335,29 +398,34 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                 .catch(error => console.error('Error fetching data:', error));
         }
 
-    function switchView(viewType) {
-        currentView = viewType;
-        const btnToday = document.getElementById('btn-today');
-        const btnMonth = document.getElementById('btn-month');
-        const btnYear = document.getElementById('btn-year');
-        
-        [btnToday, btnMonth, btnYear].forEach(btn => {
-            if(btn) btn.className = 'px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all flex items-center gap-2';
-        });
+        function switchView(viewType) {
+            currentView = viewType;
+            const btnToday = document.getElementById('btn-today');
+            const btnMonth = document.getElementById('btn-month');
+            const btnYear = document.getElementById('btn-year');
+            
+            [btnToday, btnMonth, btnYear].forEach(btn => {
+                if(btn) btn.className = 'px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition-all flex items-center gap-2';
+            });
 
-        if(viewType === 'year') {
-            if(btnYear) btnYear.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
-        } else if(viewType === 'month') {
-            if(btnMonth) btnMonth.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
-        } else {
-            if(btnToday) btnToday.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-white text-slate-800 transition-all flex items-center gap-2';
+            if(viewType === 'year') {
+                if(btnYear) btnYear.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-[#ff6b4a] text-white transition-all flex items-center gap-2';
+            } else if(viewType === 'month') {
+                if(btnMonth) btnMonth.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-[#ff6b4a] text-white transition-all flex items-center gap-2';
+            } else {
+                if(btnToday) btnToday.className = 'px-4 py-2 rounded-lg text-sm font-bold shadow-sm bg-[#ff6b4a] text-white transition-all flex items-center gap-2';
+            }
+            fetchSalesData();
         }
-        fetchSalesData();
-    }
 
         document.addEventListener("DOMContentLoaded", function() {
             switchView(currentView);
             setInterval(fetchSalesData, 5000);
+            AOS.init({
+                once: true,
+                offset: 50,
+                duration: 800,
+            });
         });
     </script>
 </body>

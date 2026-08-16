@@ -48,71 +48,70 @@ $ingredients_result = $ingredients_stmt->get_result();
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        /* Custom transitions para sa sidebar toggle gamit ang vanilla tailwind setup */
-        #sidebar-container { transition: margin-left 0.3s ease; }
-        .sidebar-hidden #sidebar-container { margin-left: -16rem; } /* -w-64 equivalent */
+        #sidebar-container { transition: margin-left 0.3s ease-in-out; }
+        .sidebar-hidden #sidebar-container { margin-left: -16rem; }
     </style>
 </head>
 
 <body class="h-full text-slate-800 font-sans antialiased">
 
     <div class="flex h-screen w-full overflow-hidden bg-white">
-        <div id="sidebar-container" class="flex-shrink-0 w-64 h-full bg-slate-900">
+        <div id="sidebar-container" class="flex-shrink-0 w-64 h-full bg-slate-900 shadow-xl transition-all duration-300">
             <?php include '../../PAGES/sidebar.php'; ?>
         </div>
 
         <div id="main-wrapper" class="flex-1 flex flex-col h-full overflow-hidden">
             
-            <header class="flex items-center justify-between px-6 bg-white border-b border-gray-200" style="height: 60px;">
+            <header class="flex items-center justify-between px-6 bg-white border-b border-purple-100 shadow-sm" style="height: 60px;">
                 <div class="flex items-center gap-4">
-                    <button id="burgerToggle" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none transition-colors">
+                    <button id="burgerToggle" type="button" class="inline-flex items-center justify-center p-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none transition-all transform hover:scale-105 active:scale-95 shadow-md">
                         <i class="bi bi-list text-xl leading-none"></i>
                     </button>
-                    <h1 class="text-xl font-bold text-orange-600">Ingredients</h1>
+                    <h1 class="text-xl font-black text-purple-700 tracking-wide animate-fade-in">Ingredients Management</h1>
                 </div>
             </header>
 
-            <main class="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-white">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-gradient-to-br from-purple-50/30 via-white to-white">
 
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div class="flex flex-wrap gap-2">
                         <?php if (!empty($categories_array)): ?>
                             <?php foreach ($categories_array as $cat): ?>
                                 <a href="ingredients.php?category_id=<?php echo $cat['id']; ?>"
-                                   class="px-4 py-2 text-sm font-medium rounded-md transition-colors <?php echo ($active_category_id == $cat['id']) ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'; ?>">
+                                   class="px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 <?php echo ($active_category_id == $cat['id']) ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 ring-2 ring-purple-400 ring-offset-1' : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 hover:border-purple-300'; ?>">
                                    <?php echo htmlspecialchars($cat['name']); ?>
                                 </a>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                     
-                    <a href="inventory.php?category_id=<?php echo $active_category_id; ?>" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-md shadow-sm transition-colors">
-                        <i class="bi bi-arrow-repeat"></i> Refill Stock
+                    <a href="inventory.php?category_id=<?php echo $active_category_id; ?>" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-100 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                        <i class="bi bi-arrow-repeat animate-spin-slow"></i> Refill Stock
                     </a>
                 </div>
 
-                <div class="overflow-hidden border border-gray-200 rounded-lg shadow-sm">
+                <div class="overflow-hidden border border-purple-100 rounded-2xl shadow-xl bg-white transition-all duration-300">
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                        <table class="min-w-full divide-y divide-purple-100">
+                            <thead class="bg-purple-50/70">
                                 <tr>
-                                    <th scope="col" class="w-[30%] px-6 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider">Ingredient Name</th>
-                                    <th scope="col" class="w-[35%] px-6 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider">Description</th>
-                                    <th scope="col" class="w-[15%] px-6 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider">Unit</th>
-                                    <th scope="col" class="w-[20%] px-6 py-3 text-left text-xs font-bold text-orange-600 uppercase tracking-wider">Stock Status</th>
+                                    <th scope="col" class="w-[30%] px-6 py-4 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Ingredient Name</th>
+                                    <th scope="col" class="w-[35%] px-6 py-4 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Description</th>
+                                    <th scope="col" class="w-[15%] px-6 py-4 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Unit</th>
+                                    <th scope="col" class="w-[20%] px-6 py-4 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Stock Status</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="bg-white divide-y divide-purple-50">
                                 <?php if ($ingredients_result && $ingredients_result->num_rows > 0): ?>
                                     <?php while ($ingredient = $ingredients_result->fetch_assoc()): ?>
-                                        <tr class="hover:bg-gray-50 transition-colors">
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                        <tr class="hover:bg-purple-50/40 transition-colors duration-150">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
                                                 <?php echo htmlspecialchars($ingredient['ingredient_name']); ?>
                                             </td>
-                                            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                            <td class="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
                                                 <?php echo htmlspecialchars($ingredient['description']); ?>
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600">
                                                 <?php echo htmlspecialchars($ingredient['unit']); ?>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -120,15 +119,15 @@ $ingredients_result = $ingredients_stmt->get_result();
                                                 $formatted_stock = rtrim(rtrim(number_format($ingredient['stock'], 2), '0'), '.');
                                                 ?>
                                                 <?php if ($ingredient['stock'] <= 0): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 animate-pulse">
                                                         <i class="bi bi-exclamation-triangle-fill"></i> Out of Stock
                                                     </span>
                                                 <?php elseif ($ingredient['stock'] <= 5): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
                                                         <i class="bi bi-exclamation-circle-fill"></i> Low: <?php echo $formatted_stock; ?> <?php echo htmlspecialchars($ingredient['unit']); ?>
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
                                                         <?php echo $formatted_stock; ?> <?php echo htmlspecialchars($ingredient['unit']); ?> Available
                                                     </span>
                                                 <?php endif; ?>
@@ -137,8 +136,8 @@ $ingredients_result = $ingredients_stmt->get_result();
                                     <?php endwhile; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-400">
-                                            <i class="bi bi-inbox text-2xl block mb-2 text-gray-300"></i> No ingredients found under this category.
+                                        <td colspan="4" class="px-6 py-12 text-center text-sm text-slate-400">
+                                            <i class="bi bi-inbox text-3xl block mb-2 text-purple-300"></i> No ingredients found under this category.
                                         </td>
                                     </tr>
                                 <?php endif; ?>

@@ -1,81 +1,212 @@
 <?php
+ob_start();
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Kunin ang role at gawing lowercase para maiwasan ang error sa uppercase/lowercase letters
 $current_role = isset($_SESSION['role']) ? strtolower(trim($_SESSION['role'])) : '';
 
-// HUWAG MAG-LOGOUT O MAG-REDIRECT KUNG ADMIN O HR ANG ROLE SA SIDEBAR
-// Suriin kung may user_id o admin_id at kung tama ang role
 if ((!isset($_SESSION['user_id']) && !isset($_SESSION['admin_id'])) || ($current_role !== 'admin' && $current_role !== 'hr')) {
     header("Location: login.php");
     exit();
 }
 
-// Anti-back/Cache control
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// ==========================================
-// DATABASE CONNECTION & INITIALIZATION
-// ==========================================
 $host = "localhost";
 $user = "root";
 $pass = "";
 $dbname = "pos";
 
-$conn = new mysqli($host, $user, $pass, $dbname);
-if ($conn->connect_error) {
-    die("Database Connection Failed: " . $conn->connect_error);
-}
-
-$status_message = "";
-$status_type = "success";
-
-// Suriin kung may nakarehistro nang HR
-$hr_check = $conn->query("SELECT COUNT(*) as total FROM hr_accounts");
-$hr_count = $hr_check->fetch_assoc()['total'];
+$current_page = basename($_SERVER['PHP_SELF']);
 
 // ==========================================
-// ACTION HANDLERS (STAY ON THIS PAGE)
+// PHPMailer Setup & Professional Email Templates
 // ==========================================
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-// ACTION: LEAVE - ADMIN APPROVE
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['leave_action']) && $_POST['leave_action'] === 'admin_approve') {
-    $request_id = intval($_POST['request_id']);
-    $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Approved', notified = 0 WHERE id = ? AND status = 'Pending Admin'");
-    $stmt->bind_param("i", $request_id);
-    $stmt->execute();
-    
-    if ($stmt->affected_rows > 0) {
-        $status_message = "Leave application has been officially Approved!";
-        $status_type = "success";
-    } 
-    $stmt->close();
-}
+require '../LIBRARIES/PHPMailer-master/src/Exception.php';
+require '../LIBRARIES/PHPMailer-master/src/PHPMailer.php';
+require '../LIBRARIES/PHPMailer-master/src/SMTP.php';
 
-// ACTION: LEAVE - ADMIN REJECT
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['leave_action']) && $_POST['leave_action'] === 'admin_reject') {
-    $request_id = intval($_POST['request_id']);
-    $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Rejected', notified = 0 WHERE id = ?");
-    $stmt->bind_param("i", $request_id);
-    if ($stmt->execute()) {
-        $status_message = "Leave application officially rejected. Log updated for user terminal view.";
-        $status_type = "error";
+function sendLeaveStatusEmail($recipient_email, $recipient_name, $subject, $message_body) {
+    if (empty($recipient_email) || !filter_var($recipient_email, FILTER_VALIDATE_EMAIL)) {
+        return false;
     }
-    $stmt->close();
+
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        
+        $mail->Username   = 'markjosephlozada251@gmail.com'; 
+        $mail->Password   = 'rhjd rqed rhdh qkbd';    
+
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+
+        $mail->setFrom('markjosephlozada251@gmail.com', 'Pannakoda Executive Board');
+        $mail->addAddress($recipient_email, $recipient_name);
+
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155;'>
+                <h2 style='color: #212121; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0;'>Leave Application Status Update</h2>
+                <p>Dear <b>{$recipient_name}</b>,</p>
+                <p>We hope this email finds you well.</p>
+                <div style='background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+                    {$message_body}
+                </div>
+                <p>Should you have any inquiries regarding your leave status, please reach out to HR or administration.</p>
+                <br>
+                <p>Best regards,</p>
+                <p><b>Executive Management Team</b><br>Pannakoda</p>
+            </div>
+        ";
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 // ==========================================
-// DATA QUERIES
+// Background Request Continuation Helper
 // ==========================================
-$admin_query = $conn->query("SELECT lr.*, e.full_name, e.department 
-                             FROM leave_requests lr 
-                             JOIN employees e ON lr.employee_id = e.id 
-                             WHERE lr.status = 'Approved' OR lr.status = 'Pending Admin' 
-                             ORDER BY lr.id DESC");
+function respond_now_then_continue() {
+    if (session_id()) {
+        session_write_close();
+    }
+
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+        return;
+    }
+
+    ignore_user_abort(true);
+    header('Connection: close');
+    $size = ob_get_length();
+    if ($size !== false) {
+        header('Content-Length: ' . $size);
+    }
+    @ob_end_flush();
+    @flush();
+}
+
+// 1. FETCH LEAVE REQUESTS VIA AJAX
+if (isset($_GET['action']) && $_GET['action'] === 'fetch_leaves') {
+    header('Content-Type: application/json');
+    $conn = new mysqli($host, $user, $pass, $dbname);
+    if ($conn->connect_error) {
+        echo json_encode(['pending' => [], 'processed' => []]);
+        exit;
+    }
+
+    $pending_query = $conn->query("SELECT lr.*, e.full_name, e.department, e.email FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.status = 'Pending Admin' ORDER BY lr.id DESC");
+    $pending = [];
+    if ($pending_query) {
+        while($row = $pending_query->fetch_assoc()) {
+            $row['id'] = intval($row['id']);
+            $pending[] = $row;
+        }
+    }
+
+    $processed_query = $conn->query("SELECT lr.*, e.full_name, e.department, e.email FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.status = 'Approved' OR lr.status = 'Rejected' ORDER BY lr.id DESC LIMIT 20");
+    $processed = [];
+    if ($processed_query) {
+        while($row = $processed_query->fetch_assoc()) {
+            $row['id'] = intval($row['id']);
+            $processed[] = $row;
+        }
+    }
+
+    echo json_encode(['pending' => $pending, 'processed' => $processed]);
+    $conn->close();
+    exit;
+}
+
+// 2. PROCESS LEAVE APPROVAL ACTION
+if (isset($_GET['action']) && $_GET['action'] === 'admin_approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $request_id = isset($_POST['request_id']) ? intval($_POST['request_id']) : 0;
+
+    if ($request_id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+        
+        $emp_query = $conn->prepare("SELECT lr.leave_type, lr.reason, e.full_name, e.email FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = ?");
+        $emp_query->bind_param("i", $request_id);
+        $emp_query->execute();
+        $emp_res = $emp_query->get_result()->fetch_assoc();
+        $emp_query->close();
+
+        $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Approved', notified = 0 WHERE id = ? AND status = 'Pending Admin'");
+        $stmt->bind_param("i", $request_id);
+        $stmt->execute();
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+        $conn->close();
+
+        if ($affected > 0) {
+            echo json_encode(['success' => true, 'message' => 'Leave application has been officially Approved!']);
+            respond_now_then_continue();
+
+            if ($emp_res && !empty($emp_res['email'])) {
+                $subject = "Leave Application Approved";
+                $body = "We are pleased to inform you that your leave request (<b>Type: {$emp_res['leave_type']}</b>) has been officially <b>Approved</b> by the Executive Administration.";
+                sendLeaveStatusEmail($emp_res['email'], $emp_res['full_name'], $subject, $body);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to approve request or already processed.']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid Request ID.']);
+    }
+    exit;
+}
+
+// 3. PROCESS LEAVE REJECTION ACTION
+if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $request_id = isset($_POST['request_id']) ? intval($_POST['request_id']) : 0;
+
+    if ($request_id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+
+        $emp_query = $conn->prepare("SELECT lr.leave_type, lr.reason, e.full_name, e.email FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = ?");
+        $emp_query->bind_param("i", $request_id);
+        $emp_query->execute();
+        $emp_res = $emp_query->get_result()->fetch_assoc();
+        $emp_query->close();
+
+        $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Rejected', notified = 0 WHERE id = ?");
+        $stmt->bind_param("i", $request_id);
+        $success = $stmt->execute();
+        $stmt->close();
+        $conn->close();
+
+        if ($success) {
+            echo json_encode(['success' => true, 'message' => 'Leave application officially rejected.']);
+            respond_now_then_continue();
+
+            if ($emp_res && !empty($emp_res['email'])) {
+                $subject = "Leave Application Status Update: Rejected";
+                $body = "We regret to inform you that your leave request (<b>Type: {$emp_res['leave_type']}</b>) has been <b>Rejected</b> by the Executive Administration.";
+                sendLeaveStatusEmail($emp_res['email'], $emp_res['full_name'], $subject, $body);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to reject request.']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid Request ID.']);
+    }
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -86,145 +217,376 @@ $admin_query = $conn->query("SELECT lr.*, e.full_name, e.department
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <script src="../LIBRARIES/tailwind.js"></script>
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- AOS Library CSS & JS -->
+    <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
+    <script src="../LIBRARIES/AOS/AOS.js"></script>
+
+    <style>
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        .admin-card-glow {
+            transition: all 0.4s ease-in-out;
+        }
+        .admin-card-glow:hover {
+            box-shadow: 0 0 35px rgba(255, 107, 74, 0.25);
+            border-color: rgba(255, 107, 74, 0.5);
+        }
+    </style>
 </head>
-<body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
+<body class="bg-white text-slate-800 font-sans antialiased h-screen overflow-hidden">
 
     <div class="flex h-screen w-full overflow-hidden">
-        
- 
-  <?php include 'sidebar.php'; ?>
+        <?php include 'sidebar.php'; ?>
 
         <!-- MAIN CONTENT -->
-        <div class="flex-1 h-screen overflow-y-auto p-8 bg-zinc-100 min-w-0">
-            <div class="max-w-6xl mx-auto">
+        <div class="flex-1 h-screen overflow-y-auto p-8 bg-white min-w-0">
+            <div class="max-w-6xl mx-auto space-y-8">
                 
-                <div class="mb-8">
-                    <h1 class="text-3xl font-black text-zinc-800 tracking-tight">Executive Leave Review</h1>
-                    <p class="text-sm text-zinc-500">Final authorization deck for employee leave requests endorsed and passed up by HR Screening.</p>
+                <!-- Top Header & Live Philippine Time Clock Widget -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4" data-aos="fade-down" data-aos-duration="800">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-[#ff6b4a] tracking-tight">EXECUTIVE LEAVE REVIEW</h1>
+                        <p class="text-sm text-slate-500 mt-1">Final authorization deck for employee leave requests endorsed and passed up by HR Screening.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-2xl shadow-sm border border-slate-200/80">
+                            <i class="bi bi-clock text-[#ff6b4a]"></i> 
+                            <span class="text-slate-700 font-medium text-xs" id="phTimeDisplay">Loading PH Time...</span>
+                        </div>
+                        <div class="flex items-center gap-3 bg-orange-50/60 px-4 py-2 rounded-2xl shadow-sm border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-105">
+                            <span class="relative flex h-3 w-3">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-700">System Active</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-50 border-b border-zinc-200 text-xs font-bold uppercase text-zinc-500 tracking-wider">
-                                <th class="p-4">Employee</th>
-                                <th class="p-4">Type</th>
-                                <th class="p-4">Reason</th>
-                                <th class="p-4">Endorsement Status</th>
-                                <th class="p-4 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-sm text-zinc-700 divide-y divide-zinc-200">
-                            <?php if ($admin_query->num_rows == 0): ?>
+                <!-- Search Bar -->
+                <div class="flex items-center gap-3 bg-slate-50 p-4 rounded-3xl shadow-sm border border-slate-200/80 admin-card-glow" data-aos="fade-up" data-aos-duration="900">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400"><i class="bi bi-search"></i></span>
+                        <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/30 focus:border-[#ff6b4a] transition-all duration-300" placeholder="Search by employee name, department, leave type, or reason...">
+                    </div>
+                </div>
+
+                <!-- TABLE 1: NEW REQUESTS / PENDING ADMIN DATA -->
+                <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 admin-card-glow" data-aos="fade-up" data-aos-duration="1000">
+                    <h2 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <div class="p-2 bg-[#ff6b4a]/10 text-[#ff6b4a] rounded-xl border border-[#ff6b4a]/20">
+                            <i class="bi bi-clock-history"></i>
+                        </div> 
+                        New Requests / Awaiting Executive Sign-off
+                    </h2>
+                    <div class="table-responsive bg-white rounded-2xl overflow-hidden border border-slate-100">
+                        <table class="table table-hover align-middle mb-0 text-sm">
+                            <thead class="table-dark">
                                 <tr>
-                                    <td colspan="5" class="p-12 text-center text-zinc-400 font-medium">No leave requests currently awaiting executive board action.</td>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Employee</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Type</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Reason</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Endorsement Status</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0 text-center">Action</th>
                                 </tr>
-                            <?php endif; ?>
-                            
-                            <?php while($req = $admin_query->fetch_assoc()): ?>
-                                <tr class="hover:bg-zinc-50/50 transition-colors">
-                                    <td class="p-4">
-                                        <div class="font-bold text-zinc-900"><?= htmlspecialchars($req['full_name']) ?></div>
-                                        <div class="text-xs text-zinc-400">Dept: <?= htmlspecialchars($req['department']) ?></div>
-                                    </td>
-                                    <td class="p-4">
-                                        <span class="px-2.5 py-1 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-lg border border-indigo-100">
-                                            <?= htmlspecialchars($req['leave_type']) ?>
-                                        </span>
-                                    </td>
-                                    <td class="p-4 text-zinc-600 max-w-xs truncate" title="<?= htmlspecialchars($req['reason']) ?>"><?= htmlspecialchars($req['reason']) ?></td>
-                                    <td class="p-4">
-                                        <?php if ($req['status'] === 'Pending Admin'): ?>
-                                            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200 uppercase">Awaiting Exec Sign-off</span>
-                                        <?php else: ?>
-                                            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">Approved</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="p-4 text-center">
-                                        <?php if ($req['status'] === 'Pending Admin'): ?>
-                                            <div class="flex justify-center gap-2">
-                                                <!-- Action triggers stay inside admin_leave.php -->
-                                                <form method="POST" action="admin_leaves.php" class="inline">
-                                                    <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                                                    <input type="hidden" name="leave_action" value="admin_approve">
-                                                    <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all">
-                                                        <i class="bi bi-check-circle"></i> Approve
-                                                    </button>
-                                                </form>
-                                                
-                                                <form method="POST" action="admin_leaves.php" class="inline">
-                                                    <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                                                    <input type="hidden" name="leave_action" value="admin_reject">
-                                                    <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all">
-                                                        <i class="bi bi-trash"></i> Reject
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        <?php else: ?>
-                                            <span class="text-xs font-bold text-zinc-500 uppercase italic">
-                                                <?= htmlspecialchars($req['status']) ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
+                            </thead>
+                            <tbody id="pendingBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TABLE 2: APPROVED / PROCESSED RECORDS -->
+                <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 admin-card-glow" data-aos="fade-up" data-aos-duration="1100">
+                    <h2 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <div class="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl border border-emerald-500/20">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div> 
+                        Approved & Processed Records
+                    </h2>
+                    <div class="table-responsive bg-white rounded-2xl overflow-hidden border border-slate-100">
+                        <table class="table table-hover align-middle mb-0 text-sm">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Employee</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Type</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Reason</th>
+                                    <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Final Status</th>
                                 </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody id="processedBody"></tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
         </div>
     </div>
 
+    <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            <?php if(!empty($status_message)): ?>
-                Swal.fire({
-                    title: '<?= $status_type === "success" ? "Authorized!" : "Action Logged" ?>',
-                    text: '<?= addslashes($status_message) ?>',
-                    icon: '<?= $status_type ?>',
-                    confirmButtonColor: '#dc2626'
-                });
-            <?php endif; ?>
-
-           document.addEventListener("DOMContentLoaded", function () {
-    // Pag-highlight ng active menu
-    const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll(".sidebar-link");
-    
-    navLinks.forEach(link => {
-        const linkPath = link.getAttribute("href");
-        if (linkPath && currentPath.endsWith(linkPath)) {
-            link.classList.remove("text-white/80", "hover:bg-white/10", "hover:text-white", "text-inherit");
-            link.classList.add("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
+        // Real-time Philippine Time Clock Function
+        function updatePhilippineTime() {
+            const options = {
+                timeZone: 'Asia/Manila',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            const formatter = new Intl.DateTimeFormat([], options);
+            const timeString = formatter.format(new Date());
+            const displayElem = document.getElementById('phTimeDisplay');
+            if (displayElem) {
+                displayElem.textContent = timeString;
+            }
         }
-    });
+        setInterval(updatePhilippineTime, 1000);
+        updatePhilippineTime();
 
-    // SweetAlert2 para sa Logout Confirmation
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault(); 
-            Swal.fire({
-                title: 'Log  out',
-                text: "Are you sure you want to Log out?",
+        let pendingLeaves = [];
+        let processedLeaves = [];
+        const phpEndpoint = "<?php echo $current_page; ?>";
+
+        async function loadLeaves() {
+            try {
+                const response = await fetch(`${phpEndpoint}?action=fetch_leaves`);
+                const data = await response.json();
+                pendingLeaves = data.pending;
+                processedLeaves = data.processed;
+                renderTables();
+            } catch (err) {
+                console.error("Failed to fetch leave requests:", err);
+            }
+        }
+
+        function renderTables() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            // Render Pending Table
+            const pendingBody = document.getElementById('pendingBody');
+            pendingBody.innerHTML = '';
+
+            const filteredPending = pendingLeaves.filter(req => {
+                const name = String(req.full_name || '').toLowerCase();
+                const dept = String(req.department || '').toLowerCase();
+                const type = String(req.leave_type || '').toLowerCase();
+                const reason = String(req.reason || '').toLowerCase();
+                return name.includes(query) || dept.includes(query) || type.includes(query) || reason.includes(query);
+            });
+
+            if (filteredPending.length === 0) {
+                pendingBody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 italic">No new leave requests currently awaiting executive board action.</td></tr>`;
+            } else {
+                filteredPending.forEach(req => {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-100 hover:bg-orange-50/20 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3.5 px-4">
+                            <div class="font-bold text-slate-800">${escapeHtml(req.full_name)}</div>
+                            <div class="text-xs text-slate-500">Dept: ${escapeHtml(req.department || 'N/A')}</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2.5 py-1 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-xl border border-indigo-100">
+                                ${escapeHtml(req.leave_type)}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600 max-w-xs truncate" title="${escapeHtml(req.reason)}">${escapeHtml(req.reason)}</td>
+                        <td class="py-3.5 px-4">
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">Awaiting Exec Sign-off</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="processLeaveAction(${req.id}, 'admin_approve', '${escapeHtml(req.full_name)}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 border-0 shadow-sm flex items-center gap-1">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </button>
+                                <button onclick="processLeaveAction(${req.id}, 'admin_reject', '${escapeHtml(req.full_name)}')" class="btn btn-sm btn-outline-danger py-1.5 px-2.5 text-xs font-semibold rounded-xl border-red-500 text-red-500 hover:bg-red-500 hover:text-white flex items-center gap-1">
+                                    <i class="bi bi-trash"></i> Reject
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    pendingBody.appendChild(tr);
+                });
+            }
+
+            // Render Processed Table
+            const processedBody = document.getElementById('processedBody');
+            processedBody.innerHTML = '';
+
+            const filteredProcessed = processedLeaves.filter(proc => {
+                const name = String(proc.full_name || '').toLowerCase();
+                const dept = String(proc.department || '').toLowerCase();
+                const type = String(proc.leave_type || '').toLowerCase();
+                const reason = String(proc.reason || '').toLowerCase();
+                return name.includes(query) || dept.includes(query) || type.includes(query) || reason.includes(query);
+            });
+
+            if (filteredProcessed.length === 0) {
+                processedBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">No approved or rejected records found.</td></tr>`;
+            } else {
+                filteredProcessed.forEach(proc => {
+                    const isRejected = proc.status === 'Rejected';
+                    const statusBadge = isRejected 
+                        ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 uppercase">${escapeHtml(proc.status)}</span>`
+                        : `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">${escapeHtml(proc.status)}</span>`;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-100 hover:bg-orange-50/20 transition-colors";
+                    tr.innerHTML = `
+                        <td class="py-3.5 px-4">
+                            <div class="font-bold text-slate-800">${escapeHtml(proc.full_name)}</div>
+                            <div class="text-xs text-slate-500">Dept: ${escapeHtml(proc.department || 'N/A')}</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2.5 py-1 bg-indigo-50 text-indigo-600 font-bold text-xs rounded-xl border border-indigo-100">
+                                ${escapeHtml(proc.leave_type)}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600 max-w-xs truncate" title="${escapeHtml(proc.reason)}">${escapeHtml(proc.reason)}</td>
+                        <td class="py-3.5 px-4">${statusBadge}</td>
+                    `;
+                    processedBody.appendChild(tr);
+                });
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        async function processLeaveAction(id, actionType, employeeName) {
+            const isApprove = actionType === 'admin_approve';
+            const actionName = isApprove ? 'Approve Leave Application' : 'Reject Leave Application';
+            const confirmColor = isApprove ? '#10b981' : '#ef4444';
+
+            const confirmResult = await Swal.fire({
+                title: `${isApprove ? 'Approve' : 'Reject'} Request?`,
+                text: `Are you sure you want to process the leave application for ${employeeName}?`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#FF8C00', 
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes',
-                cancelButtonText: 'Cancel',
-                background: '#ffffff',
-                color: '#212121'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = "logout.php"; 
-                }
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: '#64748b',
+                confirmButtonText: `Yes, ${isApprove ? 'Approve' : 'Reject'}`,
+                background: '#09090b',
+                color: '#ffffff',
+                customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
             });
+
+            if (!confirmResult.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Processing Action...',
+                text: 'Please wait a moment.',
+                allowOutsideClick: false,
+                background: '#09090b',
+                color: '#ffffff',
+                customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl backdrop-blur-xl' },
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            const fd = new FormData();
+            fd.append('request_id', id);
+
+            try {
+                const res = await fetch(`${phpEndpoint}?action=${actionType}`, { method: 'POST', body: fd });
+                const data = await res.json();
+
+                if (data.success) {
+                    await loadLeaves();
+                    Swal.fire({
+                        title: 'Success!',
+                        text: data.message,
+                        icon: 'success',
+                        timer: 1200,
+                        showConfirmButton: false,
+                        background: '#09090b',
+                        color: '#ffffff',
+                        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: data.message || 'Action failed.',
+                        icon: 'error',
+                        confirmButtonColor: '#ff6b4a',
+                        background: '#09090b',
+                        color: '#ffffff',
+                        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+                    });
+                }
+            } catch (e) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'An unexpected connection error occurred.',
+                    icon: 'error',
+                    confirmButtonColor: '#ff6b4a',
+                    background: '#09090b',
+                    color: '#ffffff',
+                    customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+                });
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderTables);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLeaves();
         });
-    }
-});
+
+        // Global SweetAlert Logout Interceptor
+        document.addEventListener('click', function(e) {
+            const logoutBtn = e.target.closest('#logoutBtn, #sidebarLogoutBtn, .logout-btn, a[href*="logout.php"]');
+            
+            if (logoutBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') {
+                    e.stopImmediatePropagation();
+                }
+
+                const logoutUrl = logoutBtn.getAttribute('href') || "logout.php";
+                
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'System Sign Out',
+                        text: "Are you sure you want to end your current session?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ff6b4a', 
+                        cancelButtonColor: '#ef4444',
+                        confirmButtonText: 'Yes, Sign Out',
+                        cancelButtonText: 'Cancel',
+                        background: '#09090b',
+                        color: '#ffffff',
+                        customClass: {
+                            popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl backdrop-blur-xl'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed && logoutUrl && logoutUrl !== '#') {
+                            window.location.href = logoutUrl; 
+                        }
+                    });
+                } else {
+                    if (confirm("Are you sure you want to log out?")) {
+                        window.location.href = logoutUrl;
+                    }
+                }
+            }
+        }, true);
+
+        // Initialize AOS animations
+        AOS.init({
+            once: true,
+            offset: 50,
+            duration: 800,
         });
     </script>
 </body>

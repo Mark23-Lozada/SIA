@@ -17,6 +17,42 @@ if ($conn->connect_error) {
 }
 
 $user_id = $_SESSION['user_id'] ?? 0;
+
+// Handle Profile Picture Upload
+$upload_msg = "";
+$upload_error = "";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_picture'])) {
+    $file = $_FILES['profile_picture'];
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+        
+        if (in_array($fileExt, $allowed)) {
+            $fileName = "profile_" . $user_id . "_" . time() . "." . $fileExt;
+            $uploadDir = "uploads/";
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $uploadPath = $uploadDir . $fileName;
+            
+            if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+                $stmt_up = $conn->prepare("UPDATE employees SET profile_picture = ? WHERE id = ?");
+                $stmt_up->bind_param("si", $uploadPath, $user_id);
+                if ($stmt_up->execute()) {
+                    $upload_msg = "Profile picture updated successfully!";
+                }
+                $stmt_up->close();
+            } else {
+                $upload_error = "Failed to move uploaded file.";
+            }
+        } else {
+            $upload_error = "Invalid file type. Only JPG, JPEG, PNG, and WEBP are allowed.";
+        }
+    } else {
+        $upload_error = "Error uploading file.";
+    }
+}
+
 $stmt = $conn->prepare("SELECT * FROM employees WHERE id = ? LIMIT 1");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -113,7 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
     $adv_amount = floatval($_POST['amount'] ?? 0);
     $adv_reason = $_POST['reason'] ?? '';
     
-    // Server-side validation: Max 10k, Min 1k[cite: 1]
     if ($adv_amount < 1000 || $adv_amount > 10000) {
         $advance_error = "Salary advance amount must be between ₱1,000 and ₱10,000[cite: 1].";
     } else {
@@ -138,6 +173,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
     <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(147, 51, 234, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(147, 51, 234, 0.4); }
+        }
+        .animate-glow {
+            animation: pulseGlow 3s infinite;
+        }
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
@@ -146,123 +195,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
         }
     </style>
 </head>
-<body class="bg-zinc-100 font-sans antialiased h-screen overflow-hidden">
+<body class="bg-purple-50/40 font-sans antialiased h-screen overflow-hidden">
 
 <div class="flex h-screen w-full overflow-hidden">
     
-    <!-- MODERN SIDEBAR -->
-    <div class="w-64 bg-zinc-900 text-zinc-300 flex flex-col justify-between border-r border-zinc-800 shrink-0">
-        <div>
-            <div class="p-6 border-b border-zinc-800">
-                <h2 class="text-white font-black text-lg tracking-wider flex items-center gap-2">
-                    <i class="bi bi-hexagon-fill text-[#FF8C00]"></i> PANNAKODA
-                </h2>
-                <p class="text-[10px] text-zinc-500 uppercase mt-0.5">Employee Portal</p>
-            </div>
-
-            <nav class="p-4 space-y-1.5 text-xs font-semibold">
-                <a href="info.php" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#FF8C00] text-white shadow-md">
-                    <i class="bi bi-person-badge text-base"></i> My Profile
-                </a>
-                
-                <button onclick="openAttendanceModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
-                    <i class="bi bi-geo-alt-fill text-base text-emerald-400"></i> Geo Attendance
-                </button>
-
-                <button onclick="openLeaveModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
-                    <i class="bi bi-calendar-plus text-base text-amber-400"></i> Request Leave
-                </button>
-
-                <button onclick="openAdvanceModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
-                    <i class="bi bi-cash-stack text-base text-cyan-400"></i> Request Salary Advance
-                </button>
-
-                <button onclick="openPayslipModal()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition-all text-left">
-                    <i class="bi bi-wallet2 text-base text-indigo-400"></i> Payslip Statement
-                </button>
-            </nav>
-        </div>
-
-        <div class="p-4 border-t border-zinc-800">
-            <a href="logout.php" id="logoutBtn" class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold">
-                <i class="bi bi-box-arrow-right text-base"></i> Logout
-            </a>
-        </div>
-    </div>
+    <!-- LOAD MODULAR SIDEBAR -->
+    <?php include 'sidebars.php'; ?>
 
     <!-- MAIN CONTENT AREA -->
-    <div class="flex-1 h-screen overflow-y-auto p-6 md:p-10 bg-zinc-100">
+    <div class="flex-1 h-screen overflow-y-auto p-6 md:p-10 bg-purple-50/30 animate-fade-in">
         <div class="max-w-5xl mx-auto space-y-6">
             
-            <!-- Header Profile Banner -->
-            <div class="bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 text-white rounded-3xl p-8 shadow-xl border border-zinc-800 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#FF8C00]/10 rounded-full blur-3xl pointer-events-none"></div>
+            <!-- Header Profile Banner (Modern White & Purple Theme) -->
+            <div class="bg-gradient-to-r from-white via-purple-50/50 to-white text-zinc-800 rounded-3xl p-8 shadow-xl shadow-purple-900/5 border border-purple-100 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-glow">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
                 
                 <div class="flex items-center gap-5 z-10">
-                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#FF8C00] to-orange-600 flex items-center text-white justify-center text-3xl font-black shadow-lg shadow-orange-500/20">
-                        <?= strtoupper(substr($employee['full_name'], 0, 1)) ?>
+                    <!-- Profile Picture Container / Click to Change Image & Add Profile Button functionality -->
+                    <div class="relative group cursor-pointer" onclick="document.getElementById('profilePicInput').click()" title="Click image to change profile">
+                        <?php if (!empty($employee['profile_picture']) && file_exists($employee['profile_picture'])): ?>
+                            <div class=" rounded-2xl overflow-hidden shadow-lg shadow-purple-500/20 border-2 border-purple-500 transition-transform duration-300 group-hover:scale-105" style="border-radius: 50%; width: 180px; height: 200px ; ">
+                                <img src="<?= htmlspecialchars($employee['profile_picture']) ?>" alt="Profile" class="w-full h-full object-cover">
+                            </div>
+                        <?php else: ?>
+                            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center text-white justify-center text-3xl font-black shadow-lg shadow-purple-500/20 transition-transform duration-300 group-hover:scale-105">
+                                <?= strtoupper(substr($employee['full_name'], 0, 1)) ?>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Hover Overlay Icon -->
+                        <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <i class="bi bi-camera-fill text-lg"></i>
+                        </div>
                     </div>
+
                     <div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-[#FF8C00] text-xs font-bold uppercase tracking-wider mb-2 border border-white/5">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-wider mb-2 border border-purple-200">
                             <i class="bi bi-shield-check"></i> <?= htmlspecialchars($role) ?>
                         </div>
-                        <h1 class="text-2xl md:text-3xl font-black tracking-tight text-white">
+                        <h1 class="text-2xl md:text-3xl font-black tracking-tight text-zinc-900">
                             <?php echo htmlspecialchars($employee['full_name']); ?>
                         </h1>
-                        <p class="text-xs text-zinc-400 mt-1 font-mono">
+                        <p class="text-xs text-zinc-500 mt-1 font-mono">
                             ID: <?= htmlspecialchars($employee['employee_id'] ?? 'EMP-' . str_pad($employee['id'], 4, '0', STR_PAD_LEFT)) ?> &bull; Dept: <?= htmlspecialchars($employee['department'] ?? 'Unassigned') ?>
                         </p>
                     </div>
+                </div>
+
+                <!-- Hidden form for direct image change / Add Profile -->
+                <form id="profilePicForm" method="POST" enctype="multipart/form-data" class="hidden">
+                    <input type="file" id="profilePicInput" name="profile_picture" accept="image/*" onchange="document.getElementById('profilePicForm').submit()">
+                </form>
+
+                <!-- Add Profile Button as requested -->
+                <div class="z-10">
+                    <button onclick="document.getElementById('profilePicInput').click()" class="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-105 flex items-center gap-2">
+                        <i class="bi bi-person-plus-fill text-base"></i> Add / Change Profile
+                    </button>
                 </div>
             </div>
 
             <!-- Credentials Grid Details -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2 space-y-6">
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
-                        <h3 class="text-xs font-black text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                            <i class="bi bi-person-lines-fill text-[#FF8C00]"></i> Personal & Employment Details
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-purple-100 transition-all hover:shadow-md">
+                        <h3 class="text-xs font-black text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="bi bi-person-lines-fill"></i> Personal & Employment Details
                         </h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
-                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Full Name</span>
+                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
+                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Full Name</span>
                                 <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($employee['full_name']); ?></span>
                             </div>
-                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
-                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Employee ID</span>
-                                <span class="font-mono font-bold text-indigo-600 mt-0.5 block"><?php echo htmlspecialchars($employee['employee_id'] ?? 'EMP-2026-...'); ?></span>
+                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
+                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Employee ID</span>
+                                <span class="font-mono font-bold text-purple-600 mt-0.5 block"><?php echo htmlspecialchars($employee['employee_id'] ?? 'EMP-2026-...'); ?></span>
                             </div>
-                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
-                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Department</span>
+                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
+                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Department</span>
                                 <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($employee['department'] ?? 'Unassigned'); ?></span>
                             </div>
-                            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
-                                <span class="block text-[11px] font-bold text-zinc-400 uppercase">Position / Role</span>
+                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
+                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Position / Role</span>
                                 <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($role); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Government Identifiers -->
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200">
-                        <h3 class="text-xs font-black text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                            <i class="bi bi-shield-shaded text-emerald-500"></i> Government Mandated Identifiers
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-purple-100 transition-all hover:shadow-md">
+                        <h3 class="text-xs font-black text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="bi bi-shield-shaded"></i> Government Mandated Identifiers
                         </h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
-                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">SSS No.</span>
+                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
+                                <span class="block text-[10px] text-purple-400 font-bold uppercase">SSS No.</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">33-1234567-8</span>
                             </div>
-                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
-                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">PhilHealth</span>
+                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
+                                <span class="block text-[10px] text-purple-400 font-bold uppercase">PhilHealth</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">12-345678901-2</span>
                             </div>
-                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
-                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">Pag-IBIG</span>
+                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
+                                <span class="block text-[10px] text-purple-400 font-bold uppercase">Pag-IBIG</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">1210-9876-5432</span>
                             </div>
-                            <div class="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
-                                <span class="block text-[10px] text-zinc-400 font-bold uppercase">GSIS No.</span>
+                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
+                                <span class="block text-[10px] text-purple-400 font-bold uppercase">GSIS No.</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">N/A</span>
                             </div>
                         </div>
@@ -271,21 +310,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
 
                 <!-- Right Column: Access Emails -->
                 <div class="space-y-6">
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-zinc-200 flex flex-col justify-between h-full">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-purple-100 flex flex-col justify-between h-full transition-all hover:shadow-md">
                         <div>
-                            <h3 class="text-xs font-black text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <i class="bi bi-envelope-at-fill text-indigo-500"></i> System Access Emails
+                            <h3 class="text-xs font-black text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <i class="bi bi-envelope-at-fill"></i> System Access Emails
                             </h3>
                             <div class="space-y-4">
-                                <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
-                                    <span class="block text-[10px] text-indigo-600 font-bold uppercase tracking-wide">Employee Email</span>
-                                    <span class="font-mono font-bold text-indigo-900 text-xs block mt-1 break-all">
+                                <div class="p-4 rounded-2xl bg-purple-50/60 border border-purple-100">
+                                    <span class="block text-[10px] text-purple-600 font-bold uppercase tracking-wide">Employee Email</span>
+                                    <span class="font-mono font-bold text-purple-950 text-xs block mt-1 break-all">
                                         <?php echo htmlspecialchars($employee['employee_gmail'] ?? 'Not set'); ?>
                                     </span>
                                 </div>
-                                <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100">
-                                    <span class="block text-[10px] text-emerald-600 font-bold uppercase tracking-wide">Company Gmail</span>
-                                    <span class="font-mono font-bold text-emerald-900 text-xs block mt-1 break-all">
+                                <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                                    <span class="block text-[10px] text-indigo-600 font-bold uppercase tracking-wide">Company Gmail</span>
+                                    <span class="font-mono font-bold text-indigo-950 text-xs block mt-1 break-all">
                                         <?php echo htmlspecialchars($employee['company_gmail'] ?? 'Not set'); ?>
                                     </span>
                                 </div>
@@ -299,189 +338,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
     </div>
 </div>
 
-<!-- LEAVE REQUEST MODAL -->
-<div id="leaveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-200">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-calendar-plus text-amber-500"></i> File Leave Request</h3>
-            <button onclick="closeLeaveModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <form method="POST" class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Leave Type</label>
-                <select name="leave_type" required class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500">
-                    <option value="Vacation Leave">Vacation Leave</option>
-                    <option value="Sick Leave">Sick Leave</option>
-                    <option value="Emergency Leave">Emergency Leave</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Reason Statement</label>
-                <textarea name="reason" rows="3" required placeholder="State your reason for absence..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500"></textarea>
-            </div>
-            <button type="submit" name="submit_leave" class="w-full bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-orange-500/20 text-sm">
-                Submit Leave Application
-            </button>
-        </form>
-    </div>
-</div>
-
-<!-- SALARY ADVANCE REQUEST MODAL -->
-<div id="advanceModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-200">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-cash-stack text-cyan-500"></i> Request Salary Advance</h3>
-            <button onclick="closeAdvanceModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <form method="POST" class="space-y-4" onsubmit="return validateAdvanceAmount()">
-            <div>
-                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Amount Requested (₱) [Min: ₱1,000 - Max: ₱10,000]</label>
-                <input type="number" step="0.01" id="adv_amount_input" name="amount" min="1000" max="10000" required placeholder="Enter amount (1,000 - 10,000)..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-zinc-500 uppercase mb-1">Reason Statement</label>
-                <textarea name="reason" rows="3" required placeholder="State the reason for advance..." class="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm font-semibold text-zinc-700 focus:outline-orange-500"></textarea>
-            </div>
-            <button type="submit" name="submit_advance" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-cyan-500/20 text-sm">
-                Submit Advance Request
-            </button>
-        </form>
-    </div>
-</div>
-
-<!-- GEOLOCATION ATTENDANCE MODAL -->
-<div id="attendanceModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-zinc-200 text-center">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-black text-zinc-800"><i class="bi bi-geo-alt-fill text-emerald-500"></i> Geo-Location Attendance</h3>
-            <button onclick="closeAttendanceModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <p class="text-xs text-zinc-500 mb-6">Choose whether to record Time In or Time Out using your GPS coordinates.</p>
-        
-        <div id="geoStatus" class="mb-4 text-xs font-mono font-bold text-amber-600 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-            Waiting for GPS Location...
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-            <button onclick="recordAttendance('time_in')" id="btnTimeIn" disabled class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-md text-xs opacity-50 cursor-not-allowed">
-                <i class="bi bi-box-arrow-in-right"></i> RECORD TIME IN
-            </button>
-            <button onclick="recordAttendance('time_out')" id="btnTimeOut" disabled class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl transition-all shadow-md text-xs opacity-50 cursor-not-allowed">
-                <i class="bi bi-box-arrow-out-right"></i> RECORD TIME OUT
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- EXACT PAYSLIP STATEMENT MODAL (PH Standards) -->
-<div id="payslipModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden">
-        <div class="flex justify-between items-center bg-slate-50 px-6 py-4 border-b no-print">
-            <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2 text-sm">
-                <i class="bi bi-receipt text-emerald-600"></i> Corporate Payroll Statement (PH Standards)
-            </h5>
-            <button onclick="closePayslipModal()" class="text-zinc-400 hover:text-zinc-700 font-bold text-lg"><i class="bi bi-x-lg"></i></button>
-        </div>
-        
-        <div class="p-6 overflow-y-auto max-h-[75vh]" id="printArea">
-            <div class="border border-gray-300 p-6 bg-white rounded-xl text-gray-800 text-xs shadow-sm">
-                <div class="text-center border-b pb-4 mb-4">
-                    <h3 class="font-black text-xl tracking-wide uppercase text-gray-900"><?= htmlspecialchars($employee['company_name'] ?? 'PannaKoda Stores Inc.') ?></h3>
-                    <p class="text-[11px] text-gray-500 font-medium"><?= htmlspecialchars($employee['company_address'] ?? '123 Business Corporate Center, Cavite, Philippines') ?></p>
-                    <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
-                    <div class="mt-2 inline-block bg-slate-100 text-slate-800 font-mono text-[11px] font-bold px-3 py-1 rounded">
-                        OFFICIAL PAYSLIP STATEMENT | <?= $cutOffPeriod ?>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4 mb-4 border-b pb-4 bg-slate-50/60 p-3 rounded-lg">
-                   <div>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-gray-800"><?= htmlspecialchars($employee['employee_id'] ?? 'EMP-' . str_pad($employee['id'], 4, '0', STR_PAD_LEFT)) ?></span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-gray-800"><?= htmlspecialchars($employee['full_name']) ?></span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Department:</span> <span class="font-semibold text-gray-800"><?= htmlspecialchars($employee['department'] ?? 'Unassigned') ?></span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-gray-800">Single / S / Z</span></p>
-                   </div>
-                   <div>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800"><?= htmlspecialchars($role) ?></span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800"><?= $payDateStr ?></span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-indigo-600">Regular</span></p>
-                    <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-gray-600 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
-                   </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-6 items-start mb-4">
-                    <div>
-                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Earnings (Semi-Monthly Breakdown)</h6>
-                        <div class="space-y-1">
-                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Basic Salary (Semi-Monthly)</span> 
-                                <span class="font-semibold font-mono">₱<?= number_format($kinsenas_base, 2) ?></span>
-                            </div>
-                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Rice & Clothing Allowance</span> 
-                                <span class="font-semibold font-mono">₱<?= number_format($kinsenas_allowance, 2) ?></span>
-                            </div>
-                            <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
-                                <span>Gross Pay (Period)</span> 
-                                <span class="font-mono text-emerald-700">₱<?= number_format($kinsenas_gross, 2) ?></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h6 class="font-bold text-xs text-gray-900 border-b pb-1.5 mb-2 uppercase tracking-wide">Statutory & Tax Deductions</h6>
-                        <div class="space-y-1">
-                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">SSS Contribution (Employee)</span> 
-                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_sss, 2) ?></span>
-                            </div>
-                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">PhilHealth (Employee)</span> 
-                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_philhealth, 2) ?></span>
-                            </div>
-                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">Pag-IBIG Fund (Employee)</span> 
-                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_pagibig, 2) ?></span>
-                            </div>
-                            <div class="flex justify-between py-1 border-b border-dashed border-gray-100">
-                                <span class="text-gray-600">BIR Withholding Tax</span> 
-                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_tax, 2) ?></span>
-                            </div>
-                            <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
-                                <span>Total Deductions</span> 
-                                <span class="font-mono text-red-600">-₱<?= number_format($kinsenas_deductions, 2) ?></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-100 p-3 rounded-lg mb-4 text-[11px] grid grid-cols-2 gap-2 text-gray-700 border border-slate-200">
-                    <div><span class="font-semibold">Monthly Basic Salary:</span> ₱<?= number_format($monthly_base, 2) ?></div>
-                    <div><span class="font-semibold">Monthly Gross Earnings:</span> ₱<?= number_format($monthly_gross, 2) ?></div>
-                    <div><span class="font-semibold">Monthly Total Statutory & Tax:</span> ₱<?= number_format($ph['total_deductions'], 2) ?></div>
-                    <div><span class="font-semibold">Monthly Net Pay Reference:</span> ₱<?= number_format($monthly_net, 2) ?></div>
-                </div>
-
-                <div class="bg-[#212121] text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
-                    <div>
-                        <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
-                        <p class="text-[10px] text-white/40">Semi-Monthly Payout (15-Day Cycle)</p>
-                    </div>
-                    <div class="text-right">
-                        <h2 class="text-2xl font-black text-[#FF8C00] font-mono">₱<?= number_format($kinsenas_net, 2) ?></h2>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-slate-50 px-6 py-3 border-t flex justify-end gap-2 no-print">
-            <button onclick="closePayslipModal()" class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-100 rounded-xl text-xs font-semibold text-gray-700">Close</button>
-            <button onclick="window.print()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5">
-                <i class="bi bi-printer"></i> Print Statement
-            </button>
-        </div>
-    </div>
-</div>
+<!-- LOAD MODULAR MODALS -->
+<?php include 'modals.php'; ?>
 
 <script>
     // Modal Controls
@@ -500,7 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
     }
     function closeAttendanceModal() { document.getElementById('attendanceModal').classList.add('hidden'); }
 
-    // Client-side validation for Salary Advance (Min: 1000, Max: 10000)
+    // Client-side validation for Salary Advance (Min: 1000, Max: 10000)[cite: 1]
     function validateAdvanceAmount() {
         const amount = parseFloat(document.getElementById('adv_amount_input').value);
         if (amount < 1000 || amount > 10000) {
@@ -508,7 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
                 title: 'Invalid Amount',
                 text: 'The salary advance request must be between ₱1,000 and ₱10,000[cite: 1].',
                 icon: 'warning',
-                confirmButtonColor: '#FF8C00'
+                confirmButtonColor: '#9333ea'
             });
             return false;
         }
@@ -563,7 +421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
                 title: data.status === 'success' ? 'Success!' : 'Notice',
                 text: data.message,
                 icon: data.status,
-                confirmButtonColor: '#FF8C00'
+                confirmButtonColor: '#9333ea'
             });
         })
         .catch(err => {
@@ -571,16 +429,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
         });
     }
 
+    <?php if(!empty($upload_msg)): ?>
+        Swal.fire({title: 'Success!', text: '<?= addslashes($upload_msg) ?>', icon: 'success', confirmButtonColor: '#9333ea'});
+    <?php endif; ?>
+
+    <?php if(!empty($upload_error)): ?>
+        Swal.fire({title: 'Error', text: '<?= addslashes($upload_error) ?>', icon: 'error', confirmButtonColor: '#9333ea'});
+    <?php endif; ?>
+
     <?php if(!empty($leave_msg)): ?>
-        Swal.fire({title: 'Submitted!', text: '<?= addslashes($leave_msg) ?>', icon: 'success', confirmButtonColor: '#FF8C00'});
+        Swal.fire({title: 'Submitted!', text: '<?= addslashes($leave_msg) ?>', icon: 'success', confirmButtonColor: '#9333ea'});
     <?php endif; ?>
 
     <?php if(!empty($advance_msg)): ?>
-        Swal.fire({title: 'Submitted!', text: '<?= addslashes($advance_msg) ?>', icon: 'success', confirmButtonColor: '#FF8C00'});
+        Swal.fire({title: 'Submitted!', text: '<?= addslashes($advance_msg) ?>', icon: 'success', confirmButtonColor: '#9333ea'});
     <?php endif; ?>
 
     <?php if(!empty($advance_error)): ?>
-        Swal.fire({title: 'Notice', text: '<?= addslashes($advance_error) ?>', icon: 'warning', confirmButtonColor: '#FF8C00'});
+        Swal.fire({title: 'Notice', text: '<?= addslashes($advance_error) ?>', icon: 'warning', confirmButtonColor: '#9333ea'});
     <?php endif; ?>
 </script>
 </body>

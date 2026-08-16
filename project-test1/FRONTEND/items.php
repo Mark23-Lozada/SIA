@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// 1. Siguraduhin muna na may naka-login na user
 if (!isset($_SESSION['role'])) {
     header("Location: ../../PAGES/login.php");
     exit();
@@ -10,21 +9,9 @@ require_once __DIR__ . '/../BACKEND/db_inventory.php';
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// ============================================================
-// THIS PAGE MANAGES MENU ITEMS (not ingredients -- see ingredients.php).
-// - Edit an item's name/price/image
-// - Toggle availability on/off (soft delete -- no hard delete, since
-//   items may already be referenced by past sales in sales_items)
-// ============================================================
-
-// ============================================================
-// Handles the optional item image upload (same logic as add_item.php).
-// Returns the relative path to store, or null if no new image was uploaded
-// (existing image should be left alone) or on failure (flags $swal_trigger).
-// ============================================================
 function handle_item_image_upload_edit() {
     if (!isset($_FILES['item_image']) || $_FILES['item_image']['error'] === UPLOAD_ERR_NO_FILE) {
-        return null; // no new image chosen -- keep whatever is already saved
+        return null;
     }
     if ($_FILES['item_image']['error'] !== UPLOAD_ERR_OK) {
         return null;
@@ -36,7 +23,7 @@ function handle_item_image_upload_edit() {
         return null;
     }
 
-    $max_size_bytes = 5 * 1024 * 1024; // 5MB
+    $max_size_bytes = 5 * 1024 * 1024;
     if ($_FILES['item_image']['size'] > $max_size_bytes) {
         return null;
     }
@@ -57,9 +44,6 @@ function handle_item_image_upload_edit() {
     return null;
 }
 
-// ---------------------------------------------------------
-// POST: update item name + price + (optionally) image
-// ---------------------------------------------------------
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_item'])) {
     $item_id       = (int)$_POST['item_id'];
     $item_name     = preg_replace('/\s+/', ' ', trim($_POST['item_name']));
@@ -67,20 +51,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_item'])) {
     $current_cat   = (int)$_POST['current_category_id'];
     $remove_image  = isset($_POST['remove_image']) && $_POST['remove_image'] == '1';
 
-    // Same validation range used when items are first created (add_item.php)
     if ($item_id > 0 && !empty($item_name) && $price >= 10 && $price <= 10000) {
         $new_image_path = handle_item_image_upload_edit();
 
         if ($new_image_path !== null) {
-            // A new image was uploaded -- replace it
             $stmt = $conn->prepare("UPDATE items SET item_name = ?, price = ?, image = ? WHERE id = ?");
             $stmt->bind_param("sdsi", $item_name, $price, $new_image_path, $item_id);
         } elseif ($remove_image) {
-            // User explicitly chose to clear the image, no replacement uploaded
             $stmt = $conn->prepare("UPDATE items SET item_name = ?, price = ?, image = NULL WHERE id = ?");
             $stmt->bind_param("sdi", $item_name, $price, $item_id);
         } else {
-            // No image change -- leave the existing image untouched
             $stmt = $conn->prepare("UPDATE items SET item_name = ?, price = ? WHERE id = ?");
             $stmt->bind_param("sdi", $item_name, $price, $item_id);
         }
@@ -92,12 +72,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_item'])) {
     exit();
 }
 
-// ---------------------------------------------------------
-// POST: toggle availability (soft delete / restore)
-// ---------------------------------------------------------
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['toggle_availability'])) {
     $item_id     = (int)$_POST['item_id'];
-    $new_status  = (int)$_POST['new_status']; // 1 = available, 0 = disabled
+    $new_status  = (int)$_POST['new_status'];
     $current_cat = (int)$_POST['current_category_id'];
 
     if ($item_id > 0) {
@@ -111,9 +88,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['toggle_availability'])
     exit();
 }
 
-// ---------------------------------------------------------
-// Categories (only ones that actually have menu items)
-// ---------------------------------------------------------
 $categories_result = $conn->query(
     "SELECT DISTINCT categories.*
      FROM categories
@@ -127,13 +101,9 @@ if ($categories_result) {
     }
 }
 
-// Default to the first actual item category (not a hardcoded ID)
 $default_category_id = !empty($categories_array) ? (int)$categories_array[0]['id'] : 0;
 $active_category_id = isset($_GET['category_id']) ? (int)$_GET['category_id'] : $default_category_id;
 
-// ---------------------------------------------------------
-// Items in the active category (including disabled ones, so they can be re-enabled)
-// ---------------------------------------------------------
 $items_stmt = $conn->prepare(
     "SELECT id, item_name, image, price, is_available
      FROM items
@@ -155,18 +125,26 @@ $items_result = $items_stmt->get_result();
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
+    <style>
+        #sidebar-container { transition: margin-left 0.3s ease-in-out; }
+        .sidebar-hidden #sidebar-container { margin-left: -16rem; }
+    </style>
 </head>
 
-<body class="bg-gray-50 font-sans antialiased flex flex-row w-screen h-screen overflow-hidden">
+<body class="bg-gradient-to-br from-purple-50/40 via-white to-slate-50 font-sans antialiased flex flex-row w-screen h-screen overflow-hidden">
 
-    <div class="shrink-0 h-full bg-white border-r border-gray-200">
+    <div id="sidebar-container" class="shrink-0 h-full bg-slate-900 border-r border-slate-800 shadow-xl">
         <?php include '../../PAGES/sidebar.php'; ?>
     </div>
     
-    <div id="main-wrapper" class="flex-1 flex flex-col min-w-0 h-full bg-gray-50 overflow-hidden">
-        <header class="navbar bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0" style="height: 60px;">
-            
-            <h1 class="text-xl font-bold text-orange-500">Manage Items</h1>
+    <div id="main-wrapper" class="flex-1 flex flex-col min-w-0 h-full bg-transparent overflow-hidden">
+        <header class="navbar bg-white border-b border-purple-100 px-6 flex items-center justify-between shrink-0 shadow-sm" style="height: 60px;">
+            <div class="flex items-center gap-4">
+                <button id="burgerToggle" type="button" class="inline-flex items-center justify-center p-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none transition-all transform hover:scale-105 active:scale-95 shadow-md">
+                    <i class="bi bi-list text-xl leading-none"></i>
+                </button>
+                <h1 class="text-xl font-black text-purple-700 tracking-wide">Manage Items</h1>
+            </div>
         </header>
 
         <div class="content-body p-6 flex-1 overflow-y-auto">
@@ -175,49 +153,49 @@ $items_result = $items_stmt->get_result();
                 <?php if (!empty($categories_array)): ?>
                     <?php foreach ($categories_array as $cat): ?>
                         <a href="items.php?category_id=<?php echo $cat['id']; ?>"
-                           class="px-4 py-2 text-sm font-medium rounded-md border transition-all duration-200 <?php echo ($active_category_id == $cat['id']) ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'; ?>">
+                           class="px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-300 transform hover:-translate-y-0.5 <?php echo ($active_category_id == $cat['id']) ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200 ring-2 ring-purple-400 ring-offset-1' : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'; ?>">
                            <?php echo htmlspecialchars($cat['name']); ?>
                         </a>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
 
-            <div class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div class="overflow-x-auto bg-white rounded-2xl shadow-xl border border-purple-100 p-4">
                 <table class="table min-w-full align-middle mb-0">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+                    <thead class="bg-purple-50/70 border-b border-purple-100">
                         <tr>
-                            <th scope="col" style="width: 10%;" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Image</th>
-                            <th scope="col" style="width: 30%;" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item Name</th>
-                            <th scope="col" style="width: 20%;" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
-                            <th scope="col" style="width: 15%;" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" style="width: 25%;" class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th scope="col" style="width: 10%;" class="px-4 py-3 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Image</th>
+                            <th scope="col" style="width: 30%;" class="px-4 py-3 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Item Name</th>
+                            <th scope="col" style="width: 20%;" class="px-4 py-3 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Price</th>
+                            <th scope="col" style="width: 15%;" class="px-4 py-3 text-left text-xs font-black text-purple-800 uppercase tracking-wider">Status</th>
+                            <th scope="col" style="width: 25%;" class="px-4 py-3 text-center text-xs font-black text-purple-800 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody class="divide-y divide-purple-50">
                         <?php if ($items_result && $items_result->num_rows > 0): ?>
                             <?php while ($item = $items_result->fetch_assoc()): ?>
-                                <tr class="hover:bg-gray-50 transition-colors <?php echo $item['is_available'] ? '' : 'text-gray-400 bg-gray-50/50'; ?>">
+                                <tr class="hover:bg-purple-50/40 transition-colors duration-150 <?php echo $item['is_available'] ? '' : 'text-slate-400 bg-slate-50/50'; ?>">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <?php if (!empty($item['image'])): ?>
-                                            <img src="../<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['item_name']); ?>" class="w-12 h-12 rounded-lg object-cover border border-gray-200 shadow-sm">
+                                            <img src="../<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['item_name']); ?>" class="w-12 h-12 rounded-xl object-cover border border-purple-200 shadow-sm">
                                         <?php else: ?>
-                                            <div class="w-12 h-12 rounded-lg flex items-center justify-content-center border border-orange-100 bg-orange-50/50">
-                                                <i class="bi bi-image text-orange-400 text-lg"></i>
+                                            <div class="w-12 h-12 rounded-xl flex items-center justify-center border border-purple-200 bg-purple-50">
+                                                <i class="bi bi-image text-purple-500 text-lg"></i>
                                             </div>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap font-bold text-gray-900"><?php echo htmlspecialchars($item['item_name']); ?></td>
-                                    <td class="px-4 py-3 whitespace-nowrap font-semibold text-gray-800">₱<?php echo number_format($item['price'], 2); ?></td>
+                                    <td class="px-4 py-3 whitespace-nowrap font-bold text-slate-900"><?php echo htmlspecialchars($item['item_name']); ?></td>
+                                    <td class="px-4 py-3 whitespace-nowrap font-bold text-purple-600">₱<?php echo number_format($item['price'], 2); ?></td>
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <?php if ($item['is_available']): ?>
-                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Available</span>
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Available</span>
                                         <?php else: ?>
-                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Disabled</span>
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">Disabled</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        <div class="btn-group btn-group-sm inline-flex shadow-sm rounded-md" role="group">
-                                            <button type="button" class="btn border border-orange-200 text-orange-500 bg-white hover:bg-orange-50 font-bold edit-btn flex items-center gap-1"
+                                        <div class="btn-group btn-group-sm inline-flex shadow-sm rounded-xl overflow-hidden" role="group">
+                                            <button type="button" class="btn border border-purple-200 text-purple-600 bg-white hover:bg-purple-50 font-bold edit-btn flex items-center gap-1.5 px-3 py-1.5 transition-colors"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#editModal"
                                                     data-id="<?php echo $item['id']; ?>"
@@ -232,7 +210,7 @@ $items_result = $items_stmt->get_result();
                                                 <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
                                                 <input type="hidden" name="current_category_id" value="<?php echo $active_category_id; ?>">
                                                 <input type="hidden" name="new_status" value="<?php echo $item['is_available'] ? 0 : 1; ?>">
-                                                <button type="submit" name="toggle_availability" class="btn border-t border-b border-r px-3 py-1.5 transition-colors font-medium rounded-r-md <?php echo $item['is_available'] ? 'border-red-200 text-red-600 bg-white hover:bg-red-50' : 'border-green-200 text-white bg-green-600 hover:bg-green-700'; ?>">
+                                                <button type="submit" name="toggle_availability" class="btn border px-3 py-1.5 transition-colors font-semibold <?php echo $item['is_available'] ? 'border-rose-200 text-rose-600 bg-white hover:bg-rose-50' : 'border-emerald-200 text-white bg-emerald-600 hover:bg-emerald-700'; ?>">
                                                     <?php if ($item['is_available']): ?>
                                                         <i class="bi bi-slash-circle"></i> Disable
                                                     <?php else: ?>
@@ -246,9 +224,9 @@ $items_result = $items_stmt->get_result();
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="text-center py-12 text-gray-400">
-                                    <i class="bi bi-inbox text-5xl block mb-3 opacity-30 text-orange-500"></i> 
-                                    <span class="text-sm">No items found under this category.</span>
+                                <td colspan="5" class="text-center py-12 text-slate-400">
+                                    <i class="bi bi-inbox text-4xl block mb-2 text-purple-300"></i> 
+                                    <span class="text-sm font-medium">No items found under this category.</span>
                                 </td>
                             </tr>
                         <?php endif; ?>
@@ -261,12 +239,12 @@ $items_result = $items_stmt->get_result();
 
     <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 rounded-2xl shadow-xl overflow-hidden bg-white">
-                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h5 class="text-lg font-bold text-orange-500 flex items-center gap-2" id="editModalLabel">
+            <div class="modal-content border-0 rounded-2xl shadow-2xl overflow-hidden bg-white">
+                <div class="px-6 py-4 border-b border-purple-100 flex items-center justify-between bg-purple-50/50">
+                    <h5 class="text-lg font-black text-purple-700 flex items-center gap-2" id="editModalLabel">
                         <i class="bi bi-pencil-square"></i> Edit Item
                     </h5>
-                    <button type="button" class="btn-close text-gray-400 hover:text-gray-600" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close text-slate-400 hover:text-slate-600 cursor-pointer" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="editForm" action="items.php" method="POST" enctype="multipart/form-data" novalidate>
                     <div class="p-6 space-y-4">
@@ -275,35 +253,35 @@ $items_result = $items_stmt->get_result();
                         <input type="hidden" name="remove_image" id="modal_remove_image" value="0">
 
                         <div class="space-y-2">
-                            <label class="block text-sm font-semibold text-gray-600">Item Image</label>
-                            <div id="editImageDropzone" class="border-2 border-dashed border-orange-400 rounded-xl flex flex-col items-center justify-center p-6 cursor-pointer bg-orange-50/30 hover:bg-orange-50/60 transition-all duration-200">
+                            <label class="block text-xs font-black text-slate-600 uppercase">Item Image</label>
+                            <div id="editImageDropzone" class="border-2 border-dashed border-purple-300 rounded-2xl flex flex-col items-center justify-center p-6 cursor-pointer bg-purple-50/30 hover:bg-purple-50/70 transition-all duration-300">
                                 <div id="editDropzonePrompt" class="hidden text-center">
-                                    <i class="bi bi-cloud-arrow-up-fill text-3xl text-orange-500 mb-2 block"></i>
-                                    <span class="text-xs text-gray-500 block">Drag & drop, or click to browse</span>
+                                    <i class="bi bi-cloud-arrow-up-fill text-3xl text-purple-500 mb-2 block"></i>
+                                    <span class="text-xs text-slate-500 font-medium block">Drag & drop, or click to browse</span>
                                 </div>
-                                <img id="editImagePreview" src="" alt="Preview" class="hidden max-h-36 rounded-lg border border-gray-200 shadow-sm object-cover">
+                                <img id="editImagePreview" src="" alt="Preview" class="hidden max-h-36 rounded-xl border border-purple-200 shadow-sm object-cover">
                             </div>
                             <input type="file" id="modal_item_image" name="item_image" accept="image/jpeg,image/png,image/webp" class="hidden">
-                            <button type="button" id="editRemoveImageBtn" class="hidden px-3 py-1.5 bg-white border border-red-200 rounded-md text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors items-center gap-1">
+                            <button type="button" id="editRemoveImageBtn" class="hidden px-3 py-1.5 bg-white border border-rose-200 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors items-center gap-1.5">
                                 <i class="bi bi-trash"></i> Remove Image
                             </button>
                         </div>
 
                         <div class="space-y-1">
-                            <label for="modal_item_name" class="block text-sm font-semibold text-gray-600">Item Name <span class="text-red-500">*</span></label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50" id="modal_item_name" name="item_name" required>
+                            <label for="modal_item_name" class="block text-xs font-black text-slate-600 uppercase">Item Name <span class="text-rose-500">*</span></label>
+                            <input type="text" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-slate-50/50 font-bold" id="modal_item_name" name="item_name" required>
                         </div>
 
                         <div class="space-y-1">
-                            <label for="modal_price" class="block text-sm font-semibold text-gray-600">Price (PHP ₱) <span class="text-red-500">*</span></label>
-                            <input type="number" step="0.01" min="10" max="10000" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50" id="modal_price" name="price" required>
-                            <span class="text-xs text-gray-400 block mt-1">Must be between ₱10.00 and ₱10,000.00</span>
+                            <label for="modal_price" class="block text-xs font-black text-slate-600 uppercase">Price (PHP ₱) <span class="text-rose-500">*</span></label>
+                            <input type="number" step="0.01" min="10" max="10000" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-slate-50/50 font-bold" id="modal_price" name="price" required>
+                            <span class="text-xs text-slate-400 block mt-1">Must be between ₱10.00 and ₱10,000.00</span>
                         </div>
                     </div>
                     
-                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
-                        <button type="button" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" name="update_item" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg text-sm shadow-sm transition-colors">Save Changes</button>
+                    <div class="px-6 py-4 bg-purple-50/50 border-t border-purple-100 flex justify-end gap-3">
+                        <button type="button" class="px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="update_item" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -344,16 +322,16 @@ $items_result = $items_stmt->get_result();
 
         editDropzone.addEventListener('dragover', function (e) {
             e.preventDefault();
-            editDropzone.classList.add('bg-orange-100/50');
+            editDropzone.classList.add('bg-purple-100/50');
         });
 
         editDropzone.addEventListener('dragleave', function () {
-            editDropzone.classList.remove('bg-orange-100/50');
+            editDropzone.classList.remove('bg-purple-100/50');
         });
 
         editDropzone.addEventListener('drop', function (e) {
             e.preventDefault();
-            editDropzone.classList.remove('bg-orange-100/50');
+            editDropzone.classList.remove('bg-purple-100/50');
             if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                 editFileInput.files = e.dataTransfer.files;
                 showEditPreviewFromFile(e.dataTransfer.files[0]);
@@ -403,13 +381,13 @@ $items_result = $items_stmt->get_result();
 
             if (nameField.value.trim() === "") {
                 e.preventDefault();
-                Swal.fire({ icon: 'warning', title: 'Item Name Required', text: 'Please enter an item name.', confirmButtonColor: '#f97316' });
+                Swal.fire({ icon: 'warning', title: 'Item Name Required', text: 'Please enter an item name.', confirmButtonColor: '#9333ea' });
                 return false;
             }
 
             if (isNaN(priceInput) || priceInput < 10 || priceInput > 10000) {
                 e.preventDefault();
-                Swal.fire({ icon: 'error', title: 'Invalid Price', text: 'Price must be between ₱10.00 and ₱10,000.00.', confirmButtonColor: '#f97316' });
+                Swal.fire({ icon: 'error', title: 'Invalid Price', text: 'Price must be between ₱10.00 and ₱10,000.00.', confirmButtonColor: '#9333ea' });
                 return false;
             }
         });

@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// 1. Siguraduhin muna na may naka-login na user
 if (!isset($_SESSION['role'])) {
     header("Location: ../../PAGES/login.php");
     exit();
@@ -9,13 +8,6 @@ if (!isset($_SESSION['role'])) {
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 require_once __DIR__ . '/../BACKEND/db_inventory.php';
-
-// ============================================================
-// STATUS IS NEVER STORED -- it's computed live from timestamps:
-//   NOW() < sales.ready_at AND served_at IS NULL  -> shows here (Cooking)
-//   NOW() >= sales.ready_at                        -> moves to depart.php automatically
-// No cron job needed: this page just re-queries on every refresh.
-// ============================================================
 
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     header('Content-Type: text/html');
@@ -37,9 +29,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     }
 
     if (empty($orders)) {
-        echo '<div class="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
-                <i class="bi bi-cup-hot text-5xl text-orange-400"></i>
-                <p class="mt-3 text-lg font-medium">No orders currently cooking.</p>
+        echo '<div class="col-span-full flex flex-col items-center justify-center py-16 text-slate-400 animate-fade-in">
+                <div class="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-500 mb-3 shadow-inner">
+                    <i class="bi bi-cup-hot text-3xl"></i>
+                </div>
+                <p class="text-base font-semibold text-slate-600">No orders currently cooking.</p>
+                <p class="text-xs text-slate-400 mt-0.5">New orders will appear here automatically</p>
               </div>';
         exit();
     }
@@ -62,18 +57,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
         $seconds_remaining = max(0, (int)$order['seconds_remaining']);
         ?>
-        <div class="bg-white border-2 border-orange-200 rounded-xl p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between">
+        <div class="bg-white border border-purple-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between animate-fade-in group">
             <div>
-                <div class="flex justify-between items-center mb-4">
-                    <span class="font-bold text-orange-600 text-lg">#TXN-<?php echo str_pad($order['id'], 5, '0', STR_PAD_LEFT); ?></span>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800 countdown-badge" data-seconds="<?php echo $seconds_remaining; ?>">
-                        <i class="bi bi-clock-history"></i> <span class="countdown-text">--:--</span>
+                <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                    <span class="font-bold text-purple-700 text-lg tracking-tight group-hover:text-purple-800 transition-colors">#TXN-<?php echo str_pad($order['id'], 5, '0', STR_PAD_LEFT); ?></span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 shadow-sm countdown-badge" data-seconds="<?php echo $seconds_remaining; ?>">
+                        <i class="bi bi-clock-history animate-spin-slow"></i> <span class="countdown-text font-mono">--:--</span>
                     </span>
                 </div>
-                <ul class="space-y-2 text-gray-700 font-medium">
+                <ul class="space-y-2.5 text-slate-700 font-medium">
                     <?php foreach ($item_lines as $line): ?>
-                        <li class="flex items-center gap-2">
-                            <span class="inline-block w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                        <li class="flex items-center gap-2 text-sm bg-slate-50/70 px-3 py-2 rounded-xl border border-slate-100/80">
+                            <span class="inline-block w-2 h-2 bg-purple-500 rounded-full shadow-sm"></span>
                             <?php echo $line; ?>
                         </li>
                     <?php endforeach; ?>
@@ -93,42 +88,45 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PannaKoda - Kitchen (Cooking)</title>
-    <!-- Tailwind CSS CDN -->
     <script src="../LIBRARIES/tailwind.js"></script>
-    <!-- Bootstrap Icons for Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
 </head>
 
-<body class="bg-orange-50/50 min-h-screen text-gray-800 font-sans antialiased">
+<body class="bg-slate-50/80 min-h-screen text-slate-800 font-sans antialiased overflow-hidden">
 
     <div class="flex h-screen w-full overflow-hidden">
         <?php include '../../PAGES/sidebar.php'; ?>
         
         <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-purple-50/10 to-slate-50">
             <div class="max-w-7xl mx-auto">
                 
                 <!-- Page Header -->
-                <div class="mb-8 border-b border-orange-100 pb-4 flex justify-between items-center">
+                <div class="mb-8 border-b border-slate-200/80 pb-5 flex justify-between items-center">
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-900">Kitchen Display</h1>
-                        <p class="text-sm text-gray-500 mt-1">Live cooking monitor</p>
+                        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Kitchen Display</h1>
+                        <p class="text-sm text-slate-500 mt-0.5">Live cooking monitor and active preparation tracking</p>
                     </div>
-                    <div class="flex items-center gap-2 text-sm bg-white px-3 py-1.5 rounded-lg shadow-sm border border-orange-100">
-                        <span class="flex h-2 w-2 relative">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                    <div class="flex items-center gap-2.5 text-xs font-medium bg-white px-3.5 py-2 rounded-xl shadow-sm border border-slate-200">
+                        <span class="flex h-2.5 w-2.5 relative">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-600"></span>
                         </span>
-                        <span class="text-gray-600 font-medium">Auto-refreshing</span>
+                        <span class="text-slate-600">Auto-refreshing</span>
                     </div>
                 </div>
 
                 <!-- Orders Grid Container -->
                 <div id="orders-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
-                        <!-- Tailwind Spinner -->
-                        <div class="animate-spin rounded-full h-10 w-10 border-4 border-orange-500 border-t-transparent"></div>
-                        <p class="mt-3 font-medium">Loading orders...</p>
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 text-slate-400">
+                        <div class="animate-spin rounded-full h-10 w-10 border-4 border-purple-600 border-t-transparent shadow-md"></div>
+                        <p class="mt-3 text-sm font-semibold text-slate-600">Loading active orders...</p>
                     </div>
                 </div>
 
@@ -137,7 +135,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     </div>
 
     <script>
-        // Refresh the order list itself every 10s
         function fetchOrders() {
             fetch('cooking.php?ajax=1')
                 .then(res => res.text())
@@ -147,7 +144,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                 .catch(err => console.error('Error fetching kitchen orders:', err));
         }
 
-        // Tick every countdown badge down once per second client-side
         function tickCountdowns() {
             document.querySelectorAll('.countdown-badge').forEach(function (badge) {
                 let seconds = parseInt(badge.getAttribute('data-seconds'), 10);
@@ -163,8 +159,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         }
 
         fetchOrders();
-        setInterval(fetchOrders, 10000); // re-sync with the server every 10s
-        setInterval(tickCountdowns, 1000); // smooth per-second countdown between syncs
+        setInterval(fetchOrders, 10000);
+        setInterval(tickCountdowns, 1000);
     </script>
 </body>
 </html>

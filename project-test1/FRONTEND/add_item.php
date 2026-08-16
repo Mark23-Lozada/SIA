@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// 1. Siguraduhin muna na may naka-login na user[cite: 2]
 if (!isset($_SESSION['role'])) {
     header("Location: ../../PAGES/login.php");
     exit();
@@ -11,9 +10,6 @@ require_once __DIR__ . '/../BACKEND/db_inventory.php';
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// ============================================================
-// Handles the optional item image upload.[cite: 2]
-// ============================================================
 function handle_item_image_upload(&$swal_trigger, &$swal_type, &$swal_title, &$swal_text) {
     if (!isset($_FILES['item_image']) || $_FILES['item_image']['error'] === UPLOAD_ERR_NO_FILE) {
         return null; 
@@ -37,7 +33,7 @@ function handle_item_image_upload(&$swal_trigger, &$swal_type, &$swal_title, &$s
         return null;
     }
 
-    $max_size_bytes = 5 * 1024 * 1024; // 5MB
+    $max_size_bytes = 5 * 1024 * 1024;
     if ($_FILES['item_image']['size'] > $max_size_bytes) {
         $swal_trigger = true;
         $swal_type = "error";
@@ -154,7 +150,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         if ($isValid && !$is_duplicate && !empty($item_name) && $final_category_id > 0 && $price > 0) {
-            // Strict duplicate check ignoring spaces/case (e.g. "choco butter" matches "chocobutter")
             $item_check_stmt = $conn->prepare("SELECT id FROM items WHERE LOWER(REPLACE(item_name, ' ', '')) = LOWER(REPLACE(?, ' ', '')) AND category_id = ?");
             $item_check_stmt->bind_param("si", $item_name, $final_category_id);
             $item_check_stmt->execute();
@@ -164,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $swal_trigger = true;
                 $swal_type = "warning";
                 $swal_title = "Duplicate Item Name!";
-                $swal_text = "The item '" . htmlspecialchars($item_name) . "' already exists under this selected category (spacing or name variant match).";
+                $swal_text = "The item '" . htmlspecialchars($item_name) . "' already exists under this selected category.";
             } else {
                 $image_path = handle_item_image_upload($swal_trigger, $swal_type, $swal_title, $swal_text);
 
@@ -213,8 +208,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         #sidebar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .dropdown-animate { transform-origin: top; animation: scaleIn 0.15s ease-out; }
-        @keyframes scaleIn { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+        .dropdown-animate { transform-origin: top; animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes scaleIn { from { transform: scaleY(0.95); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
 </head>
 
@@ -222,29 +219,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
  <div class="flex h-screen w-full overflow-hidden">
   <?php include '../../PAGES/sidebar.php'; ?>
 
-    <div id="main-wrapper" class="flex-grow flex flex-col h-full overflow-y-auto">
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
+    <div id="main-wrapper" class="flex-grow flex flex-col h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-purple-50/10 to-slate-50">
+        <header class="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm">
             <div class="flex items-center gap-4">
-                <button class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors focus:outline-none" type="button" id="burgerToggle">
+                <button class="p-2 rounded-xl text-slate-500 hover:bg-purple-50 hover:text-purple-600 transition-colors focus:outline-none" type="button" id="burgerToggle">
                     <i class="bi bi-list text-xl"></i>
                 </button>
-                <h1 class="text-lg font-bold text-slate-800 tracking-tight">Add New Product</h1>
+                <h1 class="text-base font-bold text-slate-800 tracking-tight">Add New Product</h1>
             </div>
-            <div class="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                <i class="bi bi-calendar3 text-orange-500"></i>
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-medium bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/60">
+                <i class="bi bi-calendar3 text-purple-600"></i>
                 <span>POS Hub</span>
             </div>
         </header>
         
         <div class="flex-grow p-6 flex flex-col items-center justify-start lg:pt-10">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 w-full max-w-xl transition-all duration-300 hover:shadow-md">
-                <div class="flex items-center gap-2.5 mb-6 border-b border-slate-100 pb-4">
-                    <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-                        <i class="bi bi-plus-circle-fill text-orange-500 text-base"></i>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xl p-7 w-full max-w-xl transition-all duration-300 hover:shadow-2xl animate-fade-in">
+                <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-5">
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-inner">
+                        <i class="bi bi-plus-circle-fill text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold text-slate-800">Product Details</h3>
-                        <p class="text-xs text-slate-400">Configure new menu item properties</p>
+                        <h3 class="text-base font-bold text-slate-900">Product Details</h3>
+                        <p class="text-xs text-slate-400">Configure new menu item properties and pricing</p>
                     </div>
                 </div>
 
@@ -252,18 +249,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-2 tracking-wide">Item Image (Optional)</label>
-                        <div id="imageDropzone" class="border-2 border-dashed border-slate-300 hover:border-orange-400 rounded-xl text-center p-6 cursor-pointer bg-slate-50/50 hover:bg-orange-50/10 transition-all flex flex-col items-center justify-center">
-                            <div id="dropzonePrompt" class="space-y-1.5">
-                                <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mx-auto">
-                                    <i class="bi bi-cloud-arrow-up-fill text-lg"></i>
+                        <div id="imageDropzone" class="border-2 border-dashed border-slate-200 hover:border-purple-400 rounded-2xl text-center p-6 cursor-pointer bg-slate-50/50 hover:bg-purple-50/10 transition-all flex flex-col items-center justify-center group">
+                            <div id="dropzonePrompt" class="space-y-2">
+                                <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform shadow-sm">
+                                    <i class="bi bi-cloud-arrow-up-fill text-xl"></i>
                                 </div>
-                                <p class="text-xs font-medium text-slate-700">Drag & drop image here, or <span class="text-orange-600 font-semibold">browse</span></p>
+                                <p class="text-xs font-medium text-slate-700">Drag & drop image here, or <span class="text-purple-600 font-semibold group-hover:underline">browse</span></p>
                                 <p class="text-[10px] text-slate-400">JPG, PNG, or WEBP up to 5MB</p>
                             </div>
-                            <img id="imagePreview" src="" alt="Preview" class="hidden img-fluid rounded-lg shadow-sm max-height-[160px] mx-auto object-cover">
+                            <img id="imagePreview" src="" alt="Preview" class="hidden img-fluid rounded-xl shadow-md max-h-[160px] mx-auto object-cover">
                         </div>
                         <input type="file" id="item_image" name="item_image" accept="image/jpeg,image/png,image/webp" class="hidden">
-                        <button type="button" id="removeImageBtn" class="hidden px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg mt-2 transition-colors flex items-center gap-1">
+                        <button type="button" id="removeImageBtn" class="hidden px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-xl mt-2 transition-colors flex items-center gap-1.5">
                             <i class="bi bi-trash"></i> Remove Image
                         </button>
                     </div>
@@ -271,27 +268,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="new_category_name" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Create New Category</label>
-                            <input type="text" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 placeholder:text-slate-400 transition-all" id="new_category_name" name="new_category_name" placeholder="e.g., Beverages">
+                            <input type="text" class="w-full text-sm px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 placeholder:text-slate-400 transition-all bg-slate-50/30 font-medium" id="new_category_name" name="new_category_name" placeholder="e.g., Beverages">
                         </div>
                         
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Or Select Existing Menu</label>
                             <div class="relative">
-                                <button class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl bg-white text-left text-slate-700 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 flex items-center justify-between transition-all" type="button" id="dropdownMenuButton">
-                                    <span id="dropdownLabel" class="truncate">-- Choose Category --</span>
+                                <button class="w-full text-sm px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50/30 text-left text-slate-700 focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 flex items-center justify-between transition-all font-medium" type="button" id="dropdownMenuButton">
+                                    <span id="dropdownLabel" class="truncate text-slate-400">-- Choose Category --</span>
                                     <i class="bi bi-chevron-down text-xs text-slate-400"></i>
                                 </button>
-                                <ul class="absolute left-0 w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-30 hidden dropdown-animate max-h-48 overflow-y-auto" id="dropdownList">
+                                <ul class="absolute left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-30 hidden dropdown-animate max-h-48 overflow-y-auto divide-y divide-slate-100" id="dropdownList">
                                     <?php if ($categories_result && $categories_result->num_rows > 0): ?>
                                         <?php while($cat = $categories_result->fetch_assoc()): ?>
                                             <li>
-                                                <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors select-category" href="#" data-value="<?php echo $cat['id']; ?>">
+                                                <a class="block px-4 py-2.5 text-sm text-slate-700 hover:bg-purple-50 hover:text-purple-700 transition-colors select-category font-medium" href="#" data-value="<?php echo $cat['id']; ?>">
                                                     <?php echo htmlspecialchars($cat['name']); ?>
                                                 </a>
                                             </li>
                                         <?php endwhile; ?>
                                     <?php else: ?>
-                                        <li class="px-4 py-2 text-xs text-slate-400">No categories found</li>
+                                        <li class="px-4 py-3 text-xs text-slate-400 text-center">No categories found</li>
                                     <?php endif; ?>
                                 </ul>
                                 <input type="hidden" name="category_id" id="hidden_category_id" value="0">
@@ -302,29 +299,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <div class="border-t border-slate-100 my-4"></div>
 
                     <div>
-                        <label for="item_name" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Item Name <span class="text-red-500">*</span></label>
-                        <input type="text" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 placeholder:text-slate-400 transition-all" id="item_name" name="item_name" placeholder="e.g., Iced Caramel Macchiato" required>
+                        <label for="item_name" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Item Name <span class="text-rose-500">*</span></label>
+                        <input type="text" class="w-full text-sm px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 placeholder:text-slate-400 transition-all font-medium bg-slate-50/30" id="item_name" name="item_name" placeholder="e.g., Iced Caramel Macchiato" required>
                     </div>
 
                     <div>
-                        <label for="price" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Price (PHP ₱) <span class="text-red-500">*</span></label>
+                        <label for="price" class="block text-xs font-semibold text-slate-600 mb-1.5 tracking-wide">Price (PHP ₱) <span class="text-rose-500">*</span></label>
                         <div class="relative">
-                            <span class="absolute left-3.5 top-2 text-sm font-semibold text-slate-400">₱</span>
-                            <input type="number" step="0.01" min="0.01" max="1000" class="w-full text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 placeholder:text-slate-400 transition-all font-medium" id="price" name="price" placeholder="0.00" required>
+                            <span class="absolute left-3.5 top-2.5 text-sm font-semibold text-slate-400">₱</span>
+                            <input type="number" step="0.01" min="0.01" max="1000" class="w-full text-sm pl-8 pr-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 placeholder:text-slate-400 transition-all font-medium bg-slate-50/30" id="price" name="price" placeholder="0.00" required>
                         </div>
                         <p class="text-[10px] text-slate-400 mt-1">Maximum price allowed is ₱1,000.00</p>
                     </div>
 
-                    <div class="bg-amber-50/60 rounded-xl p-3 border border-amber-200/60 flex items-start gap-2.5 text-xs text-amber-800 leading-relaxed">
-                        <i class="bi bi-info-circle-fill text-amber-500 text-sm mt-0.5"></i>
+                    <div class="bg-purple-50/50 rounded-2xl p-4 border border-purple-100 flex items-start gap-3 text-xs text-purple-900 leading-relaxed shadow-sm">
+                        <i class="bi bi-info-circle-fill text-purple-600 text-base mt-0.5"></i>
                         <p>
                             This item won't be sellable at checkout until you map its recipe rules in 
-                            <a href="recipe.php" class="font-semibold text-orange-600 hover:underline">Manage Recipes</a>. 
+                            <a href="recipe.php" class="font-semibold text-purple-700 hover:underline">Manage Recipes</a>. 
                             Availability is automated via ingredient counts.
                         </p>
                     </div>
 
-                    <button type="submit" class="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm rounded-xl transition-all shadow-md shadow-orange-600/10 focus:outline-none focus:ring-4 focus:ring-orange-200 flex items-center justify-center gap-2">
+                    <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-purple-600/20 focus:outline-none focus:ring-4 focus:ring-purple-200 flex items-center justify-center gap-2 transform active:scale-[0.99]">
                         <i class="bi bi-save-fill"></i> Save and View Inventory
                     </button>
 
@@ -356,6 +353,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 let selectedValue = this.getAttribute('data-value');
                 
                 labelSpan.textContent = selectedText;
+                labelSpan.classList.remove('text-slate-400');
+                labelSpan.classList.add('text-slate-700');
                 hiddenInput.value = selectedValue;
                 dropList.classList.add('hidden');
             });
@@ -388,16 +387,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             dropzone.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                dropzone.classList.add('border-orange-500', 'bg-orange-50/20');
+                dropzone.classList.add('border-purple-500', 'bg-purple-50/20');
             });
 
             dropzone.addEventListener('dragleave', () => {
-                dropzone.classList.remove('border-orange-500', 'bg-orange-50/20');
+                dropzone.classList.remove('border-purple-500', 'bg-purple-50/20');
             });
 
             dropzone.addEventListener('drop', (e) => {
                 e.preventDefault();
-                dropzone.classList.remove('border-orange-500', 'bg-orange-50/20');
+                dropzone.classList.remove('border-purple-500', 'bg-purple-50/20');
                 if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                     fileInput.files = e.dataTransfer.files;
                     showPreview(e.dataTransfer.files[0]);
@@ -409,7 +408,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 fileInput.value = '';
                 preview.src = '';
                 preview.classList.add('hidden');
-                prompt.classList.add('hidden');
+                prompt.classList.remove('hidden');
                 removeBtn.classList.add('hidden');
             });
         })();
@@ -419,7 +418,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 icon: '<?php echo $swal_type; ?>',
                 title: '<?php echo addslashes($swal_title); ?>',
                 text: '<?php echo addslashes($swal_text); ?>',
-                confirmButtonColor: '#ea580c'
+                confirmButtonColor: '#7c3aed'
             });
         <?php endif; ?>
     </script>

@@ -44,7 +44,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
             exit;
         }
 
-        // GSIS: no confirmed public numbering format — accept any reasonable alphanumeric ID
+        // GSIS: alphanumeric ID format check
         if (!preg_match('/^[A-Za-z0-9\-]{6,20}$/', $gsis_id)) {
             echo json_encode(["status" => "error", "message" => "Invalid GSIS ID. Please enter your GSIS BP Number as issued to you."]);
             exit;
@@ -62,9 +62,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
             exit;
         }
 
-        // Pag-IBIG MID: XXX-XXXXXXX-XX (3-7-2 digits)
-        if (!preg_match('/^\d{3}-\d{7}-\d{2}$/', $pagibig_id)) {
-            echo json_encode(["status" => "error", "message" => "Invalid Pag-IBIG MID format. Expected XXX-XXXXXXX-XX."]);
+        // Pag-IBIG MID: XXXX-XXXX-XXXX (4-4-4 digits standard format)
+        if (!preg_match('/^\d{4}-\d{4}-\d{4}$/', $pagibig_id)) {
+            echo json_encode(["status" => "error", "message" => "Invalid Pag-IBIG MID format. Expected XXXX-XXXX-XXXX."]);
             exit;
         }
 
@@ -429,7 +429,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                                         </div>
                                         <div>
                                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Pag-IBIG MID</label>
-                                            <input type="text" id="pagibig_id" name="pagibig_id" value="${formDataValues.pagibig_id || ''}" required placeholder="XXX-XXXXXXX-XX" class="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/25 focus:border-purple-600 text-slate-700">
+                                            <input type="text" id="pagibig_id" name="pagibig_id" value="${formDataValues.pagibig_id || ''}" required placeholder="XXXX-XXXX-XXXX" class="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/25 focus:border-purple-600 text-slate-700">
                                         </div>
                                     </div>
                                 </div>
@@ -503,9 +503,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                     const pagibigId = document.getElementById('pagibig_id').value.trim();
                     const file = document.getElementById('resume').files[0];
 
-                    const govtIdPattern = /^\d{2}-\d{7}-\d{1}$/; // SSS
+                    const sssPattern = /^\d{2}-\d{7}-\d{1}$/;
                     const philHealthPattern = /^\d{2}-\d{9}-\d{1}$/;
-                    const pagibigPattern = /^\d{3}-\d{7}-\d{2}$/;
+                    const pagibigPattern = /^\d{4}-\d{4}-\d{4}$/;
                     const gsisPattern = /^[A-Za-z0-9\-]{6,20}$/;
 
                     if (!name || !email || !phone || !address) {
@@ -524,16 +524,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'apply') {
                         Swal.showValidationMessage('Please enter your GSIS BP Number as issued to you.');
                         return false;
                     }
-                    if (!govtIdPattern.test(sssId)) {
-                        Swal.showValidationMessage('Invalid SSS ID format (XX-XXXXXXX-X)');
+                    if (!sssPattern.test(sssId)) {
+                        Swal.showValidationMessage('Invalid SSS ID format. Expected XX-XXXXXXX-X.');
                         return false;
                     }
                     if (!philHealthPattern.test(philhealthId)) {
-                        Swal.showValidationMessage('Invalid PhilHealth ID format (XX-XXXXXXXXX-X)');
+                        Swal.showValidationMessage('Invalid PhilHealth ID format. Expected XX-XXXXXXXXX-X.');
                         return false;
                     }
                     if (!pagibigPattern.test(pagibigId)) {
-                        Swal.showValidationMessage('Invalid Pag-IBIG MID format (XXX-XXXXXXX-XX)');
+                        Swal.showValidationMessage('Invalid Pag-IBIG MID format. Expected XXXX-XXXX-XXXX.');
                         return false;
                     }
                     if(!file) { 

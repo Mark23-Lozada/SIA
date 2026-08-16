@@ -10,20 +10,16 @@ if (!isset($_SESSION['role'])) {
 
 require_once __DIR__ . '/../BACKEND/db_inventory.php';
 
-// Kunin ang Total Company Budget mula sa sales at ibawas ang mga naaprubahang restock expenses (Fully Approved)
 $budget_query = "SELECT SUM(sales_items.quantity * sales_items.price_at_sale) as total_company_budget FROM sales_items JOIN sales ON sales_items.sale_id = sales.id WHERE YEAR(sales.created_at) = YEAR(CURDATE())";
 $budget_res = $conn->query($budget_query);
 $raw_company_budget = ($budget_res && $row = $budget_res->fetch_assoc()) ? ($row['total_company_budget'] ?? 0) : 0;
 
-// Kunin ang total na nabawas mula sa mga naaprubahang budget requests ng admin ngayong taon
 $deducted_query = "SELECT SUM(amount) as total_deducted FROM budget_requests WHERE status = 'Fully Approved (Admin)' AND YEAR(created_at) = YEAR(CURDATE())";
 $deducted_res = $conn->query($deducted_query);
 $total_deducted = ($deducted_res && $d_row = $deducted_res->fetch_assoc()) ? ($d_row['total_deducted'] ?? 0) : 0;
 
-// Net Company Budget (Sales minus Approved Restock Requests)
 $total_company_budget = $raw_company_budget - $total_deducted;
 
-// Proseso ng pag-submit ng Restock Request mula sa Modal patungo sa database
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_restock'])) {
     $title = trim($_POST['title']);
     $amount = (float)$_POST['amount'];
@@ -32,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_restock'])) {
     $department = 'Inventory / Kitchen';
     $status = 'Pending';
     
-    // Server-side validation para sa insufficient balance
     if ($amount > $total_company_budget) {
         $_SESSION['error_message'] = "Insufficient company budget for this restock request!";
     } else {
@@ -86,18 +81,17 @@ $ingredients_result = $ingredients_stmt->get_result();
     <title>Simple POS - Inventory Status & Action Stocks</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased font-sans">
+<body class="bg-gradient-to-br from-purple-50/40 via-white to-slate-50 text-slate-800 antialiased font-sans">
     <div class="flex min-h-screen w-full">
-        <div class="bg-white border-r border-gray-200 block">
+        <div class="bg-slate-900 border-r border-slate-800 shadow-xl shrink-0 hidden md:block">
             <?php include '../../PAGES/sidebar.php'; ?>
         </div>
 
-        <div class="flex-1 min-w-0 bg-white min-h-screen flex flex-col">
-            <header class="h-[60px] bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0">
-                <h1 class="text-xl font-bold text-orange-600">Inventory Status & Restock Requests</h1>
+        <div class="flex-1 min-w-0 bg-transparent min-h-screen flex flex-col">
+            <header class="h-[60px] bg-white border-b border-purple-100 px-6 flex items-center justify-between shrink-0 shadow-sm">
+                <h1 class="text-xl font-black text-purple-700 tracking-wide">Inventory Status & Restock Requests</h1>
             </header>
 
             <div class="p-6 flex-1 overflow-y-auto">
@@ -105,42 +99,42 @@ $ingredients_result = $ingredients_stmt->get_result();
                     <?php if (!empty($categories_array)): ?>
                         <?php foreach ($categories_array as $cat): ?>
                             <a href="inventory.php?category_id=<?php echo $cat['id']; ?>"
-                               class="px-4 py-2 rounded-md font-semibold text-sm transition-all duration-200 <?php echo ($active_category_id == $cat['id']) ? 'bg-orange-600 text-white shadow-sm' : 'border border-orange-600 text-orange-600 hover:bg-orange-50'; ?>">
+                               class="px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 <?php echo ($active_category_id == $cat['id']) ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 ring-2 ring-purple-400 ring-offset-1' : 'border border-purple-200 text-purple-700 bg-white hover:bg-purple-50'; ?>">
                                <?php echo htmlspecialchars($cat['name']); ?>
                             </a>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
 
-                <div class="overflow-x-auto border border-gray-200 rounded-lg bg-white shadow-sm">
+                <div class="overflow-x-auto border border-purple-100 rounded-2xl bg-white shadow-xl">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-orange-50 border-b border-gray-200">
-                                <th class="text-orange-700 font-bold px-6 py-4 text-sm uppercase">Ingredient Name</th>
-                                <th class="text-orange-700 font-bold px-6 py-4 text-sm uppercase">Unit</th>
-                                <th class="text-orange-700 font-bold px-6 py-4 text-sm uppercase">Price per Unit / kg (PHP)</th>
-                                <th class="text-orange-700 font-bold px-6 py-4 text-sm uppercase">Stock Status</th>
-                                <th class="text-orange-700 font-bold px-6 py-4 text-sm uppercase text-center">Action</th>
+                            <tr class="bg-purple-50/70 border-b border-purple-100">
+                                <th class="text-purple-800 font-black px-6 py-4 text-xs uppercase tracking-wider">Ingredient Name</th>
+                                <th class="text-purple-800 font-black px-6 py-4 text-xs uppercase tracking-wider">Unit</th>
+                                <th class="text-purple-800 font-black px-6 py-4 text-xs uppercase tracking-wider">Price per Unit / kg (PHP)</th>
+                                <th class="text-purple-800 font-black px-6 py-4 text-xs uppercase tracking-wider">Stock Status</th>
+                                <th class="text-purple-800 font-black px-6 py-4 text-xs uppercase tracking-wider text-center">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200">
+                        <tbody class="divide-y divide-purple-50">
                             <?php if ($ingredients_result && $ingredients_result->num_rows > 0): ?>
                                 <?php while ($ingredient = $ingredients_result->fetch_assoc()): ?>
                                     <?php 
                                         $item_price = $ingredient['price'] > 0 ? $ingredient['price'] : 50.00; 
                                     ?>
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="font-semibold text-gray-700 px-6 py-4"><?php echo htmlspecialchars($ingredient['ingredient_name']); ?></td>
-                                        <td class="text-gray-600 px-6 py-4"><?php echo htmlspecialchars($ingredient['unit']); ?></td>
-                                        <td class="text-gray-600 px-6 py-4 font-medium text-orange-600">₱<?php echo number_format($item_price, 2); ?></td>
+                                    <tr class="hover:bg-purple-50/40 transition-colors duration-150">
+                                        <td class="font-bold text-slate-900 px-6 py-4"><?php echo htmlspecialchars($ingredient['ingredient_name']); ?></td>
+                                        <td class="text-slate-600 px-6 py-4 font-medium"><?php echo htmlspecialchars($ingredient['unit']); ?></td>
+                                        <td class="text-purple-600 px-6 py-4 font-bold">₱<?php echo number_format($item_price, 2); ?></td>
                                         <td class="px-6 py-4">
                                             <?php $formatted_stock = rtrim(rtrim(number_format($ingredient['stock'], 2), '0'), '.'); ?>
                                             <?php if ($ingredient['stock'] <= 0): ?>
-                                                <span class="inline-flex items-center bg-red-100 text-red-800 text-xs font-bold px-3 py-1.5 rounded-full">
+                                                <span class="inline-flex items-center bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
                                                     Out of Stock (0)
                                                 </span>
                                             <?php else: ?>
-                                                <span class="inline-flex items-center bg-gray-100 text-gray-800 text-xs font-medium px-3 py-1.5 rounded-full border">
+                                                <span class="inline-flex items-center bg-purple-50 text-purple-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-purple-200">
                                                     <?php echo $formatted_stock; ?> <?php echo htmlspecialchars($ingredient['unit']); ?> Available
                                                 </span>
                                             <?php endif; ?>
@@ -148,7 +142,7 @@ $ingredients_result = $ingredients_stmt->get_result();
                                         <td class="px-6 py-4 text-center">
                                             <button type="button" 
                                                     onclick="openRestockModal('<?php echo htmlspecialchars($ingredient['ingredient_name'], ENT_QUOTES); ?>', <?php echo $item_price; ?>, <?php echo $total_company_budget; ?>, '<?php echo htmlspecialchars($ingredient['unit'], ENT_QUOTES); ?>')"
-                                                    class="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs px-3 py-2 rounded shadow-sm inline-flex items-center gap-1.5 cursor-pointer">
+                                                    class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-md shadow-purple-100 inline-flex items-center gap-1.5 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0">
                                                 <i class="bi bi-wallet2"></i> Request Budget
                                             </button>
                                         </td>
@@ -156,7 +150,7 @@ $ingredients_result = $ingredients_stmt->get_result();
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" class="text-center py-12 text-gray-400">No ingredients found.</td>
+                                    <td colspan="5" class="text-center py-12 text-slate-400">No ingredients found.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -167,13 +161,13 @@ $ingredients_result = $ingredients_stmt->get_result();
     </div>
 
     <!-- Restock Request Modal -->
-    <div id="restockModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl relative">
+    <div id="restockModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center z-50 transition-all duration-300">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-purple-100 relative transform transition-all animate-scale-up">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <i class="bi bi-wallet2 text-orange-600"></i> Restock Budget Request
+                <h3 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <i class="bi bi-wallet2 text-purple-600 text-xl"></i> Restock Budget Request
                 </h3>
-                <button type="button" onclick="closeRestockModal()" class="text-gray-400 hover:text-gray-600 cursor-pointer">
+                <button type="button" onclick="closeRestockModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
                     <i class="bi bi-x-lg text-lg"></i>
                 </button>
             </div>
@@ -182,47 +176,46 @@ $ingredients_result = $ingredients_stmt->get_result();
                 <input type="hidden" name="submit_restock" value="1">
                 <input type="hidden" name="title" id="modal_title">
 
-                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 text-xs">
-                    <div class="flex justify-between mb-1">
+                <div class="bg-purple-50/50 border border-purple-100 rounded-xl p-3 mb-4 text-xs">
+                    <div class="flex justify-between mb-1.5">
                         <span class="text-slate-500 font-medium">Current Company Budget:</span>
-                        <span class="font-bold text-slate-800" id="display_current_budget">₱0.00</span>
+                        <span class="font-black text-slate-800" id="display_current_budget">₱0.00</span>
                     </div>
-                    <div class="flex justify-between mb-1">
+                    <div class="flex justify-between">
                         <span class="text-slate-500 font-medium">Restock Cost:</span>
-                        <span class="font-bold text-orange-600" id="display_deduction">₱0.00</span>
+                        <span class="font-black text-purple-600" id="display_deduction">₱0.00</span>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Item to Restock</label>
-                    <input type="text" id="display_ingredient_name" readonly class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 font-semibold">
+                    <label class="block text-xs font-black text-slate-600 uppercase mb-1">Item to Restock</label>
+                    <input type="text" id="display_ingredient_name" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-700 font-bold">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Price per Unit/kg</label>
-                        <input type="text" id="display_unit_price" readonly class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 font-semibold">
+                        <label class="block text-xs font-black text-slate-600 uppercase mb-1">Price per Unit/kg</label>
+                        <input type="text" id="display_unit_price" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-700 font-bold">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Quantity</label>
-                        <!-- Updated with max="10" -->
-                        <input type="number" id="restock_quantity" value="10" min="1" max="10" step="any" oninput="calculateTotalCost()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold" required>
+                        <label class="block text-xs font-black text-slate-600 uppercase mb-1">Quantity</label>
+                        <input type="number" id="restock_quantity" value="10" min="1" max="100" step="any" oninput="calculateTotalCost()" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all" required>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Total Requested Amount (PHP)</label>
-                    <input type="number" step="0.01" name="amount" id="modal_amount" readonly class="w-full bg-orange-50 border border-orange-300 rounded-lg px-3 py-2 text-base text-orange-700 font-bold">
+                    <label class="block text-xs font-black text-slate-600 uppercase mb-1">Total Requested Amount (PHP)</label>
+                    <input type="number" step="0.01" name="amount" id="modal_amount" readonly class="w-full bg-purple-50/70 border border-purple-200 rounded-xl px-3.5 py-2.5 text-base text-purple-700 font-black">
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Description / Notes</label>
-                    <textarea name="desc" id="modal_desc" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required></textarea>
+                <div class="mb-5">
+                    <label class="block text-xs font-black text-slate-600 uppercase mb-1">Description / Notes</label>
+                    <textarea name="desc" id="modal_desc" rows="2" class="w-full border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all" required></textarea>
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <button type="button" onclick="closeRestockModal()" class="px-4 py-2 border rounded-lg text-sm font-semibold cursor-pointer">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold cursor-pointer">Submit to Finance</button>
+                    <button type="button" onclick="closeRestockModal()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-purple-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">Submit to Finance</button>
                 </div>
             </form>
         </div>
@@ -264,25 +257,24 @@ $ingredients_result = $ingredients_stmt->get_result();
             const qty = parseFloat(document.getElementById('restock_quantity').value) || 0;
             const requestedAmount = parseFloat(document.getElementById('modal_amount').value) || 0;
             
-            // Validation para masigurong hindi hihigit sa 10 ang quantity
             if (qty > 100) {
                 event.preventDefault();
                 Swal.fire({
                     icon: 'error',
                     title: 'Invalid Quantity!',
                     text: 'The maximum allowed quantity for restock is 100.',
-                    confirmButtonColor: '#ea580c'
+                    confirmButtonColor: '#9333ea'
                 });
                 return false;
             }
 
             if (requestedAmount > globalCompanyBudget) {
-                event.preventDefault(); // Pigilan ang pag-submit ng form
+                event.preventDefault();
                 Swal.fire({
                     icon: 'error',
                     title: 'Insufficient Balance!',
                     text: 'The requested amount exceeds the current available company budget.',
-                    confirmButtonColor: '#ea580c'
+                    confirmButtonColor: '#9333ea'
                 });
                 return false;
             }
@@ -294,13 +286,12 @@ $ingredients_result = $ingredients_stmt->get_result();
             document.getElementById('restockModal').classList.add('hidden');
         }
 
-        // SweetAlert para sa Session Messages mula sa PHP
         <?php if (isset($_SESSION['success_message'])): ?>
             Swal.fire({
                 icon: 'success',
                 title: 'Success!',
                 text: '<?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?>',
-                confirmButtonColor: '#ea580c'
+                confirmButtonColor: '#9333ea'
             });
         <?php endif; ?>
 
@@ -309,7 +300,7 @@ $ingredients_result = $ingredients_stmt->get_result();
                 icon: 'error',
                 title: 'Error!',
                 text: '<?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?>',
-                confirmButtonColor: '#ea580c'
+                confirmButtonColor: '#9333ea'
             });
         <?php endif; ?>
     </script>

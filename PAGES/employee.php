@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     header('Content-Type: application/json');
 
     $id = intval($_POST['id']);
-    $password_input = $_POST['password'] ?? '';
+    $password_input = $_POST['password'] ?? '@Lozada23';
     
     $company_name = $conn->real_escape_string($_POST['company_name'] ?? '');
     $company_address = $conn->real_escape_string($_POST['company_address'] ?? '');
@@ -52,19 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     $salary = floatval($_POST['salary']);
 
-    if (strlen($password_input) < 8 || 
-        !preg_match('/[A-Z]/', $password_input) || 
-        !preg_match('/[a-z]/', $password_input) || 
-        !preg_match('/[0-9]/', $password_input) || 
-        !preg_match('/[\W_]/', $password_input)) {
-        
-        echo json_encode([
-            "success" => false, 
-            "message" => "Ang password ay dapat hindi bababa sa 8 characters at naglalaman ng uppercase, lowercase, number, at special symbol."
-        ]);
-        exit;
-    }
-
     $employee_id = 'EMP-' . date('Y') . '-' . str_pad($id, 4, '0', STR_PAD_LEFT);
     $password_hash = password_hash($password_input, PASSWORD_DEFAULT);
 
@@ -83,7 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $name_parts = explode(' ', $full_name);
         $firstname = strtolower(preg_replace('/[^a-z]/', '', $name_parts[0]));
         $lastname = count($name_parts) > 1 ? strtolower(preg_replace('/[^a-z]/', '', end($name_parts))) : $firstname;
-        $employee_gmail = $lastname . '.' . $firstname . '@pannakoda.com';
+        
+        // Pinalitan/ginamit ang 'email' column sa halip na 'employee_gmail'
+        $email = !empty($emp_data['email']) ? $emp_data['email'] : ($lastname . '.' . $firstname . '@gmail.com');
 
         if ($dept_lower === 'hr') {
             $company_gmail = 'hr@pannakoda.com';
@@ -102,16 +91,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $update_sql = "UPDATE employees SET 
             employee_id = '$employee_id', 
             employee_password = '$password_hash', 
-            employee_gmail = '$employee_gmail',
+            email = '$email',
             company_gmail = '$company_gmail',
             department = '$department', 
             position_title = '$role',
             salary = $salary,
+            employment_type = '$employment_type',
+            immediate_supervisor = '$immediate_supervisor',
+            date_hired = '$date_hired',
+            contract_start_date = '$contract_start_date',
+            contract_end_date = '$contract_end_date',
+            contract_duration_years = $contract_duration_years,
+            work_location = '$work_location',
             status = 'hired' 
             WHERE id = $id";
         
         if ($conn->query($update_sql)) {
-            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with fixed salary saved!"]);
+            echo json_encode(["success" => true, "message" => "Employee successfully fully hired with fixed salary and contract saved!"]);
         } else {
             echo json_encode(["success" => false, "message" => $conn->error]);
         }
@@ -203,6 +199,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
   <script src="../LIBRARIES/tailwind.js"></script> 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
+  <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
+  <script src="../LIBRARIES/AOS/AOS.js"></script>
+
   <style>
     @media print {
       body * { visibility: hidden; }
@@ -211,27 +210,50 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       .no-print { display: none !important; }
     }
     
-    /* Smooth Modern Animations */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .animate-fade-in {
-      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
     .table tbody tr {
-      animation: fadeIn 0.3s ease-out forwards;
-      transition: all 0.2s ease;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .table tbody tr:hover {
-      transform: scale(1.002);
-      background-color: rgba(168, 85, 247, 0.04) !important;
+      transform: scale(1.004) translateY(-1px);
+      background-color: rgba(255, 107, 74, 0.05) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
-    /* Custom Modern Scrollbar */
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fade-in {
+      animation: fadeInScale 0.3s ease-out forwards;
+    }
+
+    body.dark-mode {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+    }
+    body.dark-mode .bg-white {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+    body.dark-mode .bg-slate-50 {
+      background-color: #111827 !important;
+      border-color: #374151 !important;
+      color: #f8fafc !important;
+    }
+    body.dark-mode .text-slate-800, body.dark-mode .text-slate-700 {
+      color: #f1f5f9 !important;
+    }
+    body.dark-mode .text-slate-400, body.dark-mode .text-slate-500 {
+      color: #94a3b8 !important;
+    }
+    body.dark-mode .form-control, body.dark-mode select {
+      background-color: #1f2937 !important;
+      color: #f8fafc !important;
+      border-color: #374151 !important;
+    }
+
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -248,83 +270,83 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     }
   </style>
 </head>
-<body class="bg-[#f8fafc] font-sans antialiased h-screen overflow-hidden">
+<body class="bg-white font-sans antialiased h-screen overflow-hidden transition-colors duration-300">
 
   <div class="flex h-screen w-full overflow-hidden">
     
     <?php include 'sidebar.php'; ?>
-    <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0 animate-fade-in">
+    <div class="flex-1 h-screen overflow-y-auto p-8 bg-white min-w-0 transition-colors duration-300" id="mainContentArea">
       
-      <!-- MODERN DYNAMIC BANNER HEADER (PURPLE THEME) -->
-      <div class="relative overflow-hidden bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 rounded-3xl shadow-xl p-8 mb-8 text-white border border-purple-500/20">
-        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-500/25 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
+      <!-- BANNER HEADER -->
+      <div data-aos="fade-down" class="relative overflow-hidden bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] rounded-3xl shadow-xl p-8 mb-8 text-white border border-[#ff6b4a]/30 transition-all duration-300 hover:shadow-2xl">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#ff6b4a]/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/20 backdrop-blur-md border border-purple-400/30 text-xs font-semibold uppercase tracking-wider text-purple-200 mb-3 shadow-sm">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#ff6b4a]/20 backdrop-blur-md border border-[#ff6b4a]/30 text-xs font-semibold uppercase tracking-wider text-[white] mb-3 shadow-sm">
               <i class="bi bi-people-fill"></i> HR & Admin Department
             </div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Employee Directory & PH Payroll</h1>
-            <p class="text-sm text-purple-100/80 max-w-2xl leading-relaxed">
+            <h1 class="text-3xl font-extrabold tracking-tight text-[white] mb-2">Employee Directory & PH Payroll</h1>
+            <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
               Manage candidates, onboarding profiles, statutory numbers, department metrics, and Philippine-compliant payroll statements seamlessly.
             </p>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 flex-wrap">
             <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
-              <div class="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300">
+              <div class="w-10 h-10 rounded-xl bg-[#ff6b4a]/30 flex items-center justify-center text-[#ff6b4a]">
                 <i class="bi bi-shield-lock-fill text-xl"></i>
               </div>
               <div>
-                <span class="block text-xs text-purple-200 font-medium">Total Workforce</span>
+                <span class="block text-xs text-slate-300 font-medium">Total Workforce</span>
                 <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="relative z-10 mt-6 pt-6 border-t border-purple-500/20 flex flex-wrap justify-between items-center gap-4">
-          <div class="text-xs text-purple-200/70 font-medium hidden sm:block">
+        <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-4">
+          <div class="text-xs text-slate-400 font-medium hidden sm:block">
             <i class="bi bi-sliders mr-1"></i> Switch active directory view below
           </div>
-          <div class="bg-black/30 backdrop-blur-md p-1.5 rounded-xl flex gap-1.5 border border-purple-500/20 ml-auto shadow-inner">
-            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-purple-600 text-white shadow-md font-semibold transform hover:scale-[1.02]">
-              <i class="bi bi-person-plus"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-white/20 text-white rounded-pill px-2">0</span>
+          <div class="bg-black/30 backdrop-blur-md p-1.5 rounded-xl flex gap-1.5 border border-[#ff6b4a]/20 ml-auto shadow-inner">
+            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-[#ff6b4a] text-white shadow-md font-semibold transform hover:scale-[1.02]">
+              <i class="bi bi-person-plus"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-white/25 text-white rounded-pill px-2">0</span>
             </button>
-            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-purple-200 hover:text-white hover:bg-purple-500/20">
+            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-slate-300 hover:text-white hover:bg-[#ff6b4a]/20">
               <i class="bi bi-person-bounding-box"></i> Personal Details
             </button>
-            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-purple-200 hover:text-white hover:bg-purple-500/20">
+            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-slate-300 hover:text-white hover:bg-[#ff6b4a]/20">
               <i class="bi bi-cash-stack"></i> Payroll Profile
             </button>
           </div>
         </div>
       </div>
 
-      <!-- METRIC CARDS SECTION -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-purple-200 group">
-          <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110">
+      <!-- METRIC CARDS -->
+      <div data-aos="fade-up" data-aos-delay="100" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white-50 p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-2xl bg-[#ff6b4a]/10 text-[#ff6b4a] flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
             <i class="bi bi-people-fill"></i>
           </div>
           <div>
             <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Hired</p>
-            <h3 id="statTotalHired" class="text-2xl font-black text-slate-800">0</h3>
+            <h3 id="statTotalHired" class="text-2xl font-black text-slate-800 transition-all duration-300">0</h3>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-purple-200 group">
-          <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110">
+        <div class="bg-white-50 p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-2xl bg-[#ff6b4a]/10 text-[#ff6b4a] flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
             <i class="bi bi-person-plus-fill"></i>
           </div>
           <div>
             <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Onboarding</p>
-            <h3 id="statOnboarding" class="text-2xl font-black text-slate-800">0</h3>
+            <h3 id="statOnboarding" class="text-2xl font-black text-slate-800 transition-all duration-300">0</h3>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 md:col-span-2 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-purple-200">
+        <div class="bg-white-50 p-5 rounded-2xl shadow-sm border border-slate-200/80 md:col-span-2 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50">
           <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">Employees per Department</p>
           <div id="deptBreakdownContainer" class="flex flex-wrap gap-2">
             <span class="text-xs text-slate-400 italic">Calculating breakdown...</span>
@@ -332,20 +354,61 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         </div>
       </div>
 
-      <div class="mb-6 flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100 transition-all duration-300 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/10">
-        <div class="relative flex-1">
-          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-            <i class="bi bi-search"></i>
-          </span>
-          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2.5 rounded-xl text-sm border-slate-200 focus:border-purple-500 focus:ring-0 shadow-none bg-slate-50/50" placeholder="Search by ID, name, department, or role...">
+      <!-- FEATURE BAR -->
+      <div data-aos="fade-up" data-aos-delay="200" class="mb-6 space-y-4">
+        <div class="flex flex-col md:flex-row items-center gap-3 bg-white-50 p-4 rounded-2xl shadow-sm border border-slate-200/80">
+          <div class="relative flex-1 w-full">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+              <i class="bi bi-search"></i>
+            </span>
+            <input id="searchInput" type="text" class="form-control pl-10 pr-10 py-2.5 rounded-xl text-sm border-slate-200 focus:border-[#ff6b4a] focus:ring-0 shadow-none bg-white transition-all" placeholder="Search by ID, name, department, or role...">
+            <button onclick="clearSearchInput()" id="clearSearchBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#ff6b4a] d-none transition-colors" title="Clear Search">
+              <i class="bi bi-x-circle-fill text-base"></i>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+            <button onclick="exportTableToCSV()" class="btn btn-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all transform hover:scale-105">
+              <i class="bi bi-file-earmark-arrow-down-fill text-emerald-600"></i> Export CSV
+            </button>
+            <button onclick="window.print()" class="btn btn-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all transform hover:scale-105">
+              <i class="bi bi-printer-fill text-slate-600"></i> Print List
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 px-2">
+          <div class="flex items-center gap-2 flex-wrap" id="departmentFilterPills">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-1"><i class="bi bi-funnel-fill text-[#ff6b4a]"></i> Filter Dept:</span>
+            <button onclick="filterByDepartment('All')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#ff6b4a] text-white shadow-sm transition-all transform hover:scale-105 active">All Departments</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <span>Show:</span>
+              <select id="rowsPerPageSelect" onchange="changeRowsPerPage()" class="form-control form-control-sm text-xs rounded-lg py-1 px-2 border-slate-200 w-auto">
+                <option value="5">5 rows</option>
+                <option value="10" selected>10 rows</option>
+                <option value="25">25 rows</option>
+                <option value="all">All rows</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 overflow-hidden">
-        <div class="table-responsive bg-white rounded-xl overflow-hidden">
+      <!-- TABLES SECTION -->
+      <div class="bg-white-50 rounded-2xl shadow-sm border border-slate-200/80 p-6 overflow-hidden transition-all duration-300">
+        
+        <div class="table-responsive bg-white rounded-xl overflow-hidden border border-slate-200/60 p-2 relative">
           
-          <!-- 1. NEWLY HIRED / ONBOARDING TABLE -->
-          <table id="newlyHiredTable" class="table table-hover align-middle mb-0 text-sm">
+          <div id="tableLoadingOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-xs z-20 flex flex-col items-center justify-center transition-opacity d-none">
+            <div class="w-8 h-8 border-3 border-[#ff6b4a] border-t-transparent rounded-full animate-spin mb-2"></div>
+            <span class="text-xs font-semibold text-slate-600">Updating table view...</span>
+          </div>
+
+          <!-- 1. NEWLY HIRED TABLE -->
+          <table id="newlyHiredTable" class="table table-hover align-middle mb-0 text-sm animate-fade-in">
             <thead>
               <tr class="border-b border-slate-200">
                 <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Full Name</th>
@@ -357,14 +420,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <tbody id="newlyHiredBody"></tbody>
           </table>
 
-          <!-- 2. PERSONAL DETAILS TABLE (Hired) -->
-          <table id="personalTable" class="table table-hover align-middle mb-0 text-sm d-none">
+          <!-- 2. PERSONAL DETAILS TABLE -->
+          <table id="personalTable" class="table table-hover align-middle mb-0 text-sm d-none animate-fade-in">
             <thead>
               <tr class="border-b border-slate-200">
                 <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Employee ID</th>
                 <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Role</th>
-                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Department</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Email</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Role & Dept</th>
+                <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0 text-center">Contract</th>
                 <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0 text-center">Action</th>
               </tr>
             </thead>
@@ -372,7 +436,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           </table>
 
           <!-- 3. PAYROLL PROFILE TABLE -->
-          <table id="payrollTable" class="table table-hover align-middle mb-0 text-sm d-none">
+          <table id="payrollTable" class="table table-hover align-middle mb-0 text-sm d-none animate-fade-in">
             <thead>
               <tr class="border-b border-slate-200">
                 <th class="py-3 px-4 bg-transparent text-slate-700 font-bold border-0">Full Name</th>
@@ -389,6 +453,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
           </table>
 
         </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 px-2 text-xs text-slate-500 font-medium">
+          <div id="tableRecordCountInfo">Showing 0 entries</div>
+          <div class="flex items-center gap-1" id="paginationControlsContainer"></div>
+        </div>
+
       </div>
     </div>
 
@@ -398,14 +468,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         <div class="modal-content rounded-3xl shadow-2xl border-0 overflow-hidden animate-fade-in">
           <div class="modal-header border-0 bg-slate-50 px-6 py-4 no-print">
             <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2">
-              <i class="bi bi-receipt text-purple-600"></i> Corporate Payroll Statement (PH Standards)
+              <i class="bi bi-receipt text-[#ff6b4a]"></i> Corporate Payroll Statement (PH Standards)
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-6" id="printArea"></div>
           <div class="modal-footer border-0 bg-slate-50 px-6 py-4 no-print">
             <button type="button" class="btn btn-light font-semibold border text-slate-600 px-4 rounded-xl" data-bs-dismiss="modal">Close</button>
-            <button type="button" id="btnPrintStatement" class="btn font-semibold bg-purple-600 hover:bg-purple-700 text-white border-0 px-5 rounded-xl flex items-center gap-2 shadow-sm transition-all duration-200">
+            <button type="button" id="btnPrintStatement" class="btn font-semibold bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white border-0 px-5 rounded-xl flex items-center gap-2 shadow-sm transition-all duration-200">
               <i class="bi bi-printer"></i> Print Statement
             </button>
           </div>
@@ -413,13 +483,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       </div>
     </div>
 
-    <!-- ONBOARDING MODAL FORM -->
+    <!-- ONBOARDING FORM MODAL -->
     <div class="modal fade" id="onboardingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-3xl shadow-2xl border-0 overflow-hidden animate-fade-in">
           <div class="modal-header border-0 bg-slate-50 px-6 py-4">
             <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2">
-              <i class="bi bi-person-check text-purple-600"></i> Complete Onboarding Details
+              <i class="bi bi-person-check text-[#ff6b4a]"></i> Complete Onboarding Details
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
@@ -434,29 +504,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Number</label>
-                  <input type="text" id="modalContactNumber" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="e.g. 09123456789">
+                  <input type="text" id="modalContactNumber" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="e.g. 09123456789">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Name</label>
-                  <input type="text" id="modalCompanyName" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="PannaKoda Stores Inc.">
+                  <input type="text" id="modalCompanyName" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="PannaKoda Stores Inc.">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Address</label>
-                  <input type="text" id="modalCompanyAddress" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="e.g. Dasmarinas Cavite">
+                  <input type="text" id="modalCompanyAddress" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="e.g. Dasmarinas Cavite">
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date of Birth</label>
-                  <input type="date" id="modalDob" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <input type="date" id="modalDob" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Civil Status</label>
-                  <select id="modalCivilStatus" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <select id="modalCivilStatus" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                     <option value="Single">Single</option>
                     <option value="Married">Married</option>
                     <option value="Widowed">Widowed</option>
@@ -464,14 +534,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nationality</label>
-                  <input type="text" id="modalNationality" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="Filipino">
+                  <input type="text" id="modalNationality" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="Filipino">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Gender</label>
-                  <select id="modalGender" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <select id="modalGender" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
@@ -479,7 +549,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Location</label>
-                  <input type="text" id="modalWorkLocation" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="Main Office">
+                  <input type="text" id="modalWorkLocation" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="Main Office">
                 </div>
               </div>
 
@@ -490,8 +560,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Employee Gmail</label>
-                  <input type="text" id="modalEmployeeGmail" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-purple-700 font-medium">
+                  <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Email (Initial)</label>
+                  <input type="text" id="modalEmployeeGmail" class="form-control text-sm rounded-xl border-slate-200 text-[#ff6b4a] font-medium" placeholder="employee@gmail.com">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Gmail</label>
@@ -501,27 +571,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
               <div>
                 <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Set Password</label>
-                <input type="password" id="modalPassword" required class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="Ilagay ang strong password" oninput="validatePasswordStrength(this.value)">
-                <div id="passwordFeedback" class="text-[11px] mt-1 text-slate-400 font-medium">
-                  Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.
+                <input type="text" id="modalPassword" value="@Lozada23" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-[#ff6b4a] font-semibold cursor-not-allowed">
+                <div id="passwordFeedback" class="text-[11px] mt-1 text-emerald-600 font-semibold">
+                  <i class="bi bi-check-circle-fill"></i> Fixed Default Password
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Department</label>
-                  <input type="text" id="modalDepartment" required class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
+                  <input type="text" id="modalDepartment" required class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Role / Position Tier</label>
-                  <select id="modalRole" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" onchange="updateDefaultSalary()">
+                  <select id="modalRole" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" onchange="updateDefaultSalary()">
                     <option value="Staff">Staff</option>
                     <option value="Manager">Manager</option>
                   </select>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Employment Type</label>
-                  <select id="modalEmploymentType" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <select id="modalEmploymentType" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                     <option value="Regular">Regular</option>
                     <option value="Probationary">Probationary</option>
                     <option value="Part-Time">Part-Time</option>
@@ -533,33 +603,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Immediate Supervisor</label>
-                  <input type="text" id="modalSupervisor" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="Supervisor Name">
+                  <input type="text" id="modalSupervisor" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="Supervisor Name">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Base Salary (PHP)</label>
-                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" placeholder="Base salary">
+                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="Base salary">
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date Hired</label>
-                  <input type="date" id="modalDateHired" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <input type="date" id="modalDateHired" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract Start Date</label>
-                  <input type="date" id="modalContractStart" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <input type="date" id="modalContractStart" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract End Date</label>
-                  <input type="date" id="modalContractEnd" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0">
+                  <input type="date" id="modalContractEnd" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract Duration (Years)</label>
-                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-0" value="1.0">
+                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="1.0">
                 </div>
               </div>
 
@@ -586,7 +656,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             </div>
             <div class="modal-footer border-0 bg-slate-50 px-6 py-4">
               <button type="button" class="btn btn-light font-semibold border text-slate-600 px-4 rounded-xl" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn font-semibold bg-purple-600 hover:bg-purple-700 text-white border-0 px-5 rounded-xl shadow-sm transition-all duration-200">Fully Hired & Save</button>
+              <button type="submit" class="btn font-semibold bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white border-0 px-5 rounded-xl shadow-sm transition-all duration-200">Fully Hired & Save</button>
             </div>
           </form>
         </div>
@@ -601,15 +671,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     let allEmployees = [];
     let bsModalInstance = null;
     let onboardingModalInstance = null;
+    
+    let selectedDepartmentFilter = 'All';
+    let currentPage = 1;
+    let rowsPerPage = 10;
 
     async function loadEmployees() {
+      showTableLoading(true);
       try {
         const response = await fetch(`${window.location.pathname}?action=fetch_employees`);
         allEmployees = response.ok ? await response.json() : [];
         updateMetrics();
+        buildDepartmentFilterPills();
         renderTables();
       } catch (err) {
         console.error("Pipeline failure:", err);
+      } finally {
+        showTableLoading(false);
+      }
+    }
+
+    function showTableLoading(show) {
+      const overlay = document.getElementById('tableLoadingOverlay');
+      if (overlay) {
+        if (show) overlay.classList.remove('d-none');
+        else overlay.classList.add('d-none');
       }
     }
 
@@ -641,11 +727,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       } else {
         for (const [dept, count] of Object.entries(deptCounts)) {
           const badge = document.createElement('div');
-          badge.className = "bg-purple-50 border border-purple-100 text-purple-800 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 hover:bg-purple-100";
-          badge.innerHTML = `<span>${dept}:</span> <span class="bg-purple-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-bold">${count}</span>`;
+          badge.className = "bg-orange-50 border border-orange-100 text-orange-800 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 hover:bg-orange-100 transform hover:scale-105";
+          badge.innerHTML = `<span>${dept}:</span> <span class="bg-[#ff6b4a] text-white px-2 py-0.5 rounded-lg text-[10px] font-bold">${count}</span>`;
           deptContainer.appendChild(badge);
         }
       }
+    }
+
+    function buildDepartmentFilterPills() {
+      const container = document.getElementById('departmentFilterPills');
+      const allBtnHTML = `<span class="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-1"><i class="bi bi-funnel-fill text-[#ff6b4a]"></i> Filter Dept:</span>
+        <button onclick="filterByDepartment('All')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold ${selectedDepartmentFilter === 'All' ? 'bg-[#ff6b4a] text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} transition-all transform hover:scale-105">All Departments</button>`;
+      
+      let depts = new Set();
+      allEmployees.forEach(e => { if(e.department) depts.add(e.department); });
+
+      let pillsHTML = allBtnHTML;
+      depts.forEach(d => {
+        const isActive = selectedDepartmentFilter === d;
+        pillsHTML += `<button onclick="filterByDepartment('${d}')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold ${isActive ? 'bg-[#ff6b4a] text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} transition-all transform hover:scale-105">${d}</button>`;
+      });
+      container.innerHTML = pillsHTML;
+    }
+
+    function filterByDepartment(dept) {
+      selectedDepartmentFilter = dept;
+      currentPage = 1;
+      buildDepartmentFilterPills();
+      renderTables();
+    }
+
+    function clearSearchInput() {
+      const input = document.getElementById('searchInput');
+      input.value = '';
+      document.getElementById('clearSearchBtn').classList.add('d-none');
+      renderTables();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const clearBtn = document.getElementById('clearSearchBtn');
+      if (val.length > 0) clearBtn.classList.remove('d-none');
+      else clearBtn.classList.add('d-none');
+      currentPage = 1;
+      renderTables();
+    });
+
+    function changeRowsPerPage() {
+      const val = document.getElementById('rowsPerPageSelect').value;
+      rowsPerPage = val === 'all' ? 999999 : parseInt(val);
+      currentPage = 1;
+      renderTables();
     }
 
     function updateDefaultSalary() {
@@ -658,15 +790,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
     function updateModalGmailPreview() {
       const deptInput = document.getElementById('modalDepartment').value.trim().toLowerCase();
-      const employeeEmailField = document.getElementById('modalEmployeeGmail');
       const companyEmailField = document.getElementById('modalCompanyGmail');
       const empName = document.getElementById('modalName').value;
       const empId = document.getElementById('modalId').value;
-
-      const nameParts = empName.trim().split(' ');
-      const firstname = nameParts[0] ? nameParts[0].toLowerCase().replace(/[^a-z]/g, '') : 'user';
-      const lastname = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase().replace(/[^a-z]/g, '') : firstname;
-      employeeEmailField.value = `${lastname}.${firstname}@pannakoda.com`;
 
       if (deptInput === 'hr') {
         companyEmailField.value = 'hr@pannakoda.com';
@@ -681,24 +807,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       }
     }
 
-    function validatePasswordStrength(password) {
-      const feedback = document.getElementById('passwordFeedback');
-      
-      const minLength = password.length >= 8;
-      const hasUpperCase = /[A-Z]/.test(password);
-      const hasLowerCase = /[a-z]/.test(password);
-      const hasNumbers = /\d/.test(password);
-      const hasNonalphanumeric = /[\W_]/.test(password);
-
-      if (minLength && hasUpperCase && hasLowerCase && hasNumbers && hasNonalphanumeric) {
-        feedback.className = "text-[11px] mt-1 text-emerald-600 font-semibold";
-        feedback.innerHTML = '<i class="bi bi-check-circle-fill"></i> Strong password!';
-      } else {
-        feedback.className = "text-[11px] mt-1 text-rose-500 font-semibold";
-        feedback.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Mahina pa ang password. Sundin ang kinakailangan.';
-      }
-    }
-
     function renderTables() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       
@@ -707,8 +815,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         const name = String(emp.full_name || '').toLowerCase();
         const dept = String(emp.department || '').toLowerCase();
         const role = String(emp.role || '').toLowerCase();
-        return customId.includes(query) || name.includes(query) || dept.includes(query) || role.includes(query);
+        const gmail = String(emp.email || '').toLowerCase(); // Pinalitan ang employee_gmail ng email
+        
+        const matchesSearch = customId.includes(query) || name.includes(query) || dept.includes(query) || role.includes(query) || gmail.includes(query);
+        const matchesDept = selectedDepartmentFilter === 'All' || emp.department === selectedDepartmentFilter;
+        
+        return matchesSearch && matchesDept;
       });
+
+      const totalRecords = filtered.length;
+      const totalPages = Math.ceil(totalRecords / rowsPerPage) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const paginatedItems = filtered.slice(startIndex, startIndex + rowsPerPage);
 
       const newlyHiredBody = document.getElementById('newlyHiredBody');
       const personalBody = document.getElementById('personalBody');
@@ -722,23 +842,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       let hiredPersonalCount = 0;
       let activePayrollCount = 0;
 
-      filtered.forEach(emp => {
+      paginatedItems.forEach(emp => {
         const status = (emp.status || 'onboarding').toLowerCase();
         const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
         
         const displayRole = (emp.role && emp.role.trim() !== '') ? emp.role : 'Staff';
-        const roleClass = displayRole === 'Manager' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        const roleClass = displayRole === 'Manager' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200';
 
         if (status !== 'hired') {
           onboardingCount++;
           const trNew = document.createElement('tr');
-          trNew.className = "border-b border-slate-100 hover:bg-purple-50/40 transition-all duration-200";
+          trNew.className = "border-b border-slate-100 hover:bg-orange-50/40 transition-all duration-200";
           trNew.innerHTML = `
             <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
             <td class="py-3.5 px-4"><span class="${roleClass} px-3 py-1 rounded-lg text-xs font-semibold border">${displayRole}</span></td>
             <td class="py-3.5 px-4"><span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Onboarding</span></td>
             <td class="py-3.5 px-4 text-center">
-              <button onclick="openOnboardingModal(${emp.id})" class="btn btn-sm py-1.5 px-3.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm transition-all duration-200 hover:scale-105">
+              <button onclick="openOnboardingModal(${emp.id})" class="btn btn-sm py-1.5 px-3.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white border-0 shadow-sm transition-all duration-200 hover:scale-105">
                 <i class="bi bi-person-check-fill"></i> Setup Form / Onboarding
               </button>
             </td>
@@ -747,12 +867,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         } else {
           hiredPersonalCount++;
           const trPersonal = document.createElement('tr');
-          trPersonal.className = "border-b border-slate-100 hover:bg-purple-50/40 transition-all duration-200";
+          trPersonal.className = "border-b border-slate-100 hover:bg-orange-50/40 transition-all duration-200";
           trPersonal.innerHTML = `
             <td class="px-6 py-4 font-mono text-slate-600">${emp.display_emp_id || ''}</td>
             <td class="px-6 py-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
-            <td class="px-6 py-4"><span class="${roleClass} px-3 py-1 rounded-lg text-xs font-semibold border">${displayRole}</span></td>
-            <td class="px-6 py-4 text-slate-600">${emp.department || 'Unassigned'}</td>
+            <td class="px-6 py-4 font-mono text-xs text-[#ff6b4a]">${emp.email || 'Not registered'}</td>
+            <td class="px-6 py-4">
+              <div class="font-semibold text-slate-800">${emp.department || 'Unassigned'}</div>
+              <span class="${roleClass} px-2.5 py-0.5 rounded-md text-[11px] font-medium border inline-block mt-1">${displayRole}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <button onclick="viewEmployeeContract(${emp.id})" class="btn btn-sm bg-orange-50 hover:bg-orange-100 text-[#ff6b4a] border border-orange-200 py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto transition-all">
+                <i class="bi bi-file-earmark-text-fill"></i> View Contract
+              </button>
+            </td>
             <td class="px-6 py-4 text-center">
               <button onclick="triggerDelete(${emp.id}, '${(emp.full_name || '').replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-danger py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1 mx-auto transition-all duration-200 hover:scale-105">
                 <i class="bi bi-trash3"></i> Delete
@@ -763,17 +891,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
           activePayrollCount++;
           const trPayroll = document.createElement('tr');
-          trPayroll.className = "border-b border-slate-100 hover:bg-purple-50/40 transition-all duration-200";
+          trPayroll.className = "border-b border-slate-100 hover:bg-orange-50/40 transition-all duration-200";
           trPayroll.innerHTML = `
             <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
-            <td class="py-3.5 px-4 font-semibold text-xs ${displayRole === 'Manager' ? 'text-purple-700' : 'text-indigo-700'}">${displayRole}</td>
+            <td class="py-3.5 px-4 font-semibold text-xs ${displayRole === 'Manager' ? 'text-orange-600' : 'text-slate-700'}">${displayRole}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.sss_id || '33-1234567-8'}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.philhealth_id || '12-345678901-2'}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.pagibig_id || '1210-9876-5432'}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.gsis_id || '-'}</td>
             <td class="py-3.5 px-4 text-end font-bold text-slate-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
             <td class="py-3.5 px-4 text-center">
-              <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white border-0 transition-all duration-200">
+              <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-orange-50 text-[#ff6b4a] hover:bg-[#ff6b4a] hover:text-white border border-orange-200 transition-all duration-200">
                 <i class="bi bi-file-earmark-spreadsheet"></i> Payslip
               </button>
             </td>
@@ -782,15 +910,125 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         }
       });
 
-      if (onboardingCount === 0) {
-        newlyHiredBody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400 italic">No candidates undergoing onboarding.</td></tr>`;
+      if (paginatedItems.length === 0) {
+        const emptyHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400 italic">No records found matching criteria.</td></tr>`;
+        newlyHiredBody.innerHTML = emptyHTML;
+        personalBody.innerHTML = emptyHTML;
+        payrollBody.innerHTML = emptyHTML;
       }
-      if (hiredPersonalCount === 0) {
-        personalBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-400 italic">No hired operational records matched.</td></tr>`;
+
+      document.getElementById('tableRecordCountInfo').innerText = `Showing ${totalRecords > 0 ? startIndex + 1 : 0} to ${Math.min(startIndex + rowsPerPage, totalRecords)} of ${totalRecords} entries`;
+      renderPaginationControls(totalPages);
+    }
+
+    function renderPaginationControls(totalPages) {
+      const container = document.getElementById('paginationControlsContainer');
+      let html = '';
+      
+      html += `<button onclick="changePage(${currentPage - 1})" class="px-2.5 py-1 rounded-lg border bg-white text-slate-600 hover:bg-slate-100 text-xs ${currentPage === 1 ? 'disabled opacity-50 pointer-events-none' : ''}"><i class="bi bi-chevron-left"></i></button>`;
+      
+      for(let i=1; i<=totalPages; i++) {
+        if(i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+          html += `<button onclick="changePage(${i})" class="px-3 py-1 rounded-lg border text-xs font-semibold ${currentPage === i ? 'bg-[#ff6b4a] text-white border-[#ff6b4a]' : 'bg-white text-slate-600 hover:bg-slate-100'}">${i}</button>`;
+        } else if(i === currentPage - 2 || i === currentPage + 2) {
+          html += `<span class="px-2 text-slate-400">...</span>`;
+        }
       }
-      if (activePayrollCount === 0) {
-        payrollBody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400 italic">No operational payroll records matched.</td></tr>`;
+
+      html += `<button onclick="changePage(${currentPage + 1})" class="px-2.5 py-1 rounded-lg border bg-white text-slate-600 hover:bg-slate-100 text-xs ${currentPage === totalPages ? 'disabled opacity-50 pointer-events-none' : ''}"><i class="bi bi-chevron-right"></i></button>`;
+      container.innerHTML = html;
+    }
+
+    function changePage(targetPage) {
+      currentPage = targetPage;
+      renderTables();
+    }
+
+    function exportTableToCSV() {
+      if(allEmployees.length === 0) {
+        Swal.fire('Notice', 'No employee records available to export.', 'info');
+        return;
       }
+
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Employee ID,Full Name,Email,Department,Position/Role,Status,Employment Type,Base Salary\r\n";
+
+      allEmployees.forEach(emp => {
+        let row = [
+          `"${emp.display_emp_id || ''}"`,
+          `"${emp.full_name || ''}"`,
+          `"${emp.email || ''}"`,
+          `"${emp.department || ''}"`,
+          `"${emp.role || ''}"`,
+          `"${emp.status || ''}"`,
+          `"${emp.employment_type || ''}"`,
+          `"${emp.salary || 0}"`
+        ];
+        csvContent += row.join(",") + "\r\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `employee_directory_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Export Successful',
+        text: 'Employee database downloaded as CSV file.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+    function viewEmployeeContract(id) {
+      const emp = allEmployees.find(e => e.id == id);
+      if (!emp) return;
+
+      const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
+      const formattedSalary = baseSalary.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+      Swal.fire({
+        title: `<div class="text-left"><h4 class="font-bold text-slate-900 text-base mb-0"><i class="bi bi-file-earmark-text text-[#ff6b4a]"></i> Employment Contract Agreement</h4><span class="text-xs text-slate-400 font-normal">Reference ID: ${emp.display_emp_id}</span></div>`,
+        html: `
+          <div class="text-left text-xs space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 max-h-[60vh] overflow-y-auto">
+            <div class="border-b border-slate-200 pb-2">
+              <p class="font-bold text-slate-800 text-sm mb-1">${emp.full_name}</p>
+              <p class="text-slate-500"><strong>Email:</strong> <span class="text-[#ff6b4a] font-mono">${emp.email || 'N/A'}</span></p>
+              <p class="text-slate-500"><strong>Company Email:</strong> <span class="text-emerald-700 font-mono">${emp.company_gmail || 'N/A'}</span></p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2">
+              <div><strong>Department:</strong> ${emp.department || 'Unassigned'}</div>
+              <div><strong>Position / Role:</strong> ${emp.role || 'Staff'}</div>
+              <div><strong>Employment Type:</strong> ${emp.employment_type || 'Regular'}</div>
+              <div><strong>Work Location:</strong> ${emp.work_location || 'Main Office'}</div>
+              <div><strong>Immediate Supervisor:</strong> ${emp.immediate_supervisor || 'None specified'}</div>
+              <div><strong>Base Salary:</strong> ₱${formattedSalary} / month</div>
+            </div>
+
+            <div class="border-t border-slate-200 pt-2 space-y-1">
+              <p><strong>Date Hired:</strong> ${emp.date_hired || 'N/A'}</p>
+              <p><strong>Contract Start Date:</strong> ${emp.contract_start_date || 'N/A'}</p>
+              <p><strong>Contract End Date:</strong> ${emp.contract_end_date || 'N/A'}</p>
+              <p><strong>Contract Duration:</strong> ${emp.contract_duration_years || 1.0} Year(s)</p>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-amber-900 text-[11px]">
+              <i class="bi bi-info-circle-fill"></i> This digital contract binds the employee to the company policies of <strong>${emp.company_name || 'PannaKoda Stores Inc.'}</strong> located at <em>${emp.company_address || 'Cavite, Philippines'}</em>, as configured during the onboarding setup.
+            </div>
+          </div>
+        `,
+        width: '600px',
+        confirmButtonText: 'Close Contract',
+        confirmButtonColor: '#ff6b4a',
+        customClass: {
+          popup: 'rounded-3xl shadow-2xl'
+        }
+      });
     }
 
     function openOnboardingModal(id) {
@@ -809,6 +1047,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalWorkLocation').value = emp.work_location || 'Main Office';
       document.getElementById('modalDepartment').value = emp.department || '';
 
+      document.getElementById('modalEmployeeGmail').value = emp.email || '';
       updateModalGmailPreview();
 
       document.getElementById('modalAddress').value = emp.address || '';
@@ -818,18 +1057,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalDateHired').value = emp.date_hired || new Date().toISOString().split('T')[0];
       document.getElementById('modalContractStart').value = emp.contract_start_date || '';
       document.getElementById('modalContractEnd').value = emp.contract_end_date || '';
-      document.getElementById('modalContractDuration').value = emp.contract_duration_years || 1.0;
+      document.getElementById('modalContractDuration').value = emp.contract_duration_years || '1.0';
 
-      document.getElementById('modalPassword').value = '';
-      document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-slate-400 font-medium";
-      document.getElementById('passwordFeedback').innerHTML = "Dapat 8+ chars, may malaking titik, maliit na titik, numero, at symbol.";
+      const defaultSal = (document.getElementById('modalRole').value === 'Manager') ? 45000 : 22000;
+      document.getElementById('modalSalary').value = (emp.salary && parseFloat(emp.salary) > 0) ? emp.salary : defaultSal;
+
       document.getElementById('modalSss').value = emp.sss_id || '33-1234567-8';
       document.getElementById('modalPhilhealth').value = emp.philhealth_id || '12-345678901-2';
       document.getElementById('modalPagibig').value = emp.pagibig_id || '1210-9876-5432';
       document.getElementById('modalGsis').value = emp.gsis_id || '-';
-      
-      const defaultSal = ((emp.role || 'Staff') === 'Manager') ? 45000 : 22000;
-      document.getElementById('modalSalary').value = (emp.salary && parseFloat(emp.salary) > 0) ? emp.salary : defaultSal;
+
+      document.getElementById('modalPassword').value = '@Lozada23';
+      document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-emerald-600 font-semibold";
+      document.getElementById('passwordFeedback').innerHTML = '<i class="bi bi-check-circle-fill"></i> Fixed Default Password';
 
       if (!onboardingModalInstance) {
         onboardingModalInstance = new bootstrap.Modal(document.getElementById('onboardingModal'));
@@ -839,19 +1079,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
     async function submitOnboarding(event) {
       event.preventDefault();
-      const id = document.getElementById('modalId').value;
-      const password = document.getElementById('modalPassword').value;
-      
-      let salaryVal = document.getElementById('modalSalary').value;
-      const role = document.getElementById('modalRole').value;
-      if (!salaryVal || isNaN(salaryVal) || parseFloat(salaryVal) <= 0) {
-        salaryVal = (role === 'Manager') ? 45000 : 22000;
-      }
-      
+
       const formData = new URLSearchParams();
       formData.append('action', 'complete_onboarding');
-      formData.append('id', id);
-      formData.append('password', password);
+      formData.append('id', document.getElementById('modalId').value);
+      formData.append('password', document.getElementById('modalPassword').value);
       formData.append('company_name', document.getElementById('modalCompanyName').value);
       formData.append('company_address', document.getElementById('modalCompanyAddress').value);
       formData.append('contact_number', document.getElementById('modalContactNumber').value);
@@ -860,15 +1092,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       formData.append('nationality', document.getElementById('modalNationality').value);
       formData.append('gender', document.getElementById('modalGender').value);
       formData.append('department', document.getElementById('modalDepartment').value);
-      formData.append('role', role);
+      formData.append('role', document.getElementById('modalRole').value);
       formData.append('employment_type', document.getElementById('modalEmploymentType').value);
       formData.append('immediate_supervisor', document.getElementById('modalSupervisor').value);
+      formData.append('salary', document.getElementById('modalSalary').value);
       formData.append('date_hired', document.getElementById('modalDateHired').value);
       formData.append('contract_start_date', document.getElementById('modalContractStart').value);
       formData.append('contract_end_date', document.getElementById('modalContractEnd').value);
       formData.append('contract_duration_years', document.getElementById('modalContractDuration').value);
       formData.append('work_location', document.getElementById('modalWorkLocation').value);
-      formData.append('salary', salaryVal);
 
       try {
         const res = await fetch(window.location.pathname, {
@@ -882,8 +1114,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             icon: 'success',
             title: 'Fully Hired!',
             text: result.message,
-            timer: 1500,
-            showConfirmButton: false
+            confirmButtonText: 'Got it'
           });
           loadEmployees();
         } else {
@@ -901,7 +1132,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         text: `Are you sure you want to delete this data "${name}"?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#9333ea',
+        confirmButtonColor: '#ff6b4a',
         cancelButtonColor: '#64748b',
         confirmButtonText: 'Yes',
         cancelButtonText: 'Cancel'
@@ -921,6 +1152,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               Swal.fire('Deleted!', resultData.message, 'success');
               allEmployees = allEmployees.filter(emp => emp.id != dbId);
               updateMetrics();
+              buildDepartmentFilterPills();
               renderTables();
             } else {
               Swal.fire('Error!', resultData.message || "Failed.", 'error');
@@ -1001,7 +1233,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <h3 class="font-black text-xl tracking-wide uppercase text-slate-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
             <p class="text-[11px] text-slate-400 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
             <p class="text-[11px] text-slate-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
-            <div class="mt-3 inline-block bg-purple-50 text-purple-800 font-mono text-[11px] font-bold px-3 py-1 rounded-lg border border-purple-100">
+            <div class="mt-3 inline-block bg-orange-50 text-orange-800 font-mono text-[11px] font-bold px-3 py-1 rounded-lg border border-orange-100">
               OFFICIAL PAYSLIP STATEMENT | ${cutOffPeriod}
             </div>
           </div>
@@ -1010,13 +1242,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
              <div>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-slate-800">${emp.display_emp_id}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-slate-800">${emp.full_name}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Email:</span> <span class="font-mono text-[#ff6b4a]">${emp.email || 'N/A'}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Department:</span> <span class="font-semibold text-slate-800">${emp.department}</span></p>
-              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Tax Status:</span> <span class="font-semibold text-slate-800">Single / S / Z</span></p>
              </div>
              <div>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-slate-800">${emp.role}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-slate-800">${payDateStr}</span></p>
-              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-purple-600">${emp.employment_type || 'Regular'}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-[#ff6b4a]">${emp.employment_type || 'Regular'}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-slate-400 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
              </div>
           </div>
@@ -1074,13 +1306,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <div><span class="font-semibold text-slate-700">Monthly Net Pay Reference:</span> ₱${f(monthlyNet)}</div>
           </div>
 
-          <div class="bg-gradient-to-r from-purple-950 to-indigo-950 text-white p-4 rounded-2xl flex justify-between items-center shadow-md">
+          <div class="bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] text-white p-4 rounded-2xl flex justify-between items-center shadow-md border border-[#ff6b4a]/30">
             <div>
-              <h4 class="text-[10px] uppercase tracking-widest text-purple-200 font-semibold">Net Pay for this Period</h4>
-              <p class="text-[10px] text-purple-300/70">Kinsenas Payout (15-Day Cycle)</p>
+              <h4 class="text-[10px] uppercase tracking-widest text-[#ff6b4a] font-semibold">Net Pay for this Period</h4>
+              <p class="text-[10px] text-slate-400">Kinsenas Payout (15-Day Cycle)</p>
             </div>
             <div class="text-right">
-              <h2 class="text-2xl font-black text-purple-300 font-mono">₱${f(kinsenasNet)}</h2>
+              <h2 class="text-2xl font-black text-[#ff6b4a] font-mono">₱${f(kinsenasNet)}</h2>
             </div>
           </div>
         </div>
@@ -1099,9 +1331,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       tabs.forEach(id => {
         const btn = document.getElementById(id);
         if (id === activeBtnId) {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-purple-600 text-white shadow-md font-semibold transform hover:scale-[1.02]";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-[#ff6b4a] text-white shadow-md font-semibold transform hover:scale-[1.02]";
         } else {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-purple-200 hover:text-white hover:bg-purple-500/20";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-slate-300 hover:text-white hover:bg-[#ff6b4a]/20";
         }
       });
 
@@ -1109,7 +1341,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         const tbl = document.getElementById(id);
         if (id === activeTableId) {
           tbl.classList.remove('d-none');
-          tbl.classList.add('animate-fade-in');
         } else {
           tbl.classList.add('d-none');
         }
@@ -1119,9 +1350,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     document.getElementById('tabNewlyHired').addEventListener('click', () => switchTab('tabNewlyHired', 'newlyHiredTable'));
     document.getElementById('tabPersonal').addEventListener('click', () => switchTab('tabPersonal', 'personalTable'));
     document.getElementById('tabPayroll').addEventListener('click', () => switchTab('tabPayroll', 'payrollTable'));
-    document.getElementById('searchInput').addEventListener('input', renderTables);
+
     document.getElementById('btnPrintStatement').addEventListener('click', () => window.print());
-    window.addEventListener('DOMContentLoaded', loadEmployees);
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadEmployees();
+    });
+  </script>
+
+  <script>
+    AOS.init({
+        once: true,
+        offset: 50,
+        duration: 800,
+    });
   </script>
 </body>
 </html>

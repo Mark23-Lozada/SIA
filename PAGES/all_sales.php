@@ -8,12 +8,12 @@ if (!isset($_SESSION['role'])) {
 
 require_once __DIR__ . '../../project-test1/BACKEND/db_inventory.php';
 
-// Anti-Back Button Cache Control
+// Anti-Back Button Cache Control[cite: 1]
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Fix for ONLY_FULL_GROUP_BY error
+// Fix for ONLY_FULL_GROUP_BY error[cite: 1]
 $conn->query("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
 $current_page = basename($_SERVER['PHP_SELF']);
@@ -56,29 +56,29 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && $active_tab == 'live') {
     }
     ?>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div class="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 flex items-center justify-between transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:border-purple-300 animate-fade-in">
+        <div class="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 flex items-center justify-between transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:border-[#ff6b4a]/40 animate-fade-in">
             <div>
                 <span class="text-xs font-extrabold text-black uppercase tracking-wider block mb-1">Total Revenue (<?php echo ucfirst($view); ?>)</span>
                 <h3 class="text-2xl lg:text-3xl font-extrabold text-black">₱<?php echo number_format($grand_total, 2); ?></h3>
             </div>
-            <div class="w-14 h-14 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform duration-300 hover:rotate-6">
+            <div class="w-14 h-14 bg-orange-50 text-[#ff6b4a] rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform duration-300 hover:rotate-6 border border-[#ff6b4a]/20">
                 <i class="bi bi-cash-stack"></i>
             </div>
         </div>
-        <div class="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 flex items-center justify-between transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:border-purple-300 animate-fade-in">
+        <div class="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 flex items-center justify-between transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:border-[#ff6b4a]/40 animate-fade-in">
             <div>
                 <span class="text-xs font-extrabold text-black uppercase tracking-wider block mb-1">Total Transactions (<?php echo ucfirst($view); ?>)</span>
                 <h3 class="text-2xl lg:text-3xl font-extrabold text-black"><?php echo number_format($grand_trans); ?> Orders</h3>
             </div>
-            <div class="w-14 h-14 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform duration-300 hover:rotate-6">
+            <div class="w-14 h-14 bg-orange-50 text-[#ff6b4a] rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform duration-300 hover:rotate-6 border border-[#ff6b4a]/20">
                 <i class="bi bi-receipt"></i>
             </div>
         </div>
     </div>
 
-    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 mb-6 transition-all duration-300 hover:shadow-2xl animate-fade-in">
+    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 mb-6 transition-all duration-300 hover:shadow-2xl animate-fade-in">
         <h3 class="text-sm font-extrabold text-black uppercase tracking-wider mb-6 flex items-center gap-2">
-            <i class="bi bi-graph-up text-purple-700 text-lg"></i> Live Revenue Chart
+            <i class="bi bi-graph-up text-[#ff6b4a] text-lg"></i> Live Revenue Chart
         </h3>
         <div class="h-80 w-full">
             <canvas id="salesChart" 
@@ -88,28 +88,28 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && $active_tab == 'live') {
         </div>
     </div>
 
-    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 overflow-hidden animate-fade-in">
-        <div class="p-6 lg:p-8 border-b border-purple-100">
+    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 overflow-hidden animate-fade-in">
+        <div class="p-6 lg:p-8 border-b border-orange-100">
             <h3 class="text-sm font-extrabold text-black uppercase tracking-wider flex items-center gap-2">
-                <i class="bi bi-table text-purple-700 text-lg"></i> Breakdown Summary Table
+                <i class="bi bi-table text-[#ff6b4a] text-lg"></i> Breakdown Summary Table
             </h3>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto max-h-[350px] overflow-y-auto">
             <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-purple-50/70 border-b border-purple-100 text-black text-xs uppercase font-extrabold tracking-wider">
+                <thead class="sticky top-0 z-10">
+                    <tr class="bg-orange-50/90 backdrop-blur-md border-b border-orange-100 text-black text-xs uppercase font-extrabold tracking-wider">
                         <th class="p-4 pl-8">Timeframe / Period</th>
                         <th class="p-4 text-center">Transactions Count</th>
                         <th class="p-4 text-right pr-8">Subtotal Earnings</th>
                     </tr>
                 </thead>
-                <tbody class="text-sm divide-y divide-purple-50 text-black">
+                <tbody class="text-sm divide-y divide-orange-50 text-black">
                     <?php if (!empty($table_rows)): ?>
                         <?php foreach ($table_rows as $tr): ?>
-                            <tr class="hover:bg-purple-50/60 transition-all duration-200">
+                            <tr class="hover:bg-orange-50/60 transition-all duration-200">
                                 <td class="p-4 pl-8 font-bold text-black"><?php echo htmlspecialchars($tr['label_name']); ?></td>
-                                <td class="p-4 text-center font-extrabold text-purple-700"><?php echo $tr['total_transactions']; ?></td>
-                                <td class="p-4 text-right pr-8 font-extrabold text-purple-700">₱<?php echo number_format($tr['total_earnings'], 2); ?></td>
+                                <td class="p-4 text-center font-extrabold text-[#ff6b4a]"><?php echo $tr['total_transactions']; ?></td>
+                                <td class="p-4 text-right pr-8 font-extrabold text-[#ff6b4a]">₱<?php echo number_format($tr['total_earnings'], 2); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -277,11 +277,11 @@ foreach($graph_yearly_data as $y) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-purple-950/10">
+<html lang="en" class="h-full bg-slate/50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PannaKoda - Combined System Reports</title>
+    <title>PannaKoda - Combined System Reports & Tools</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -295,15 +295,8 @@ foreach($graph_yearly_data as $y) {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 15px rgba(147, 51, 234, 0.15); }
-            50% { box-shadow: 0 0 25px rgba(147, 51, 234, 0.35); }
-        }
         .animate-fade-in {
             animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .animate-pulse-glow {
-            animation: pulseGlow 3s infinite ease-in-out;
         }
         .hover-lift {
             transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
@@ -313,65 +306,86 @@ foreach($graph_yearly_data as $y) {
         }
     </style>
 </head>
-<body class="h-full flex overflow-hidden text-black antialiased selection:bg-purple-600 selection:text-white">
-    <div class="flex h-screen w-full overflow-hidden">
+<body class="h-full flex overflow-hidden text-black antialiased selection:bg-[#ff6b4a] selection:text-white bg-slate/50">
+    <div class="flex h-screen w-full overflow-hidden bg-slate/50" id="mainDashboardWrapper">
         <?php include 'sidebar.php'; ?>
         
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden md:hidden transition-all duration-300"></div>
 
-        <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-purple-50/30">
-            <header class="h-20 px-6 md:hidden flex items-center bg-white/90 backdrop-blur-2xl border-b border-purple-100 shrink-0 shadow-sm">
-                <button id="burgerToggle" class="p-2 -ml-2 rounded-2xl text-black hover:bg-purple-100 focus:outline-none transition-colors">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
-                <span class="ml-4 font-extrabold text-black tracking-tight">PannaKoda</span>
+        <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate/50">
+            <!-- TOP NAVBAR WITH FEATURE 1 (PH TIME CLOCK) POSITIONED AT THE TOP -->
+            <header class="h-20 px-6 flex items-center justify-between bg-white/90 backdrop-blur-2xl border-b border-orange-100 shrink-0 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <button id="burgerToggle" class="p-2 -ml-2 rounded-2xl text-black hover:bg-orange-100 focus:outline-none md:hidden transition-colors">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- FEATURE 1: Philippine Time Live Clock Widget -->
+                <div class="flex items-center gap-3">
+                    <div class="bg-orange-50 border border-[#ff6b4a]/20 px-4 py-2 rounded-2xl flex items-center gap-2.5 shadow-inner">
+                        <i class="bi bi-clock-history text-[#ff6b4a] animate-pulse"></i>
+                        <div>
+                            <span id="ph-clock" class="text-xs font-bold text-black font-mono">Loading...</span>
+                        </div>
+                    </div>
+                </div>
             </header>
              
-            <main class="flex-1 p-6 lg:p-8 space-y-6 overflow-y-auto">
-                
-                <!-- NAVIGATION BUTTON TABS FOR SWITCHING VIEWS -->
-                <div class="bg-white/90 backdrop-blur-2xl p-3 rounded-3xl shadow-lg shadow-purple-900/5 border border-purple-100 flex flex-wrap gap-2 items-center justify-between animate-fade-in">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <a href="?tab=analytics" class="px-5 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center gap-2 hover-lift <?php echo $active_tab == 'analytics' ? 'bg-purple-700 text-white shadow-lg shadow-purple-700/30' : 'bg-purple-50 text-black hover:bg-purple-100'; ?>">
-                            <i class="bi bi-grid-1x2-fill"></i> Analytics Dashboard
-                        </a>
-                        <a href="?tab=history" class="px-5 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center gap-2 hover-lift <?php echo $active_tab == 'history' ? 'bg-purple-700 text-white shadow-lg shadow-purple-700/30' : 'bg-purple-50 text-black hover:bg-purple-100'; ?>">
-                            <i class="fa-solid fa-clock-rotate-left"></i> Sales History Logs
-                        </a>
-                        <a href="?tab=live" class="px-5 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center gap-2 hover-lift <?php echo $active_tab == 'live' ? 'bg-purple-700 text-white shadow-lg shadow-purple-700/30' : 'bg-purple-50 text-black hover:bg-purple-100'; ?>">
-                            <i class="bi bi-activity"></i> Live Reports (Today/Month)
-                        </a>
-                    </div>
+            <main class="flex-1 p-6 lg:p-8 space-y-6 overflow-y-auto bg-slate/50">
+                     
+                <!-- FEATURE BAR: 10 WORKING MODERN UTILITY FEATURES -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-5 gap-3">
+                    <button onclick="switchTab('analytics')" class="p-3 bg-white/90 hover:bg-orange-50 rounded-2xl border border-orange-100 shadow-sm text-center transition-all hover-lift">
+                        <i class="bi bi-grid-1x2-fill text-[#ff6b4a] text-lg block mb-1"></i>
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider block text-black">Analytics</span>
+                    </button>
+                    <button onclick="switchTab('history')" class="p-3 bg-white/90 hover:bg-orange-50 rounded-2xl border border-orange-100 shadow-sm text-center transition-all hover-lift">
+                        <i class="fa-solid fa-clock-rotate-left text-[#ff6b4a] text-lg block mb-1"></i>
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider block text-black">History Logs</span>
+                    </button>
+                    <button onclick="switchTab('live')" class="p-3 bg-white/90 hover:bg-orange-50 rounded-2xl border border-orange-100 shadow-sm text-center transition-all hover-lift">
+                        <i class="bi bi-activity text-[#ff6b4a] text-lg block mb-1"></i>
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider block text-black">Live Reports</span>
+                    </button>
+                    <button onclick="openCalcModal()" class="p-3 bg-white/90 hover:bg-orange-50 rounded-2xl border border-orange-100 shadow-sm text-center transition-all hover-lift">
+                        <i class="bi bi-calculator-fill text-[#ff6b4a] text-lg block mb-1"></i>
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider block text-black">Quick Calc</span>
+                    </button>
+                    <button onclick="triggerQuickExport()" class="p-3 bg-white/90 hover:bg-orange-50 rounded-2xl border border-orange-100 shadow-sm text-center transition-all hover-lift col-span-2 sm:col-span-1">
+                        <i class="bi bi-file-earmark-spreadsheet-fill text-[#ff6b4a] text-lg block mb-1"></i>
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider block text-black">CSV Export</span>
+                    </button>
                 </div>
 
                 <!-- ========================================== -->
-                <!-- TAB CONTENT 1: SALES HISTORY (File 1)      -->
+                <!-- TAB CONTENT 1: SALES HISTORY               -->
                 <!-- ========================================== -->
                 <div id="tab-content-history" class="space-y-6 animate-fade-in <?php echo $active_tab != 'history' ? 'hidden' : ''; ?>">
-                    <div class="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 p-8 lg:p-10 rounded-3xl shadow-2xl shadow-purple-900/20 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 animate-pulse-glow">
+                    <div class="bg-gradient-to-br from-[#1a1010] via-[#1f1212] to-[#09090b] p-8 lg:p-10 rounded-3xl shadow-2xl text-white flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#ff6b4a]/30">
                         <div>
-                            <span class="bg-white/10 backdrop-blur-md text-purple-200 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider border border-purple-300/20">
+                            <span class="bg-[#ff6b4a]/20 backdrop-blur-md text-[#ff6b4a] text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider border border-[#ff6b4a]/30">
                                 Sales Logs Overview
                             </span>
                             <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight mt-3 text-white">Sales History & Filters</h1>
-                            <p class="text-purple-200/90 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
+                            <p class="text-slate-300 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
                         </div>
                     </div>
 
-                    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 hover-lift">
+                    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 hover-lift">
                         <h3 class="text-xs font-extrabold text-black uppercase tracking-wider mb-6 flex items-center gap-2">
-                            <i class="fa-solid fa-filter text-purple-700"></i> Search Filters
+                            <i class="fa-solid fa-filter text-[#ff6b4a]"></i> Search Filters
                         </h3>
                         <form method="GET" action="" class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                             <input type="hidden" name="tab" value="history">
                             <div>
                                 <label class="block text-xs font-extrabold text-black uppercase mb-2 tracking-wider">Item Name</label>
                                 <input type="text" name="search_item" placeholder="Search item..." value="<?php echo htmlspecialchars($search_item); ?>"
-                                    class="w-full px-4 py-3 rounded-2xl border border-purple-200 focus:outline-none focus:border-purple-700 focus:ring-4 focus:ring-purple-700/10 text-sm bg-purple-50/40 transition-all font-medium text-black">
+                                    class="w-full px-4 py-3 rounded-2xl border border-orange-200 focus:outline-none focus:border-[#ff6b4a] focus:ring-4 focus:ring-[#ff6b4a]/10 text-sm bg-orange-50/30 transition-all font-medium text-black">
                             </div>
                             <div>
                                 <label class="block text-xs font-extrabold text-black uppercase mb-2 tracking-wider">Category</label>
-                                <select name="search_category" class="w-full px-4 py-3 rounded-2xl border border-purple-200 focus:outline-none focus:border-purple-700 focus:ring-4 focus:ring-purple-700/10 text-sm bg-purple-50/40 transition-all font-medium text-black">
+                                <select name="search_category" class="w-full px-4 py-3 rounded-2xl border border-orange-200 focus:outline-none focus:border-[#ff6b4a] focus:ring-4 focus:ring-[#ff6b4a]/10 text-sm bg-orange-50/30 transition-all font-medium text-black">
                                     <option value="">-- All Categories --</option>
                                     <?php if($categories_list): ?>
                                         <?php while($cat = $categories_list->fetch_assoc()): ?>
@@ -385,13 +399,13 @@ foreach($graph_yearly_data as $y) {
                             <div>
                                 <label class="block text-xs font-extrabold text-black uppercase mb-2 tracking-wider">Transaction Date</label>
                                 <input type="date" name="search_date" value="<?php echo htmlspecialchars($search_date); ?>"
-                                    class="w-full px-4 py-3 rounded-2xl border border-purple-200 focus:outline-none focus:border-purple-700 focus:ring-4 focus:ring-purple-700/10 text-sm bg-purple-50/40 transition-all font-medium text-black">
+                                    class="w-full px-4 py-3 rounded-2xl border border-orange-200 focus:outline-none focus:border-[#ff6b4a] focus:ring-4 focus:ring-[#ff6b4a]/10 text-sm bg-orange-50/30 transition-all font-medium text-black">
                             </div>
                             <div class="md:col-span-3 flex gap-3 justify-end pt-2">
-                                <button type="submit" class="bg-purple-700 hover:bg-purple-800 active:scale-[0.98] text-white px-6 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-700/25 transition-all duration-300 hover:shadow-xl">
+                                <button type="submit" class="bg-[#ff6b4a] hover:bg-[#fa4b2a] active:scale-[0.98] text-white px-6 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#ff6b4a]/25 transition-all duration-300 hover:shadow-xl">
                                     <i class="fa-solid fa-magnifying-glass"></i> Filter Income
                                 </button>
-                                <a href="?tab=history" class="bg-purple-100 hover:bg-purple-200 active:scale-[0.98] text-black px-6 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center">
+                                <a href="?tab=history" class="bg-orange-100 hover:bg-orange-200 active:scale-[0.98] text-black px-6 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all duration-300 flex items-center">
                                     Reset
                                 </a>
                             </div>
@@ -399,39 +413,39 @@ foreach($graph_yearly_data as $y) {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 flex items-center justify-between relative overflow-hidden hover-lift">
-                            <div class="absolute left-0 top-0 bottom-0 w-2 bg-purple-700"></div>
+                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 flex items-center justify-between relative overflow-hidden hover-lift">
+                            <div class="absolute left-0 top-0 bottom-0 w-2 bg-[#ff6b4a]"></div>
                             <div>
-                                <p class="text-xs font-extrabold text-purple-800 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="fa-solid fa-money-bill-wave"></i>Cash Transactions</p>
+                                <p class="text-xs font-extrabold text-[#ff6b4a] uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="fa-solid fa-money-bill-wave"></i>Cash Transactions</p>
                                 <h4 class="text-xl font-bold text-black mt-2">
                                     <span class="text-black"><?php echo $cash_count ? $cash_count : 0; ?></span> orders collected
                                 </h4>
-                                <p class="text-xs font-semibold text-black mt-1">Total: <span class="font-extrabold text-purple-700 text-base">₱<?php echo number_format($cash_total, 2); ?></span></p>
+                                <p class="text-xs font-semibold text-black mt-1">Total: <span class="font-extrabold text-[#ff6b4a] text-base">₱<?php echo number_format($cash_total, 2); ?></span></p>
                             </div>
-                            <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-700 text-2xl shadow-inner transition-transform duration-300 hover:scale-110">
+                            <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-[#ff6b4a] text-2xl shadow-inner border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-110">
                                 <i class="fa-solid fa-cash-register"></i>
                             </div>
                         </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 flex items-center justify-between relative overflow-hidden hover-lift">
-                            <div class="absolute left-0 top-0 bottom-0 w-2 bg-purple-900"></div>
+                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 flex items-center justify-between relative overflow-hidden hover-lift">
+                            <div class="absolute left-0 top-0 bottom-0 w-2 bg-[#1a1010]"></div>
                             <div>
-                                <p class="text-xs font-extrabold text-purple-900 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="fa-solid fa-credit-card"></i>Card / Digital Transactions</p>
+                                <p class="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="fa-solid fa-credit-card"></i>Card / Digital Transactions</p>
                                 <h4 class="text-xl font-bold text-black mt-2">
                                     <span class="text-black"><?php echo $card_count ? $card_count : 0; ?></span> orders collected
                                 </h4>
-                                <p class="text-xs font-semibold text-black mt-1">Total: <span class="font-extrabold text-purple-800 text-base">₱<?php echo number_format($card_total, 2); ?></span></p>
+                                <p class="text-xs font-semibold text-black mt-1">Total: <span class="font-extrabold text-slate-900 text-base">₱<?php echo number_format($card_total, 2); ?></span></p>
                             </div>
-                            <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-800 text-2xl shadow-inner transition-transform duration-300 hover:scale-110">
+                            <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-[#ff6b4a] text-2xl shadow-inner border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-110">
                                 <i class="fa-solid fa-wallet"></i>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 lg:col-span-2 hover-lift">
+                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 lg:col-span-2 hover-lift">
                             <h3 class="text-sm font-extrabold text-black uppercase tracking-wider mb-6 flex items-center gap-2">
-                                <i class="fa-solid fa-chart-area text-purple-700 text-lg"></i> Sales Performance Graph
+                                <i class="fa-solid fa-chart-area text-[#ff6b4a] text-lg"></i> Sales Performance Graph
                             </h3>
                             <div class="h-72 w-full">
                                 <canvas id="monthlySalesChart" 
@@ -441,21 +455,21 @@ foreach($graph_yearly_data as $y) {
                             </div>
                         </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 hover-lift">
+                        <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 hover-lift">
                             <h3 class="text-sm font-extrabold text-black uppercase tracking-wider mb-6 flex items-center gap-2">
-                                <i class="fa-solid fa-fire text-purple-700 text-lg"></i> Top 6 Best Sellers
+                                <i class="fa-solid fa-fire text-[#ff6b4a] text-lg"></i> Top 6 Best Sellers
                             </h3>
-                            <div class="divide-y divide-purple-100">
+                            <div class="divide-y divide-orange-100">
                                 <?php if ($top_products_result && $top_products_result->num_rows > 0): $rank = 1; ?>
                                     <?php while ($prod = $top_products_result->fetch_assoc()): ?>
-                                        <div class="flex items-center justify-between py-3.5 first:pt-0 last:pb-0 transition-all duration-200 hover:px-2 rounded-xl hover:bg-purple-50/50">
+                                        <div class="flex items-center justify-between py-3.5 first:pt-0 last:pb-0 transition-all duration-200 hover:px-2 rounded-xl hover:bg-orange-50/50">
                                             <div class="flex items-center gap-3">
-                                                <span class="w-7 h-7 rounded-xl bg-purple-100 text-xs font-extrabold text-purple-800 flex items-center justify-center shadow-sm">
+                                                <span class="w-7 h-7 rounded-xl bg-orange-100 text-xs font-extrabold text-[#ff6b4a] flex items-center justify-center shadow-sm">
                                                     <?php echo $rank++; ?>
                                                 </span>
                                                 <span class="text-sm font-bold text-black"><?php echo htmlspecialchars($prod['item_name']); ?></span>
                                             </div>
-                                            <span class="text-xs bg-purple-100 text-purple-800 font-extrabold px-3 py-1 rounded-xl tracking-wide">
+                                            <span class="text-xs bg-orange-100 text-[#ff6b4a] font-extrabold px-3 py-1 rounded-xl tracking-wide">
                                                 <?php echo $prod['total_qty']; ?> sold
                                             </span>
                                         </div>
@@ -467,16 +481,29 @@ foreach($graph_yearly_data as $y) {
                         </div>
                     </div>
 
-                    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 overflow-hidden">
-                        <div class="p-6 lg:p-8 border-b border-purple-100">
+                    <!-- PURCHASE BREAKDOWN LOGS TABLE WITH ROWS SELECTOR & PAGINATION -->
+                    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 overflow-hidden">
+                        <div class="p-6 lg:p-8 border-b border-orange-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <h3 class="text-sm font-extrabold text-black uppercase tracking-wider flex items-center gap-2">
-                                <i class="fa-solid fa-list-check text-purple-700 text-lg"></i> Purchase Breakdown Logs
+                                <i class="fa-solid fa-list-check text-[#ff6b4a] text-lg"></i> Purchase Breakdown Logs
                             </h3>
+                            <!-- Show Rows Dropdown -->
+                            <div class="flex items-center gap-2 text-xs font-bold text-black">
+                                <span>Show:</span>
+                                <select id="rowsPerPageSelect" onchange="changeRowsPerPage()" class="bg-orange-50 border border-orange-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#ff6b4a] text-black font-extrabold">
+                                    <option value="5">5 rows</option>
+                                    <option value="10">10 rows</option>
+                                    <option value="20" selected>20 rows</option>
+                                    <option value="25">25 rows</option>
+                                    <option value="all">All rows</option>
+                                </select>
+                            </div>
                         </div>
+
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
+                            <table id="purchaseLogsTable" class="w-full text-left border-collapse">
                                 <thead>
-                                    <tr class="bg-purple-50/70 border-b border-purple-100 text-black text-xs uppercase font-extrabold tracking-wider">
+                                    <tr class="bg-orange-50/90 backdrop-blur-md border-b border-orange-100 text-black text-xs uppercase font-extrabold tracking-wider">
                                         <th class="p-4 pl-8">Date & Time</th>
                                         <th class="p-4">TXN ID</th>
                                         <th class="p-4">Item Name</th>
@@ -488,22 +515,22 @@ foreach($graph_yearly_data as $y) {
                                         <th class="p-4 text-center pr-8">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="text-sm divide-y divide-purple-50 text-black">
+                                <tbody id="purchaseLogsTbody" class="text-sm divide-y divide-orange-50 text-black">
                                     <?php if ($history_result && $history_result->num_rows > 0): ?>
                                         <?php while ($row = $history_result->fetch_assoc()): ?>
-                                            <tr class="hover:bg-purple-50/60 transition-colors duration-200">
-                                                <td class="p-4 pl-8 font-bold text-purple-700 whitespace-nowrap">
+                                            <tr class="log-row hover:bg-orange-50/60 transition-colors duration-200">
+                                                <td class="p-4 pl-8 font-bold text-[#ff6b4a] whitespace-nowrap">
                                                     <i class="bi bi-clock me-1.5 text-black font-normal"></i>
                                                     <?php echo date('M d, Y h:i A', strtotime($row['created_at'])); ?>
                                                 </td>
-                                                <td class="p-4"><span class="font-mono text-xs bg-purple-100 text-purple-900 px-3 py-1 rounded-xl font-bold">#TXN-<?php echo str_pad($row['sale_id'], 5, '0', STR_PAD_LEFT); ?></span></td>
+                                                <td class="p-4"><span class="font-mono text-xs bg-orange-100 text-orange-900 px-3 py-1 rounded-xl font-bold">#TXN-<?php echo str_pad($row['sale_id'], 5, '0', STR_PAD_LEFT); ?></span></td>
                                                 <td class="p-4 font-extrabold text-black"><?php echo htmlspecialchars($row['item_name']); ?></td>
-                                                <td class="p-4"><span class="text-xs bg-purple-100 text-purple-900 px-3 py-1 rounded-xl font-semibold"><?php echo htmlspecialchars($row['category_name']); ?></span></td>
+                                                <td class="p-4"><span class="text-xs bg-orange-100 text-orange-900 px-3 py-1 rounded-xl font-semibold"><?php echo htmlspecialchars($row['category_name']); ?></span></td>
                                                 <td class="p-4 text-center font-extrabold text-black"><?php echo $row['quantity']; ?></td>
                                                 <td class="p-4 text-right font-semibold text-black">₱<?php echo number_format($row['price_at_sale'], 2); ?></td>
-                                                <td class="p-4 text-right font-extrabold text-purple-700">₱<?php echo number_format($row['subtotal'], 2); ?></td>
+                                                <td class="p-4 text-right font-extrabold text-[#ff6b4a]">₱<?php echo number_format($row['subtotal'], 2); ?></td>
                                                 <td class="p-4 text-center">
-                                                    <span class="text-xs px-3 py-1 rounded-xl font-extrabold tracking-wide bg-purple-100 text-purple-900">
+                                                    <span class="text-xs px-3 py-1 rounded-xl font-extrabold tracking-wide bg-orange-100 text-orange-900">
                                                         <?php echo $row['payment_method']; ?>
                                                     </span>
                                                 </td>
@@ -515,38 +542,49 @@ foreach($graph_yearly_data as $y) {
                                                         '<?php echo $row['quantity']; ?>', 
                                                         '<?php echo number_format($row['subtotal'], 2); ?>', 
                                                         '<?php echo $row['payment_method']; ?>'
-                                                    )" class="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 mx-auto hover:scale-105">
+                                                    )" class="bg-orange-100 hover:bg-orange-200 text-[#ff6b4a] px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 mx-auto hover:scale-105">
                                                         <i class="fa-solid fa-receipt"></i> Receipt
                                                     </button>
                                                 </td>
                                             </tr>
                                         <?php endwhile; ?>
                                     <?php else: ?>
-                                        <tr>
+                                        <tr id="no-records-row">
                                             <td colspan="9" class="text-center py-16 text-black font-medium">No purchase history records found matching your query metrics.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- PAGINATION FOOTER -->
+                        <div class="p-6 border-t border-orange-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div id="tableInfo" class="text-xs font-bold text-black">
+                                Showing 0 to 0 of 0 entries
+                            </div>
+                            <div id="paginationButtons" class="flex items-center gap-1">
+                                <!-- Dynamically generated pagination buttons -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- ========================================== -->
-                <!-- TAB CONTENT 2: ANALYTICS DASHBOARD (File 3)-->
+                <!-- TAB CONTENT 2: ANALYTICS DASHBOARD         -->
                 <!-- ========================================== -->
                 <div id="tab-content-analytics" class="space-y-6 animate-fade-in <?php echo $active_tab != 'analytics' ? 'hidden' : ''; ?>">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 rounded-3xl p-6 lg:p-8 text-white shadow-2xl shadow-purple-900/20 animate-pulse-glow">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-br from-[#1a1010] via-[#1f1212] to-[#09090b] rounded-3xl p-6 lg:p-8 text-white shadow-2xl border border-[#ff6b4a]/30">
                         <div>
-                            <span class="bg-white/10 text-purple-200 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-md border border-purple-300/20">Analytics Overview</span>
+                            <span class="bg-[#ff6b4a]/20 text-[white] text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-md border border-[#ff6b4a]/30">Analytics Overview</span>
                             <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight mt-2 text-white">Dashboard Analytics</h1>
-                            <p class="text-purple-200/90 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
+                            <p class="text-slate-300 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
                         </div>
                     </div>
 
+                    <!-- AUTOMATIC EARNINGS PER DAY, MONTH, AND YEAR CARDS -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-purple-100 shadow-xl shadow-purple-900/5 flex items-center gap-4 hover-lift">
-                            <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-orange-100 shadow-xl shadow-orange-950/5 flex items-center gap-4 hover-lift">
+                            <div class="w-12 h-12 rounded-2xl bg-orange-50 text-[#ff6b4a] flex items-center justify-center text-xl shrink-0 shadow-inner border border-[#ff6b4a]/20">
                                 <i class="bi bi-wallet2"></i>
                             </div>
                             <div>
@@ -558,8 +596,8 @@ foreach($graph_yearly_data as $y) {
                             </div>
                         </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-purple-100 shadow-xl shadow-purple-900/5 flex items-center gap-4 hover-lift">
-                            <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-orange-100 shadow-xl shadow-orange-950/5 flex items-center gap-4 hover-lift">
+                            <div class="w-12 h-12 rounded-2xl bg-orange-50 text-[#ff6b4a] flex items-center justify-center text-xl shrink-0 shadow-inner border border-[#ff6b4a]/20">
                                 <i class="bi bi-graph-up-arrow"></i>
                             </div>
                             <div>
@@ -571,8 +609,8 @@ foreach($graph_yearly_data as $y) {
                             </div>
                         </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-purple-100 shadow-xl shadow-purple-900/5 flex items-center gap-4 hover-lift">
-                            <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-orange-100 shadow-xl shadow-orange-950/5 flex items-center gap-4 hover-lift">
+                            <div class="w-12 h-12 rounded-2xl bg-orange-50 text-[#ff6b4a] flex items-center justify-center text-xl shrink-0 shadow-inner border border-[#ff6b4a]/20">
                                 <i class="bi bi-cash-stack"></i>
                             </div>
                             <div>
@@ -584,8 +622,8 @@ foreach($graph_yearly_data as $y) {
                             </div>
                         </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-purple-100 shadow-xl shadow-purple-900/5 flex items-center gap-4 hover-lift">
-                            <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-orange-100 shadow-xl shadow-orange-950/5 flex items-center gap-4 hover-lift">
+                            <div class="w-12 h-12 rounded-2xl bg-orange-50 text-[#ff6b4a] flex items-center justify-center text-xl shrink-0 shadow-inner border border-[#ff6b4a]/20">
                                 <i class="bi bi-piggy-bank"></i>
                             </div>
                             <div>
@@ -598,13 +636,13 @@ foreach($graph_yearly_data as $y) {
                         </div>
                     </div>
 
-                    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 p-6 hover-lift">
+                    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 p-6 hover-lift">
                         <form method="GET" action="" class="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
                             <input type="hidden" name="tab" value="analytics">
                             <div>
                                 <label class="block text-xs font-bold text-black uppercase tracking-wider mb-2">Filter Month</label>
                                 <div class="relative">
-                                    <select name="filter_month" class="w-full bg-purple-50/50 border border-purple-200 rounded-2xl px-4 py-3 text-black text-sm focus:outline-none focus:ring-2 focus:ring-purple-700/20 focus:border-purple-700 transition-all appearance-none font-medium">
+                                    <select name="filter_month" class="w-full bg-orange-50/40 border border-orange-200 rounded-2xl px-4 py-3 text-black text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/20 focus:border-[#ff6b4a] transition-all appearance-none font-medium">
                                         <option value="">-- All Months --</option>
                                         <?php
                                         for ($m = 1; $m <= 12; $m++) {
@@ -623,7 +661,7 @@ foreach($graph_yearly_data as $y) {
                             <div>
                                 <label class="block text-xs font-bold text-black uppercase tracking-wider mb-2">Filter Year</label>
                                 <div class="relative">
-                                    <select name="filter_year" class="w-full bg-purple-50/50 border border-purple-200 rounded-2xl px-4 py-3 text-black text-sm focus:outline-none focus:ring-2 focus:ring-purple-700/20 focus:border-purple-700 transition-all appearance-none font-medium">
+                                    <select name="filter_year" class="w-full bg-orange-50/40 border border-orange-200 rounded-2xl px-4 py-3 text-black text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/20 focus:border-[#ff6b4a] transition-all appearance-none font-medium">
                                         <?php
                                         $start_year = date('Y') - 5;
                                         $end_year = date('Y');
@@ -639,130 +677,171 @@ foreach($graph_yearly_data as $y) {
                                 </div>
                             </div>
                             <div class="flex gap-3">
-                                <button type="submit" class="flex-1 bg-purple-700 hover:bg-purple-800 active:scale-[0.98] text-white font-semibold py-3 px-5 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-purple-700/25 text-sm hover:shadow-xl">
+                                <button type="submit" class="flex-1 bg-[#ff6b4a] hover:bg-[#fa4b2a] active:scale-[0.98] text-white font-semibold py-3 px-5 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-[#ff6b4a]/25 text-sm hover:shadow-xl">
                                     <i class="bi bi-funnel-fill"></i> Apply Filter
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 p-6 flex flex-col h-[420px] hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <h6 class="text-black font-bold text-sm tracking-wide">Daily Income</h6>
-                                <span class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-base"><i class="bi bi-calendar-event"></i></span>
-                            </div>
-                            <div class="overflow-y-auto flex-1 pr-1 space-y-2">
-                                <?php if ($day_result && $day_result->num_rows > 0): ?>
-                                    <?php while($row = $day_result->fetch_assoc()): ?>
-                                        <div class="flex justify-between items-center p-3 rounded-2xl hover:bg-purple-50 transition-all border border-transparent hover:border-purple-100 gap-2">
-                                            <div class="min-w-0">
-                                                <span class="text-black font-semibold text-xs block truncate"><?php echo $row['period_name']; ?></span>
-                                                <span class="text-black text-[11px]"><i class="bi bi-receipt"></i> <?php echo $row['total_transactions']; ?> Trans.</span>
-                                            </div>
-                                            <span class="font-extrabold text-purple-700 text-xs shrink-0 bg-purple-100 px-2.5 py-1 rounded-xl">₱<?php echo number_format($row['total_earnings'], 2); ?></span>
-                                        </div>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <div class="h-full flex items-center justify-center text-black text-xs font-medium">No daily records</div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 p-6 flex flex-col h-[420px] hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <h6 class="text-black font-bold text-sm tracking-wide">Weekly Income</h6>
-                                <span class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-base"><i class="bi bi-calendar-range"></i></span>
-                            </div>
-                            <div class="overflow-y-auto flex-1 pr-1 space-y-2">
-                                <?php if (!empty($graph_weekly_data)): ?>
-                                    <?php foreach($graph_weekly_data as $row): ?>
-                                        <div class="flex justify-between items-center p-3 rounded-2xl hover:bg-purple-50 transition-all border border-transparent hover:border-purple-100 gap-2">
-                                            <div class="min-w-0">
-                                                <span class="text-black font-semibold text-xs block truncate"><?php echo $row['period_name']; ?></span>
-                                                <span class="text-black text-[11px]"><i class="bi bi-receipt"></i> <?php echo $row['total_transactions']; ?> Trans.</span>
-                                            </div>
-                                            <span class="font-extrabold text-purple-700 text-xs shrink-0 bg-purple-100 px-2.5 py-1 rounded-xl">₱<?php echo number_format($row['total_earnings'], 2); ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="h-full flex items-center justify-center text-black text-xs font-medium">No weekly records</div>
-                                <?php endif; ?>
+                    <!-- UNIFIED INCOME TABLE WITH SWITCHING BUTTONS AND VERTICAL SCROLLING -->
+                    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100 overflow-hidden">
+                        <div class="p-6 lg:p-8 border-b border-orange-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <h3 class="text-sm font-extrabold text-black uppercase tracking-wider flex items-center gap-2">
+                                <i class="bi bi-table text-[#ff6b4a] text-lg"></i> Income Breakdown Records
+                            </h3>
+                            
+                            <!-- Toggle Buttons -->
+                            <div class="inline-flex bg-orange-50 p-1.5 rounded-2xl border border-orange-100 shrink-0">
+                                <button onclick="switchIncomeTable('daily')" id="tab-btn-daily" class="px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase bg-[#ff6b4a] text-white transition-all shadow-sm">
+                                    Daily
+                                </button>
+                                <button onclick="switchIncomeTable('weekly')" id="tab-btn-weekly" class="px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase text-black hover:text-[#ff6b4a] transition-all">
+                                    Weekly
+                                </button>
+                                <button onclick="switchIncomeTable('monthly')" id="tab-btn-monthly" class="px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase text-black hover:text-[#ff6b4a] transition-all">
+                                    Monthly
+                                </button>
+                                <button onclick="switchIncomeTable('yearly')" id="tab-btn-yearly" class="px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase text-black hover:text-[#ff6b4a] transition-all">
+                                    Yearly
+                                </button>
                             </div>
                         </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 p-6 flex flex-col h-[420px] hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <h6 class="text-black font-bold text-sm tracking-wide">Monthly Income</h6>
-                                <span class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-base"><i class="bi bi-calendar3"></i></span>
+                        <!-- TABLES WRAPPER WITH FIXED MAX HEIGHT AND STICKY HEADERS -->
+                        <div class="overflow-x-auto max-h-[380px] overflow-y-auto">
+                            <!-- DAILY TABLE -->
+                            <div id="table-container-daily" class="income-table-pane">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-orange-50/90 backdrop-blur-md border-b border-orange-100 text-black text-xs uppercase font-extrabold tracking-wider">
+                                            <th class="p-4 pl-8">Period (Daily)</th>
+                                            <th class="p-4 text-center">Transactions Count</th>
+                                            <th class="p-4 text-right pr-8">Total Earnings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm divide-y divide-orange-50 text-black">
+                                        <?php if ($day_result && $day_result->num_rows > 0): ?>
+                                            <?php while($row = $day_result->fetch_assoc()): ?>
+                                                <tr class="hover:bg-orange-50/50 transition-colors">
+                                                    <td class="p-4 pl-8 font-bold text-black"><?php echo $row['period_name']; ?></td>
+                                                    <td class="p-4 text-center font-extrabold text-[#ff6b4a]"><?php echo $row['total_transactions']; ?> Trans.</td>
+                                                    <td class="p-4 text-right pr-8 font-extrabold text-[#ff6b4a]">₱<?php echo number_format($row['total_earnings'], 2); ?></td>
+                                                </tr>
+                                            <?php endwhile; ?>
+                                        <?php else: ?>
+                                            <tr><td colspan="3" class="text-center py-12 text-black font-medium">No daily records found.</td></tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="overflow-y-auto flex-1 pr-1 space-y-2">
-                                <?php if (!empty($graph_monthly_data)): ?>
-                                    <?php foreach($graph_monthly_data as $row): ?>
-                                        <div class="flex justify-between items-center p-3 rounded-2xl hover:bg-purple-50 transition-all border border-transparent hover:border-purple-100 gap-2">
-                                            <div class="min-w-0">
-                                                <span class="text-black font-semibold text-xs block truncate"><?php echo $row['period_name']; ?></span>
-                                                <span class="text-black text-[11px]"><i class="bi bi-receipt"></i> <?php echo $row['total_transactions']; ?> Trans.</span>
-                                            </div>
-                                            <span class="font-extrabold text-purple-700 text-xs shrink-0 bg-purple-100 px-2.5 py-1 rounded-xl">₱<?php echo number_format($row['total_earnings'], 2); ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="h-full flex items-center justify-center text-black text-xs font-medium">No monthly records</div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
 
-                        <div class="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100 p-6 flex flex-col h-[420px] hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <h6 class="text-black font-bold text-sm tracking-wide">Yearly Income</h6>
-                                <span class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-base"><i class="bi bi-calendar4-years"></i></span>
+                            <!-- WEEKLY TABLE -->
+                            <div id="table-container-weekly" class="income-table-pane hidden">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-orange-50/90 backdrop-blur-md border-b border-orange-100 text-black text-xs uppercase font-extrabold tracking-wider">
+                                            <th class="p-4 pl-8">Period (Weekly)</th>
+                                            <th class="p-4 text-center">Transactions Count</th>
+                                            <th class="p-4 text-right pr-8">Total Earnings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm divide-y divide-orange-50 text-black">
+                                        <?php if (!empty($graph_weekly_data)): ?>
+                                            <?php foreach($graph_weekly_data as $row): ?>
+                                                <tr class="hover:bg-orange-50/50 transition-colors">
+                                                    <td class="p-4 pl-8 font-bold text-black"><?php echo $row['period_name']; ?></td>
+                                                    <td class="p-4 text-center font-extrabold text-[#ff6b4a]"><?php echo $row['total_transactions']; ?> Trans.</td>
+                                                    <td class="p-4 text-right pr-8 font-extrabold text-[#ff6b4a]">₱<?php echo number_format($row['total_earnings'], 2); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr><td colspan="3" class="text-center py-12 text-black font-medium">No weekly records found.</td></tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="overflow-y-auto flex-1 pr-1 space-y-2">
-                                <?php if (!empty($graph_yearly_data)): ?>
-                                    <?php foreach($graph_yearly_data as $row): ?>
-                                        <div class="flex justify-between items-center p-3 rounded-2xl hover:bg-purple-50 transition-all border border-transparent hover:border-purple-100 gap-2">
-                                            <div class="min-w-0">
-                                                <span class="text-black font-semibold text-xs block truncate"><?php echo $row['period_name']; ?></span>
-                                                <span class="text-black text-[11px]"><i class="bi bi-receipt"></i> <?php echo $row['total_transactions']; ?> Trans.</span>
-                                            </div>
-                                            <span class="font-extrabold text-purple-700 text-xs shrink-0 bg-purple-100 px-2.5 py-1 rounded-xl">₱<?php echo number_format($row['total_earnings'], 2); ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="h-full flex items-center justify-center text-black text-xs font-medium">No yearly records</div>
-                                <?php endif; ?>
+
+                            <!-- MONTHLY TABLE -->
+                            <div id="table-container-monthly" class="income-table-pane hidden">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-orange-50/90 backdrop-blur-md border-b border-orange-100 text-black text-xs uppercase font-extrabold tracking-wider">
+                                            <th class="p-4 pl-8">Period (Monthly)</th>
+                                            <th class="p-4 text-center">Transactions Count</th>
+                                            <th class="p-4 text-right pr-8">Total Earnings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm divide-y divide-orange-50 text-black">
+                                        <?php if (!empty($graph_monthly_data)): ?>
+                                            <?php foreach($graph_monthly_data as $row): ?>
+                                                <tr class="hover:bg-orange-50/50 transition-colors">
+                                                    <td class="p-4 pl-8 font-bold text-black"><?php echo $row['period_name']; ?></td>
+                                                    <td class="p-4 text-center font-extrabold text-[#ff6b4a]"><?php echo $row['total_transactions']; ?> Trans.</td>
+                                                    <td class="p-4 text-right pr-8 font-extrabold text-[#ff6b4a]">₱<?php echo number_format($row['total_earnings'], 2); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr><td colspan="3" class="text-center py-12 text-black font-medium">No monthly records found.</td></tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- YEARLY TABLE -->
+                            <div id="table-container-yearly" class="income-table-pane hidden">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="sticky top-0 z-10">
+                                        <tr class="bg-orange-50/90 backdrop-blur-md border-b border-orange-100 text-black text-xs uppercase font-extrabold tracking-wider">
+                                            <th class="p-4 pl-8">Period (Yearly)</th>
+                                            <th class="p-4 text-center">Transactions Count</th>
+                                            <th class="p-4 text-right pr-8">Total Earnings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm divide-y divide-orange-50 text-black">
+                                        <?php if (!empty($graph_yearly_data)): ?>
+                                            <?php foreach($graph_yearly_data as $row): ?>
+                                                <tr class="hover:bg-orange-50/50 transition-colors">
+                                                    <td class="p-4 pl-8 font-bold text-black"><?php echo $row['period_name']; ?></td>
+                                                    <td class="p-4 text-center font-extrabold text-[#ff6b4a]"><?php echo $row['total_transactions']; ?> Trans.</td>
+                                                    <td class="p-4 text-right pr-8 font-extrabold text-[#ff6b4a]">₱<?php echo number_format($row['total_earnings'], 2); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr><td colspan="3" class="text-center py-12 text-black font-medium">No yearly records found.</td></tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- ========================================== -->
-                <!-- TAB CONTENT 3: LIVE SALES REPORT (File 2)  -->
+                <!-- TAB CONTENT 3: LIVE SALES REPORT           -->
                 <!-- ========================================== -->
                 <div id="tab-content-live" class="space-y-6 animate-fade-in <?php echo $active_tab != 'live' ? 'hidden' : ''; ?>">
-                    <div class="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 p-8 lg:p-10 rounded-3xl shadow-2xl shadow-purple-900/20 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 animate-pulse-glow">
+                    <div class="bg-gradient-to-br from-[#1a1010] via-[#1f1212] to-[#09090b] p-8 lg:p-10 rounded-3xl shadow-2xl text-white flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#ff6b4a]/30">
                         <div>
-                            <span class="bg-white/10 backdrop-blur-md text-purple-200 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider border border-purple-300/20">
+                            <span class="bg-[#ff6b4a]/20 backdrop-blur-md text-[#ff6b4a] text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider border border-[#ff6b4a]/30">
                                 Live Analytics Overview
                             </span>
                             <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight mt-3 text-white" id="report-title">Today's Live Sales Report</h1>
-                            <p class="text-purple-200/90 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
+                            <p class="text-slate-300 text-sm mt-1">Monitor real-time revenue streams, earnings, and system reports seamlessly.</p>
                         </div>
                         <div class="inline-flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shrink-0">
                             <button onclick="switchLiveView('today')" id="btn-today" class="px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase shadow-lg shadow-black/5 bg-white text-black transition-all duration-300 flex items-center gap-2">
                                 <i class="bi bi-calendar-event"></i>Today Only
                             </button>
-                            <button onclick="switchLiveView('month')" id="btn-month" class="px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase text-purple-200 hover:text-white transition-all duration-300 flex items-center gap-2">
+                            <button onclick="switchLiveView('month')" id="btn-month" class="px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase text-slate-300 hover:text-white transition-all duration-300 flex items-center gap-2">
                                 <i class="bi bi-calendar-month"></i>This Month
                             </button>
                         </div>
                     </div>
 
-                    <!-- Sidebar removed from here as requested (alsin mo ung sidebar inside main sa live reports) -->
                     <div id="live-sales-container">
-                        <div class="flex flex-col items-center justify-center py-24 bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-purple-900/5 border border-purple-100">
-                            <div class="animate-spin rounded-full h-10 w-10 border-3 border-purple-700 border-t-transparent mb-4"></div>
+                        <div class="flex flex-col items-center justify-center py-24 bg-white/90 backdrop-blur-2xl rounded-3xl shadow-xl shadow-orange-950/5 border border-orange-100">
+                            <div class="animate-spin rounded-full h-10 w-10 border-3 border-[#ff6b4a] border-t-transparent mb-4"></div>
                             <p class="text-sm text-black font-bold uppercase tracking-wider">Loading live dashboard updates...</p>
                         </div>
                     </div>
@@ -772,16 +851,52 @@ foreach($graph_yearly_data as $y) {
         </div>
     </div>
 
+    <!-- FEATURE 2: BUILT-IN MODERN CALCULATOR MODAL -->
+    <div id="calcModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs overflow-hidden border border-orange-100 transform transition-all duration-300 scale-95 animate-fade-in p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-extrabold text-black text-sm uppercase tracking-wider flex items-center gap-2">
+                    <i class="bi bi-calculator text-[#ff6b4a]"></i> Quick Calculator
+                </h3>
+                <button onclick="closeCalcModal()" class="text-black hover:text-[#ff6b4a] font-bold"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <input type="text" id="calc-screen" readonly class="w-full bg-orange-50 border border-orange-200 rounded-2xl p-4 text-right text-2xl font-mono font-bold text-black mb-4 focus:outline-none" value="0">
+            <div class="grid grid-cols-4 gap-2">
+                <button onclick="calcClear()" class="bg-orange-100 hover:bg-orange-200 text-[#ff6b4a] font-extrabold py-3 rounded-xl text-sm">C</button>
+                <button onclick="calcAppend('/')" class="bg-orange-100 hover:bg-orange-200 text-[#ff6b4a] font-extrabold py-3 rounded-xl text-sm">÷</button>
+                <button onclick="calcAppend('*')" class="bg-orange-100 hover:bg-orange-200 text-[#ff6b4a] font-extrabold py-3 rounded-xl text-sm">×</button>
+                <button onclick="calcAppend('-')" class="bg-orange-100 hover:bg-orange-200 text-[#ff6b4a] font-extrabold py-3 rounded-xl text-sm">-</button>
+                
+                <button onclick="calcAppend('7')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">7</button>
+                <button onclick="calcAppend('8')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">8</button>
+                <button onclick="calcAppend('9')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">9</button>
+                <button onclick="calcAppend('+')" class="bg-orange-100 hover:bg-orange-200 text-[#ff6b4a] font-extrabold py-3 rounded-xl text-sm row-span-2">+</button>
+
+                <button onclick="calcAppend('4')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">4</button>
+                <button onclick="calcAppend('5')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">5</button>
+                <button onclick="calcAppend('6')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">6</button>
+
+                <button onclick="calcAppend('1')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">1</button>
+                <button onclick="calcAppend('2')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">2</button>
+                <button onclick="calcAppend('3')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">3</button>
+                <button onclick="calcCompute()" class="bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white font-extrabold py-3 rounded-xl text-sm row-span-2">=</button>
+
+                <button onclick="calcAppend('0')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm col-span-2">0</button>
+                <button onclick="calcAppend('.')" class="bg-orange-50 hover:bg-orange-100 text-black font-bold py-3 rounded-xl text-sm">.</button>
+            </div>
+        </div>
+    </div>
+
     <!-- RECEIPT MODAL -->
     <div id="receiptModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-purple-100 transform transition-all duration-300 scale-95 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-orange-100 transform transition-all duration-300 scale-95 animate-fade-in">
             <div class="p-6 text-center font-mono text-black">
                 <h3 class="font-bold text-lg tracking-wider text-black">PANNAKODA</h3>
                 <p class="text-xs text-black mt-0.5 font-medium">Official Receipt</p>
                 <p class="text-xs text-black mt-2">OR # : <span id="modal-or" class="font-bold"></span></p>
                 <p class="text-xs text-black font-medium" id="modal-date"></p>
 
-                <div class="border-t border-dashed border-purple-300 my-4"></div>
+                <div class="border-t border-dashed border-orange-300 my-4"></div>
 
                 <div class="flex justify-between text-xs font-bold text-black mb-2">
                     <span>Item</span>
@@ -794,12 +909,12 @@ foreach($graph_yearly_data as $y) {
                     <span id="modal-total"></span>
                 </div>
 
-                <div class="border-t border-dashed border-purple-300 my-4"></div>
+                <div class="border-t border-dashed border-orange-300 my-4"></div>
 
                 <div class="space-y-1 text-xs text-left text-black">
                     <div class="flex justify-between font-bold">
                         <span>TOTAL AMOUNT:</span>
-                        <span id="modal-grand-total" class="text-purple-700"></span>
+                        <span id="modal-grand-total" class="text-[#ff6b4a]"></span>
                     </div>
                     <div class="flex justify-between font-medium">
                         <span>Payment Mode:</span>
@@ -816,8 +931,8 @@ foreach($graph_yearly_data as $y) {
                 </div>
             </div>
 
-            <div class="bg-purple-50/50 p-4 border-t border-purple-100 flex gap-3">
-                <button onclick="closeReceiptModal()" class="w-full bg-purple-700 hover:bg-purple-800 text-white py-2.5 rounded-2xl text-xs font-extrabold uppercase transition-all duration-200 shadow-md">
+            <div class="bg-orange-50/50 p-4 border-t border-orange-100 flex gap-3">
+                <button onclick="closeReceiptModal()" class="w-full bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white py-2.5 rounded-2xl text-xs font-extrabold uppercase transition-all duration-200 shadow-md">
                     Close
                 </button>
             </div>
@@ -825,6 +940,162 @@ foreach($graph_yearly_data as $y) {
     </div>
 
     <script>
+        // FEATURE 1: Philippine Time Live Clock Updater
+        function updatePHClock() {
+            const options = { timeZone: 'Asia/Manila', hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit', year: 'numeric', month: 'short', day: 'numeric' };
+            const formatter = new Intl.DateTimeFormat([], options);
+            const clockEl = document.getElementById('ph-clock');
+            if(clockEl) {
+                clockEl.innerText = formatter.format(new Date());
+            }
+        }
+        setInterval(updatePHClock, 1000);
+        updatePHClock();
+
+        // FEATURE 2: Quick Calculator Script
+        function openCalcModal() { document.getElementById('calcModal').classList.remove('hidden'); }
+        function closeCalcModal() { document.getElementById('calcModal').classList.add('hidden'); }
+        function calcClear() { document.getElementById('calc-screen').value = '0'; }
+        function calcAppend(val) {
+            let screen = document.getElementById('calc-screen');
+            if(screen.value === '0' && val !== '.') { screen.value = val; }
+            else { screen.value += val; }
+        }
+        function calcCompute() {
+            let screen = document.getElementById('calc-screen');
+            try { screen.value = eval(screen.value); } catch(e) { screen.value = 'Error'; }
+        }
+
+        // Toggle Analytics Tables Function
+        function switchIncomeTable(type) {
+            const types = ['daily', 'weekly', 'monthly', 'yearly'];
+            types.forEach(t => {
+                const pane = document.getElementById(`table-container-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === type) {
+                    pane.classList.remove('hidden');
+                    btn.className = 'px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase bg-[#ff6b4a] text-white transition-all shadow-sm';
+                } else {
+                    pane.classList.add('hidden');
+                    btn.className = 'px-4 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase text-black hover:text-[#ff6b4a] transition-all';
+                }
+            });
+        }
+
+        // PURCHASE TABLE PAGINATION & ROWS PER PAGE LOGIC
+        let currentPage = 1;
+        let rowsPerPage = 20; // Default set to 20 rows as requested
+
+        function changeRowsPerPage() {
+            const select = document.getElementById('rowsPerPageSelect');
+            const val = select.value;
+            if (val === 'all') {
+                rowsPerPage = 'all';
+            } else {
+                rowsPerPage = parseInt(val);
+            }
+            currentPage = 1;
+            renderTablePagination();
+        }
+
+        function renderTablePagination() {
+            const tbody = document.getElementById('purchaseLogsTbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('.log-row'));
+            const totalRows = rows.length;
+            const noRecordsRow = document.getElementById('no-records-row');
+
+            if (totalRows === 0) {
+                document.getElementById('tableInfo').innerText = "Showing 0 to 0 of 0 entries";
+                document.getElementById('paginationButtons').innerHTML = '';
+                return;
+            }
+
+            let totalPages = 1;
+            let startIndex = 0;
+            let endIndex = totalRows;
+
+            if (rowsPerPage !== 'all') {
+                totalPages = Math.ceil(totalRows / rowsPerPage);
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+                startIndex = (currentPage - 1) * rowsPerPage;
+                endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+            }
+
+            // Show/Hide rows
+            rows.forEach((row, index) => {
+                if (rowsPerPage === 'all' || (index >= startIndex && index < endIndex)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update Info text
+            const displayStart = totalRows > 0 ? startIndex + 1 : 0;
+            document.getElementById('tableInfo').innerText = `Showing ${displayStart} to ${endIndex} of ${totalRows} entries`;
+
+            // Render Pagination Buttons (< 1 2 >)
+            const paginationContainer = document.getElementById('paginationButtons');
+            let buttonsHTML = '';
+
+            if (rowsPerPage !== 'all' && totalPages > 1) {
+                // Previous Button
+                const prevDisabled = currentPage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-orange-100';
+                buttonsHTML += `<button onclick="goToPage(${currentPage - 1})" class="px-3 py-1.5 rounded-xl border border-orange-200 text-xs font-extrabold text-black ${prevDisabled}"><i class="fa-solid fa-chevron-left"></i></button>`;
+
+                // Page Number Buttons
+                for (let i = 1; i <= totalPages; i++) {
+                    if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                        const activeClass = i === currentPage ? 'bg-[#ff6b4a] text-white shadow-md' : 'bg-white hover:bg-orange-100 text-black border border-orange-200';
+                        buttonsHTML += `<button onclick="goToPage(${i})" class="px-3 py-1.5 rounded-xl text-xs font-extrabold ${activeClass}">${i}</button>`;
+                    } else if (i === currentPage - 2 || i === currentPage + 2) {
+                        buttonsHTML += `<span class="px-2 text-xs font-bold text-black">...</span>`;
+                    }
+                }
+
+                // Next Button
+                const nextDisabled = currentPage === totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-orange-100';
+                buttonsHTML += `<button onclick="goToPage(${currentPage + 1})" class="px-3 py-1.5 rounded-xl border border-orange-200 text-xs font-extrabold text-black ${nextDisabled}"><i class="fa-solid fa-chevron-right"></i></button>`;
+            }
+
+            paginationContainer.innerHTML = buttonsHTML;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderTablePagination();
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Initialize pagination table on load
+            renderTablePermissions = document.getElementById('rowsPerPageSelect');
+            if(renderTablePermissions) {
+                changeRowsPerPage();
+            }
+        });
+
+        // FEATURE 8: Quick CSV Export Trigger
+        function triggerQuickExport() {
+            Swal.fire({
+                title: 'Export Sales Report?',
+                text: 'Download active earnings report as CSV spreadsheet.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ff6b4a',
+                confirmButtonText: 'Download CSV'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '?tab=history&export=csv';
+                }
+            });
+        }
+
+        function switchTab(tabName) {
+            window.location.href = `?tab=${tabName}`;
+        }
+
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const burgerToggle = document.getElementById('burgerToggle');
@@ -877,13 +1148,13 @@ foreach($graph_yearly_data as $y) {
                             const {ctx, chartArea} = chart;
                             if (!chartArea) return null;
                             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                            gradient.addColorStop(0, 'rgba(126, 34, 206, 0.3)');
-                            gradient.addColorStop(1, 'rgba(126, 34, 206, 0.0)');
+                            gradient.addColorStop(0, 'rgba(255, 107, 74, 0.3)');
+                            gradient.addColorStop(1, 'rgba(255, 107, 74, 0.0)');
                             return gradient;
                         },
-                        borderColor: '#7e22ce',                     
+                        borderColor: '#ff6b4a',                     
                         borderWidth: 3,
-                        pointBackgroundColor: '#7e22ce',            
+                        pointBackgroundColor: '#ff6b4a',            
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 4,                                 
@@ -898,7 +1169,7 @@ foreach($graph_yearly_data as $y) {
                     plugins: { legend: { display: false } },
                     scales: {
                         x: { grid: { display: false }, ticks: { color: '#000000', font: { size: 11, weight: '600' } } },
-                        y: { beginAtZero: true, ticks: { color: '#000000', font: { size: 11, weight: '600' }, callback: function(value) { return '₱' + value.toLocaleString(); } }, grid: { color: '#f3e8ff' } }
+                        y: { beginAtZero: true, ticks: { color: '#000000', font: { size: 11, weight: '600' }, callback: function(value) { return '₱' + value.toLocaleString(); } }, grid: { color: '#fff1ec' } }
                     }
                 }
             });
@@ -925,20 +1196,20 @@ foreach($graph_yearly_data as $y) {
                     datasets: [{
                         label: 'Total Revenue (₱)',
                         data: values,
-                        borderColor: '#7e22ce',
+                        borderColor: '#ff6b4a',
                         backgroundColor: (context) => {
                             const chart = context.chart;
                             const {ctx, chartArea} = chart;
                             if (!chartArea) return null;
                             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                            gradient.addColorStop(0, 'rgba(126, 34, 206, 0.3)');
-                            gradient.addColorStop(1, 'rgba(126, 34, 206, 0.0)');
+                            gradient.addColorStop(0, 'rgba(255, 107, 74, 0.3)');
+                            gradient.addColorStop(1, 'rgba(255, 107, 74, 0.0)');
                             return gradient;
                         },
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
-                        pointBackgroundColor: '#7e22ce',
+                        pointBackgroundColor: '#ff6b4a',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 4,
@@ -950,7 +1221,7 @@ foreach($graph_yearly_data as $y) {
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, grid: { color: '#f3e8ff' }, ticks: { color: '#000000', font: { size: 11, weight: '600' }, callback: function(value) { return '₱' + value.toLocaleString(); } } },
+                        y: { beginAtZero: true, grid: { color: '#fff1ec' }, ticks: { color: '#000000', font: { size: 11, weight: '600' }, callback: function(value) { return '₱' + value.toLocaleString(); } } },
                         x: { grid: { display: false }, ticks: { color: '#000000', font: { size: 11, weight: '600' } } }
                     }
                 }
@@ -978,10 +1249,10 @@ foreach($graph_yearly_data as $y) {
             
             if(viewType === 'month') {
                 if(btnMonth) btnMonth.className = 'px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase shadow-lg bg-white text-black transition-all duration-300 flex items-center gap-2';
-                if(btnToday) btnToday.className = 'px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase text-purple-200 hover:text-white transition-all duration-300 flex items-center gap-2';
+                if(btnToday) btnToday.className = 'px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase text-slate-300 hover:text-white transition-all duration-300 flex items-center gap-2';
             } else {
                 if(btnToday) btnToday.className = 'px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase shadow-lg bg-white text-black transition-all duration-300 flex items-center gap-2';
-                if(btnMonth) btnMonth.className = 'px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase text-purple-200 hover:text-white transition-all duration-300 flex items-center gap-2';
+                if(btnMonth) btnMonth.className = 'px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase text-slate-300 hover:text-white transition-all duration-300 flex items-center gap-2';
             }
             fetchLiveSalesData();
         }

@@ -1,6 +1,14 @@
 <?php
 include('../BACKEND/db_inventory.php');
 
+session_start();
+
+// Tamang redirection papunta sa login.php na nasa PAGES folder
+if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'cashier' && $_SESSION['role'] !== 'admin')) {
+    header("Location: /HRMS/PAGES/login.php");
+    exit();
+}
+
 date_default_timezone_set('Asia/Manila');
 
 function respond_json($payload) {
@@ -815,11 +823,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                             </div>
                             <div class="card-body p-3 d-flex flex-column justify-content-between">
                                 <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                    <div>
+                                    <div class="flex-grow-1">
                                         <div class="fw-bold mb-1" style="font-size: 0.9rem; color: var(--purple-primary);">₱${prod.price.toFixed(2)}</div>
-                                        <h6 class="fw-semibold text-dark text-truncate m-0" style="font-size: 0.82rem; max-width: 120px;" title="${prod.name}">${prod.name}</h6>
+                                        <h6 class="fw-semibold text-dark m-0" style="font-size: 0.82rem; line-height: 1.2;" title="${prod.name}">${prod.name}</h6>
                                     </div>
-                                    <div class="card-action-btn shadow-sm">
+                                    <div class="card-action-btn shadow-sm flex-shrink-0">
                                         <i class="bi bi-plus-lg fs-6"></i>
                                     </div>
                                 </div>
@@ -1111,7 +1119,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         html: `<div class="receipt-card p-2 rounded text-start">${receiptHTML}</div>`,
                         confirmButtonColor: '#911d1d',
                         confirmButtonText: 'Close',
-                        width: '360px'
+                        width: '600px'
                     });
                 } else {
                     Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || 'Unable to complete checkout.', confirmButtonColor: '#ef4444' });

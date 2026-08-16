@@ -54,6 +54,11 @@ $total_branches = count($branches_list);
     <title>PannaKoda - Select & Delete Branch Map</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-4px); }
@@ -70,6 +75,11 @@ $total_branches = count($branches_list);
         .map-transition {
             animation: mapPulse 0.4s ease-in-out;
         }
+        #leafletMap {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-sans">
@@ -84,7 +94,7 @@ $total_branches = count($branches_list);
         <div class="flex-1 flex flex-col overflow-hidden">
             <header class="bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between shrink-0 shadow-xs">
                 <h1 class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-                    <span class="w-2.5 h-2.5 bg-purple-600 rounded-full ring-4 ring-purple-600/10 animate-pulse"></span> Branch Location Map
+                    <span class="w-2.5 h-2.5 bg-purple-600 rounded-full ring-4 ring-purple-600/10 animate-pulse"></span> Branch Location Map (Leaflet & OpenStreetMap)
                 </h1>
             </header>
 
@@ -127,10 +137,9 @@ $total_branches = count($branches_list);
                     <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-2.5 scrollbar-thin">
                         <?php if (count($branches_list) > 0): ?>
                             <?php foreach ($branches_list as $index => $branch): ?>
-                                <?php $encoded_address = urlencode($branch['full_address']); ?>
                                 <div class="relative group rounded-xl border border-slate-200/70 bg-white hover:bg-purple-50/30 hover:border-purple-200 transition-all duration-300 shadow-2xs hover:shadow-md hover:-translate-y-0.5">
                                     <!-- Clickable area to view map -->
-                                    <div onclick="changeMap('<?php echo htmlspecialchars($branch['branch_name'], ENT_QUOTES); ?>', '<?php echo $encoded_address; ?>', '<?php echo htmlspecialchars($branch['full_address'], ENT_QUOTES); ?>')" 
+                                    <div onclick="changeMap('<?php echo htmlspecialchars($branch['branch_name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($branch['full_address'], ENT_QUOTES); ?>')" 
                                          class="p-3.5 cursor-pointer">
                                         <div class="flex justify-between items-start pr-8">
                                             <h3 class="font-semibold text-slate-900 text-sm mb-1 group-hover:text-purple-700 transition-colors"><?php echo htmlspecialchars($branch['branch_name']); ?></h3>
@@ -175,24 +184,18 @@ $total_branches = count($branches_list);
                             </h2>
                             <p id="displayAddress" class="text-xs text-slate-500 mt-0.5 transition-all duration-300">Click a branch from the list to view its precise location details</p>
                         </div>
-                        <!-- Open direct to Google Maps Route -->
+                        <!-- Open direct to OpenStreetMap / Directions Route -->
                         <a id="externalNavBtn" href="#" target="_blank" class="hidden bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-all duration-200 items-center gap-2 shadow-sm hover:shadow active:scale-95 animate-fade-in">
                             <i class="bi bi-cursor-fill"></i> Get Directions
                         </a>
                     </div>
 
-                    <!-- Google Maps iframe -->
+                    <!-- Leaflet Map Container -->
                     <div id="mapContainer" class="flex-1 w-full bg-slate-200 relative transition-all duration-300">
-                        <iframe 
-                            id="mapIframe"
-                            class="w-full h-full border-0 transition-opacity duration-500"
-                            loading="lazy"
-                            allowfullscreen
-                            src="">
-                        </iframe>
+                        <div id="leafletMap"></div>
                         
                         <!-- Placeholder screen before selection -->
-                        <div id="mapPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 backdrop-blur-xs z-10 animate-fade-in">
+                        <div id="mapPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 backdrop-blur-xs z-[1000] animate-fade-in">
                             <div class="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 mb-4 shadow-xs animate-bounce">
                                 <i class="bi bi-geo-alt text-2xl"></i>
                             </div>
@@ -207,19 +210,64 @@ $total_branches = count($branches_list);
     </div>
 
     <script>
-        function changeMap(branchName, encodedAddress, fullAddress) {
+        let map;
+        let currentMarker = null;
+
+        // Initialize Leaflet Map centered on the Philippines by default
+        document.addEventListener('DOMContentLoaded', function() {
+            map = L.map('leafletMap').setView([12.8797, 121.7740], 6);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Auto-load the first branch on initialization if available
+            <?php if (count($branches_list) > 0): ?>
+                const firstBranchName = "<?php echo addslashes($branches_list[0]['branch_name']); ?>";
+                const firstAddress = "<?php echo addslashes($branches_list[0]['full_address']); ?>";
+                changeMap(firstBranchName, firstAddress);
+            <?php endif; ?>
+        });
+
+        function changeMap(branchName, fullAddress) {
             const container = document.getElementById('mapContainer');
             container.classList.add('map-transition');
             setTimeout(() => container.classList.remove('map-transition'), 400);
 
             document.getElementById('displayBranchName').innerText = branchName;
             document.getElementById('displayAddress').innerText = fullAddress;
-            
-            const mapUrl = `https://maps.google.com/maps?q=${encodedAddress}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
-            document.getElementById('mapIframe').src = mapUrl;
 
+            // Use OpenStreetMap Nominatim API to fetch geographic coordinates from address string
+            const encodedQuery = encodeURIComponent(fullAddress);
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+
+                        map.setView([lat, lon], 17);
+
+                        if (currentMarker) {
+                            map.removeLayer(currentMarker);
+                        }
+
+                        currentMarker = L.marker([lat, lon]).addTo(map)
+                            .bindPopup(`<b>${branchName}</b><br>${fullAddress}`)
+                            .openPopup();
+                    } else {
+                        // Fallback coordinates (Manila center) if lookup fails
+                        map.setView([14.5995, 120.9842], 13);
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                });
+
+            // Update external directions button link to OpenStreetMap routing interface
             const navBtn = document.getElementById('externalNavBtn');
-            navBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+            navBtn.href = `https://www.openstreetmap.org/search?query=${encodedQuery}`;
             navBtn.classList.remove('hidden');
             navBtn.classList.add('flex');
 
@@ -228,17 +276,12 @@ $total_branches = count($branches_list);
             setTimeout(() => {
                 placeholder.style.display = 'none';
             }, 200);
-        }
 
-        // Auto-load the first branch on initialization if available
-        <?php if (count($branches_list) > 0): ?>
-            document.addEventListener('DOMContentLoaded', function() {
-                const firstBranchName = "<?php echo addslashes($branches_list[0]['branch_name']); ?>";
-                const firstAddressEncoded = "<?php echo urlencode($branches_list[0]['full_address']); ?>";
-                const firstAddress = "<?php echo addslashes($branches_list[0]['full_address']); ?>";
-                changeMap(firstBranchName, firstAddressEncoded, firstAddress);
-            });
-        <?php endif; ?>
+            // Fix container rendering issues after pane visibility adjustments
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 250);
+        }
     </script>
 </body>
 </html>
