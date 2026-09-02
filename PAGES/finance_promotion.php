@@ -63,7 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_finance_promotions') {
     header('Content-Type: application/json');
 
-    // Kunin nang tama ang current_salary mula sa table ng employees sa halip na i-hardcode na 0
     $query = "SELECT pr.*, COALESCE(e.full_name, 'Unknown Employee') as full_name, e.employee_id as custom_emp_id, COALESCE(e.department, 'Unassigned') as department, COALESCE(e.salary, 0) as current_salary, COALESCE(e.position_title, 'Staff') as current_position 
               FROM promotion_requests pr 
               LEFT JOIN employees e ON pr.employee_id = e.id 
@@ -96,39 +95,92 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_finance_promotions') {
   <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
   <script src="../LIBRARIES/tailwind.js"></script> 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
 </head>
-<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+<body class="bg-slate-50 font-sans antialiased h-screen overflow-hidden">
   <div class="flex h-screen w-full overflow-hidden">
     <?php include 'sidebar.php'; ?>
-    <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Promotion & Salary Adjustments Review (Finance)</h1>
-          <p class="text-sm text-gray-500">Review pending promotion tickets before forwarding them to Admin.</p>
+    <div class="flex-1 h-screen overflow-y-auto p-4 lg:p-6 bg-slate-50 min-w-0">
+      
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 bg-white px-5 py-4 rounded-xl shadow-sm border border-slate-100 gap-2">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-900 text-white flex items-center justify-center text-base shadow-sm">
+            <i class="bi bi-award-fill"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-blue-950 tracking-tight leading-snug">Promotion & Salary Review</h1>
+            <p class="text-xs text-slate-500">Evaluate and review pending employee promotion requests.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Live Queue</span>
         </div>
       </div>
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <div class="table-responsive bg-white rounded-xl overflow-hidden">
-          <table class="table table-hover align-middle mb-0 text-sm">
-            <thead class="table-dark">
-              <tr>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Employee Name</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Department</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Current Role & Salary</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Proposed Role & New Salary</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0">Reason</th>
-                <th class="py-3 px-4 bg-[#212121] text-white font-semibold border-0 text-center">Action</th>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+        
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Selected Employee:</span>
+            <span id="selectedEmployeeNameText" class="text-xs font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-md border border-blue-200/60 shadow-sm">None Selected</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnApprove" onclick="processSingleDecision('Approved')" disabled class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm border-0 disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="bi bi-check-lg text-sm"></i> Approve
+            </button>
+            <button id="btnReject" onclick="processSingleDecision('Rejected')" disabled class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="bi bi-x-lg text-sm"></i> Reject
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-100">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-900 text-white text-xs uppercase tracking-wider">
+                <th class="py-3 px-3 font-semibold text-center w-10">
+                  <span class="sr-only">Select</span>
+                </th>
+                <th class="py-3 px-4 font-semibold">Employee Name</th>
+                <th class="py-3 px-4 font-semibold">ID</th>
+                <th class="py-3 px-4 font-semibold">Department</th>
+                <th class="py-3 px-4 font-semibold">Current Role</th>
+                <th class="py-3 px-4 font-semibold text-right">Current Salary</th>
+                <th class="py-3 px-4 font-semibold">Proposed Role</th>
+                <th class="py-3 px-4 font-semibold text-right">New Salary</th>
+                <th class="py-3 px-4 font-semibold">Reason</th>
               </tr>
             </thead>
-            <tbody id="financePromotionTableBody"></tbody>
+            <tbody id="financePromotionTableBody" class="divide-y divide-slate-100 text-sm">
+              </tbody>
           </table>
         </div>
       </div>
+
     </div>
   </div>
+
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
   <script>
     let promotionRequests = [];
+    let selectedRequestId = null;
+    let selectedEmployeeName = '';
     const endpointUrl = 'finance_promotion.php';
 
     async function loadPromotionRequests() {
@@ -138,6 +190,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_finance_promotions') {
         
         try {
           promotionRequests = JSON.parse(rawText);
+          selectedRequestId = null;
+          selectedEmployeeName = '';
           renderTable();
         } catch (jsonErr) {
           console.error("JSON Parse Error:", jsonErr);
@@ -152,69 +206,136 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_finance_promotions') {
     function renderTable() {
       const tbody = document.getElementById('financePromotionTableBody');
       tbody.innerHTML = '';
+      
       if (!Array.isArray(promotionRequests) || promotionRequests.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 italic">No pending promotion requests requiring finance review.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-slate-400 italic bg-slate-50/50 font-medium text-sm">No pending promotion requests requiring finance review.</td></tr>`;
+        updateToolbarState();
         return;
       }
+
       promotionRequests.forEach(req => {
+        const isSelected = selectedRequestId == req.id;
         const tr = document.createElement('tr');
-        tr.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
+        tr.className = `transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/70 hover:bg-blue-50' : 'hover:bg-slate-50/80'}`;
+        
+        tr.onclick = (e) => {
+          // Toggle selection kapag na-click ulit ang kasalukuyang selected row
+          if (selectedRequestId == req.id) {
+            clearSelection();
+          } else {
+            selectedRequestId = req.id;
+            selectedEmployeeName = req.full_name;
+            renderTable();
+          }
+        };
+
         tr.innerHTML = `
-          <td class="py-3 px-4 font-semibold text-gray-800">${req.full_name || 'N/A'} <br><small class="text-gray-400 font-mono font-normal">${req.custom_emp_id || ''}</small></td>
-          <td class="py-3 px-4 text-gray-600">${req.department || 'Unassigned'}</td>
-          <td class="py-3 px-4">
-            <span class="text-xs text-gray-700 font-semibold block">${req.current_position || 'Staff'}</span>
-            <span class="text-xs font-mono font-bold text-gray-900">₱${Number(req.current_salary || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+          <td class="py-3.5 px-3 text-center" onclick="event.stopPropagation()">
+            <input type="radio" name="employee_selection" value="${req.id}" ${isSelected ? 'checked' : ''} class="row-radio w-4 h-4 text-blue-900 focus:ring-blue-800 border-slate-300 cursor-pointer" onclick="handleRadioClick(${req.id}, '${escapeHtml(req.full_name)}', event)">
           </td>
-          <td class="py-3 px-4">
-            <span class="text-xs text-amber-700 font-semibold block">${req.proposed_position || 'N/A'}</span>
-            <span class="text-xs font-mono font-bold text-emerald-600">₱${Number(req.new_salary || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+          <td class="py-3.5 px-4 font-bold text-slate-900 text-sm whitespace-nowrap">${req.full_name || 'N/A'}</td>
+          <td class="py-3.5 px-4 font-mono font-medium text-slate-600 text-xs whitespace-nowrap">${req.custom_emp_id || 'N/A'}</td>
+          <td class="py-3.5 px-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-sm">${req.department || 'Unassigned'}</span>
           </td>
-          <td class="py-3 px-4 text-xs text-gray-600 max-w-xs truncate" title="${req.reason_for_promotion || ''}">
+          <td class="py-3.5 px-4 font-medium text-slate-700 text-sm whitespace-nowrap">${req.current_position || 'Staff'}</td>
+          <td class="py-3.5 px-4 text-right font-mono whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60 shadow-sm">₱${Number(req.current_salary || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+          </td>
+          <td class="py-3.5 px-4 font-bold text-blue-900 text-sm whitespace-nowrap">${req.proposed_position || 'N/A'}</td>
+          <td class="py-3.5 px-4 text-right font-mono whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/60 shadow-sm">₱${Number(req.new_salary || 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+          </td>
+          <td class="py-3.5 px-4 text-slate-600 text-sm max-w-[200px] truncate" title="${req.reason_for_promotion || ''}">
             ${req.reason_for_promotion || 'No reason provided'}
-          </td>
-          <td class="py-3 px-4 text-center">
-            <div class="flex items-center justify-center gap-1.5">
-              <button onclick="processDecision(${req.id}, 'Approved')" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg">
-                <i class="bi bi-check-lg"></i> Approve
-              </button>
-              <button onclick="processDecision(${req.id}, 'Rejected')" class="btn btn-sm btn-outline-danger py-1 px-2 text-xs font-semibold rounded-lg">
-                <i class="bi bi-x-lg"></i> Reject
-              </button>
-            </div>
           </td>
         `;
         tbody.appendChild(tr);
       });
+      updateToolbarState();
     }
 
-    async function processDecision(requestId, decision) {
+    function handleRadioClick(id, name, event) {
+      event.stopPropagation();
+      if (selectedRequestId == id) {
+        // Kung naka-check na tapos pinindot ulit, i-unselect
+        clearSelection();
+      } else {
+        selectedRequestId = id;
+        selectedEmployeeName = name;
+        renderTable();
+      }
+    }
+
+    function clearSelection() {
+      selectedRequestId = null;
+      selectedEmployeeName = '';
+      renderTable();
+    }
+
+    function updateToolbarState() {
+      const nameText = document.getElementById('selectedEmployeeNameText');
+      const btnApprove = document.getElementById('btnApprove');
+      const btnReject = document.getElementById('btnReject');
+
+      if (selectedRequestId) {
+        nameText.innerText = selectedEmployeeName;
+        nameText.className = "text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-md border border-emerald-200/60 shadow-sm";
+        btnApprove.removeAttribute('disabled');
+        btnReject.removeAttribute('disabled');
+      } else {
+        nameText.innerText = "None Selected";
+        nameText.className = "text-xs font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-md border border-blue-200/60 shadow-sm";
+        btnApprove.setAttribute('disabled', 'true');
+        btnReject.setAttribute('disabled', 'true');
+      }
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    async function processSingleDecision(decision) {
+      if (!selectedRequestId) return;
+
       Swal.fire({
-        title: `${decision} Request?`,
-        text: `Are you sure you want to ${decision.toLowerCase()} this promotion?`,
+        title: `${decision} Request for ${selectedEmployeeName}?`,
+        text: `Are you sure you want to ${decision.toLowerCase()} this employee's promotion request?`,
         icon: decision === 'Approved' ? 'question' : 'warning',
         showCancelButton: true,
-        confirmButtonColor: decision === 'Approved' ? '#198754' : '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: `Yes, ${decision}`
+        confirmButtonColor: decision === 'Approved' ? '#059669' : '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: `Yes, ${decision}`,
+        customClass: {
+          popup: 'rounded-2xl shadow-xl border border-slate-100',
+          confirmButton: 'rounded-lg px-3.5 py-2 font-bold text-xs',
+          cancelButton: 'rounded-lg px-3.5 py-2 font-bold text-xs'
+        }
       }).then(async (result) => {
         if (result.isConfirmed) {
           const formData = new URLSearchParams();
           formData.append('action', 'process_finance_promotion');
-          formData.append('request_id', requestId);
+          formData.append('request_id', selectedRequestId);
           formData.append('decision', decision);
 
           try {
             const res = await fetch(endpointUrl, { method: 'POST', body: formData });
             const data = await res.json();
             if (data.success) {
-              Swal.fire({ icon: 'success', title: 'Success!', text: data.message, timer: 1500, showConfirmButton: false });
+              Swal.fire({ 
+                icon: 'success', 
+                title: 'Success!', 
+                text: data.message, 
+                timer: 1500, 
+                showConfirmButton: false,
+                customClass: { popup: 'rounded-2xl shadow-xl' }
+              });
               loadPromotionRequests();
             } else {
-              Swal.fire('Error', data.message, 'error');
+              Swal.fire({ icon: 'error', title: 'Error', text: data.message, customClass: { popup: 'rounded-2xl shadow-xl' } });
             }
           } catch (err) {
-            Swal.fire('Error', 'Failed to communicate with server.', 'error');
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to communicate with server.', customClass: { popup: 'rounded-2xl shadow-xl' } });
           }
         }
       });

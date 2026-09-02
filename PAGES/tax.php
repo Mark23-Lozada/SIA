@@ -49,6 +49,8 @@ $deductions_result = $conn->query($deductions_query);
     <title>Tax Management & Compliance</title>
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- AOS Library CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased font-sans">
     <div class="flex min-h-screen w-full">
@@ -57,62 +59,91 @@ $deductions_result = $conn->query($deductions_query);
         </div>
 
         <div class="flex-1 min-w-0 bg-white min-h-screen flex flex-col">
-            <header class="h-[60px] bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0">
-                <h1 class="text-xl font-bold text-purple-700">Tax Management & Computations</h1>
-                <span class="text-xs font-semibold bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-200">Active Fiscal Year <?php echo date('Y'); ?></span>
-            </header>
+       
 
             <div class="p-6 flex-1 overflow-y-auto space-y-6">
-                <!-- CUSTOM BANNER HEADER -->
-                <div class="w-full bg-gradient-to-r from-purple-900 via-indigo-900 to-violet-950 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                <!-- CUSTOM BANNER HEADER WITH AOS -->
+                <div class="w-full bg-amber-500  rounded-3xl p-8 text-white shadow-lg relative overflow-hidden" data-aos="fade-up">
                     <div class="relative z-10 space-y-2">
-                        <span class="inline-block bg-white/20 backdrop-blur-md text-purple-100 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                        <span class="inline-block bg-white/20 backdrop-blur-md text-blue-100 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-white/20">
                             Fiscal & Tax Compliance
                         </span>
                         <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">
                             Annual Tax Computation & Allowable Deductions (<?php echo date('Y'); ?>)
                         </h2>
-                        <p class="text-purple-100 text-sm">
+                        <p class="text-blue-100 text-sm">
                             Compute taxable income, evaluate allowable business expense deductions, and check estimated tax dues.
                         </p>
                     </div>
                 </div>
 
-                <!-- Tax Summary Boxes -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-purple-600">
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Gross Revenue</p>
-                        <h3 class="text-2xl font-black text-gray-800">₱<?php echo number_format($total_revenue, 2); ?></h3>
-                        <p class="text-xs text-gray-500 mt-2">Total sales revenue generated this year</p>
+                <!-- Tax Summary Boxes WITH AOS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <!-- Total Gross Revenue -->
+                    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-amber-500/5 border border-blue-500/20 flex items-center justify-between relative overflow-hidden hover:border-blue-500 hover:bg-blue-50/10 group transition-all duration-300" data-aos="fade-up" data-aos-delay="100">
+                        <div class="absolute left-0 top-0 bottom-0 w-2 bg-blue-600 group-hover:w-3 transition-all"></div>
+                        <div>
+                            <p class="text-xs font-extrabold text-blue-700 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="bi bi-graph-up-arrow"></i>Gross Revenue</p>
+                            <h4 class="text-xl font-bold text-amber-500 mt-2">₱<?php echo number_format($total_revenue, 2); ?></h4>
+                            <p class="text-xs font-semibold text-gray-600 mt-1">Total sales this year</p>
+                        </div>
+                        <div class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-600 text-2xl shadow-inner border border-blue-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-indigo-600">
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Allowable Deductions</p>
-                        <h3 class="text-2xl font-black text-indigo-600">₱<?php echo number_format($total_expenses, 2); ?></h3>
-                        <p class="text-xs text-gray-500 mt-2">From approved restock/refill requests</p>
+
+                    <!-- Allowable Deductions -->
+                    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-500/20 flex items-center justify-between relative overflow-hidden hover:border-emerald-500 hover:bg-emerald-50/10 group transition-all duration-300" data-aos="fade-up" data-aos-delay="200">
+                        <div class="absolute left-0 top-0 bottom-0 w-2 bg-emerald-600 group-hover:w-3 transition-all"></div>
+                        <div>
+                            <p class="text-xs font-extrabold text-emerald-700 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="bi bi-receipt"></i>Deductions</p>
+                            <h4 class="text-xl font-bold text-amber-500 mt-2">₱<?php echo number_format($total_expenses, 2); ?></h4>
+                            <p class="text-xs font-semibold text-gray-600 mt-1">Approved restock/refill</p>
+                        </div>
+                        <div class="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600 text-2xl shadow-inner border border-emerald-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white">
+                            <i class="bi bi-cart-dash"></i>
+                        </div>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-violet-600">
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Taxable Income</p>
-                        <h3 class="text-2xl font-black text-violet-600">₱<?php echo number_format($taxable_income, 2); ?></h3>
-                        <p class="text-xs text-gray-500 mt-2">Revenue minus allowable expenses</p>
+
+                    <!-- Taxable Income -->
+                    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-purple-950/5 border border-purple-500/20 flex items-center justify-between relative overflow-hidden hover:border-purple-500 hover:bg-purple-50/10 group transition-all duration-300" data-aos="fade-up" data-aos-delay="300">
+                        <div class="absolute left-0 top-0 bottom-0 w-2 bg-purple-600 group-hover:w-3 transition-all"></div>
+                        <div>
+                            <p class="text-xs font-extrabold text-purple-700 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="bi bi-calculator"></i>Taxable Income</p>
+                            <h4 class="text-xl font-bold text-amber-500 mt-2">₱<?php echo number_format($taxable_income, 2); ?></h4>
+                            <p class="text-xs font-semibold text-gray-600 mt-1">Revenue minus expenses</p>
+                        </div>
+                        <div class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-600 text-2xl shadow-inner border border-purple-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white">
+                            <i class="bi bi-calculator-fill"></i>
+                        </div>
                     </div>
-                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm border-l-4 border-l-fuchsia-600">
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Estimated Tax Due (8%)</p>
-                        <h3 class="text-2xl font-black text-fuchsia-600">₱<?php echo number_format($estimated_tax, 2); ?></h3>
-                        <p class="text-xs text-gray-500 mt-2">Estimated tax payable</p>
+
+                    <!-- Estimated Tax Due -->
+                    <div class="bg-white/90 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl shadow-xl shadow-amber-950/5 border border-amber-500/20 flex items-center justify-between relative overflow-hidden hover:border-amber-500 hover:bg-amber-50/10 group transition-all duration-300" data-aos="fade-up" data-aos-delay="400">
+                        <div class="absolute left-0 top-0 bottom-0 w-2 bg-amber-600 group-hover:w-3 transition-all"></div>
+                        <div>
+                            <p class="text-xs font-extrabold text-amber-700 uppercase tracking-wider mb-1 flex items-center gap-1.5"><i class="bi bi-shield-check"></i>Tax Due (8%)</p>
+                            <h4 class="text-xl font-bold text-amber-500 mt-2">₱<?php echo number_format($estimated_tax, 2); ?></h4>
+                            <p class="text-xs font-semibold text-gray-600 mt-1">Total tax payable</p>
+                        </div>
+                        <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-600 text-2xl shadow-inner border border-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white">
+                            <i class="bi bi-bank"></i>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Section Title -->
-                <div class="mb-4 pt-2">
-                    <h2 class="text-lg font-bold text-gray-800">Approved Deductible Expenses (Refill & Restock History)</h2>
+                <!-- Section Title WITH AOS -->
+                <div class="mb-4 pt-2" data-aos="fade-up" data-aos-delay="500">
+                    <h2 class="text-lg font-bold text-amber-500">Approved Deductible Expenses (Refill & Restock History)</h2>
                     <p class="text-xs text-gray-500">These transactions are automatically deducted from total revenue to legally lower taxable income.</p>
                 </div>
 
-                <!-- Deductions Table -->
+                <!-- Deductions Table (NO AOS applied here) -->
                 <div class="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-purple-50 border-b border-gray-200 text-xs font-bold text-purple-800 uppercase">
+                            <tr class="bg-blue-50 border-b border-gray-200 text-xs font-bold text-blue-900 uppercase">
                                 <th class="px-6 py-4">Request ID / Title</th>
                                 <th class="px-6 py-4">Department</th>
                                 <th class="px-6 py-4 text-right">Deducted Amount</th>
@@ -127,9 +158,13 @@ $deductions_result = $conn->query($deductions_query);
                                             <div class="font-bold text-gray-900"><?php echo htmlspecialchars($row['request_id']); ?></div>
                                             <div class="text-xs text-gray-500"><?php echo htmlspecialchars($row['title']); ?></div>
                                         </td>
-                                        <td class="px-6 py-4 text-gray-600"><?php echo htmlspecialchars($row['department']); ?></td>
-                                        <td class="px-6 py-4 text-right font-bold text-purple-600">-₱<?php echo number_format($row['amount'], 2); ?></td>
-                                        <td class="px-6 py-4 text-center text-xs text-gray-500 font-medium">
+                                        <td class="px-6 py-4">
+                                            <span class="inline-block bg-blue-50 text-blue-800 text-xs font-semibold px-2.5 py-1 rounded-md border border-blue-200">
+                                                <?php echo htmlspecialchars($row['department']); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right font-bold text-blue-800">-₱<?php echo number_format($row['amount'], 2); ?></td>
+                                        <td class="px-6 py-4 text-center text-xs text-amber-500 font-medium">
                                             <?php echo date('M d, Y', strtotime($row['created_at'])); ?>
                                         </td>
                                     </tr>
@@ -145,6 +180,15 @@ $deductions_result = $conn->query($deductions_query);
             </div>
         </div>
     </div>
+
+    <!-- AOS Library JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true
+        });
+    </script>
 </body>
 </html>
 <?php $conn->close(); ?>

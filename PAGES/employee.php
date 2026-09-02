@@ -71,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $firstname = strtolower(preg_replace('/[^a-z]/', '', $name_parts[0]));
         $lastname = count($name_parts) > 1 ? strtolower(preg_replace('/[^a-z]/', '', end($name_parts))) : $firstname;
         
-        // Pinalitan/ginamit ang 'email' column sa halip na 'employee_gmail'
         $email = !empty($emp_data['email']) ? $emp_data['email'] : ($lastname . '.' . $firstname . '@gmail.com');
 
         if ($dept_lower === 'hr') {
@@ -216,7 +215,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
     .table tbody tr:hover {
       transform: scale(1.004) translateY(-1px);
-      background-color: rgba(255, 107, 74, 0.05) !important;
+      background-color: rgba(202, 138, 4, 0.05) !important;
       box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
@@ -277,99 +276,104 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     <?php include 'sidebar.php'; ?>
     <div class="flex-1 h-screen overflow-y-auto p-8 bg-white min-w-0 transition-colors duration-300" id="mainContentArea">
       
-      <!-- BANNER HEADER -->
-      <div data-aos="fade-down" class="relative overflow-hidden bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] rounded-3xl shadow-xl p-8 mb-8 text-white border border-[#ff6b4a]/30 transition-all duration-300 hover:shadow-2xl">
-        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#ff6b4a]/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div data-aos="fade-down" class="relative overflow-hidden bg-amber-500 rounded-3xl shadow-xl p-8 mb-8 text-white border border-amber-500/35 transition-all duration-300 hover:shadow-2xl">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-amber-500 rounded-full blur-3xl pointer-events-none opacity-50 animate-pulse"></div>
+    
 
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#ff6b4a]/20 backdrop-blur-md border border-[#ff6b4a]/30 text-xs font-semibold uppercase tracking-wider text-[white] mb-3 shadow-sm">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-700 backdrop-blur-md border border-amber-500/50 text-xs font-semibold uppercase tracking-wider text-amber-100 mb-3 shadow-sm">
               <i class="bi bi-people-fill"></i> HR & Admin Department
             </div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-[white] mb-2">Employee Directory & PH Payroll</h1>
-            <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
+            <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Employee Directory & PH Payroll</h1>
+            <p class="text-sm text-amber-100 max-w-2xl leading-relaxed">
               Manage candidates, onboarding profiles, statutory numbers, department metrics, and Philippine-compliant payroll statements seamlessly.
             </p>
           </div>
 
           <div class="flex items-center gap-3 flex-wrap">
-            <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
-              <div class="w-10 h-10 rounded-xl bg-[#ff6b4a]/30 flex items-center justify-center text-[#ff6b4a]">
+            <div class="bg-amber-700/45 backdrop-blur-md border border-amber-500/40 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
+              <div class="w-10 h-10 rounded-xl bg-amber-800 flex items-center justify-center text-amber-100">
                 <i class="bi bi-shield-lock-fill text-xl"></i>
               </div>
               <div>
-                <span class="block text-xs text-slate-300 font-medium">Total Workforce</span>
+                <span class="block text-xs text-amber-200 font-medium">Total Workforce</span>
                 <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-4">
-          <div class="text-xs text-slate-400 font-medium hidden sm:block">
+        <div class="relative z-10 mt-6 pt-6 border-t border-amber-700/50 flex flex-wrap justify-between items-center gap-4">
+          <div class="text-xs text-amber-200 font-medium hidden sm:block">
             <i class="bi bi-sliders mr-1"></i> Switch active directory view below
           </div>
-          <div class="bg-black/30 backdrop-blur-md p-1.5 rounded-xl flex gap-1.5 border border-[#ff6b4a]/20 ml-auto shadow-inner">
-            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-[#ff6b4a] text-white shadow-md font-semibold transform hover:scale-[1.02]">
-              <i class="bi bi-person-plus"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-white/25 text-white rounded-pill px-2">0</span>
+          <div class="bg-amber-700/50 backdrop-blur-md p-1.5 rounded-xl flex gap-1.5 border border-amber-500/40 ml-auto shadow-inner">
+            <button id="tabNewlyHired" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-amber-800 text-white shadow-md font-bold transform hover:scale-[1.02]">
+              <i class="bi bi-person-plus"></i> Newly Hired <span id="badgeNewlyHired" class="badge bg-amber-900 text-white rounded-pill px-2">0</span>
             </button>
-            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-slate-300 hover:text-white hover:bg-[#ff6b4a]/20">
+            <button id="tabPersonal" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-amber-100 hover:text-white hover:bg-amber-700/50">
               <i class="bi bi-person-bounding-box"></i> Personal Details
             </button>
-            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-slate-300 hover:text-white hover:bg-[#ff6b4a]/20">
+            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-amber-100 hover:text-white hover:bg-amber-700/50">
               <i class="bi bi-cash-stack"></i> Payroll Profile
             </button>
           </div>
         </div>
       </div>
 
-      <!-- METRIC CARDS -->
       <div data-aos="fade-up" data-aos-delay="100" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white-50 p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
-          <div class="w-12 h-12 rounded-2xl bg-[#ff6b4a]/10 text-[#ff6b4a] flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-            <i class="bi bi-people-fill"></i>
-          </div>
-          <div>
-            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Hired</p>
-            <h3 id="statTotalHired" class="text-2xl font-black text-slate-800 transition-all duration-300">0</h3>
-          </div>
+        <!-- Card 1: Total Hired (Blue Theme) -->
+        <div class="bg-blue-50/90 backdrop-blur-2xl rounded-3xl p-5 border border-blue-200/80 shadow-xl shadow-blue-950/5 flex items-center gap-4 transition-all duration-300 hover:shadow-2xl hover:border-blue-600 hover:bg-blue-50/40 group transform hover:-translate-y-1.5 cursor-pointer">
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-700 flex items-center justify-center text-xl shrink-0 shadow-inner border border-blue-500/30 transition-all group-hover:bg-blue-600 group-hover:text-white group-hover:rotate-6">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div>
+                <p class="text-xs text-blue-600 group-hover:text-blue-800 font-bold uppercase tracking-wider transition-colors">Total Hired</p>
+                <h3 id="statTotalHired" class="text-2xl font-black text-blue-900 group-hover:text-blue-950 transition-colors mt-0.5">0</h3>
+            </div>
         </div>
 
-        <div class="bg-white-50 p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
-          <div class="w-12 h-12 rounded-2xl bg-[#ff6b4a]/10 text-[#ff6b4a] flex items-center justify-center text-xl font-bold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-            <i class="bi bi-person-plus-fill"></i>
-          </div>
-          <div>
-            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Onboarding</p>
-            <h3 id="statOnboarding" class="text-2xl font-black text-slate-800 transition-all duration-300">0</h3>
-          </div>
+        <!-- Card 2: Onboarding (Green Theme) -->
+        <div class="bg-emerald-50/90 backdrop-blur-2xl rounded-3xl p-5 border border-emerald-200/80 shadow-xl shadow-emerald-950/5 flex items-center gap-4 transition-all duration-300 hover:shadow-2xl hover:border-emerald-500 hover:bg-emerald-50/40 group transform hover:-translate-y-1.5 cursor-pointer">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-xl shrink-0 shadow-inner border border-emerald-500/30 transition-all group-hover:bg-emerald-600 group-hover:text-white group-hover:rotate-6">
+                <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <div>
+                <p class="text-xs text-emerald-600 group-hover:text-emerald-800 font-bold uppercase tracking-wider transition-colors">Onboarding</p>
+                <h3 id="statOnboarding" class="text-2xl font-black text-emerald-900 group-hover:text-emerald-950 transition-colors mt-0.5">0</h3>
+            </div>
         </div>
 
-        <div class="bg-white-50 p-5 rounded-2xl shadow-sm border border-slate-200/80 md:col-span-2 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50">
-          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">Employees per Department</p>
-          <div id="deptBreakdownContainer" class="flex flex-wrap gap-2">
-            <span class="text-xs text-slate-400 italic">Calculating breakdown...</span>
-          </div>
+        <!-- Card 3: Employees per Department (Purple Theme) -->
+        <div class="bg-purple-50/90 backdrop-blur-2xl rounded-3xl p-5 border border-purple-200/80 shadow-xl shadow-purple-950/5 md:col-span-2 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:border-purple-600/50 group transform hover:-translate-y-1.5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-xs text-purple-600 group-hover:text-purple-800 font-bold uppercase tracking-wider transition-colors">Employees per Department</p>
+                <div class="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-700 flex items-center justify-center text-sm shrink-0 shadow-inner border border-purple-500/30 transition-all group-hover:bg-purple-600 group-hover:text-white group-hover:rotate-6">
+                    <i class="bi bi-building-fill"></i>
+                </div>
+            </div>
+            <div id="deptBreakdownContainer" class="flex flex-wrap gap-2 mt-1">
+                <span class="text-xs text-purple-400 italic">Calculating breakdown...</span>
+            </div>
         </div>
       </div>
 
-      <!-- FEATURE BAR -->
       <div data-aos="fade-up" data-aos-delay="200" class="mb-6 space-y-4">
-        <div class="flex flex-col md:flex-row items-center gap-3 bg-white-50 p-4 rounded-2xl shadow-sm border border-slate-200/80">
+        <div class="flex flex-col md:flex-row items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
           <div class="relative flex-1 w-full">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
               <i class="bi bi-search"></i>
             </span>
-            <input id="searchInput" type="text" class="form-control pl-10 pr-10 py-2.5 rounded-xl text-sm border-slate-200 focus:border-[#ff6b4a] focus:ring-0 shadow-none bg-white transition-all" placeholder="Search by ID, name, department, or role...">
-            <button onclick="clearSearchInput()" id="clearSearchBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#ff6b4a] d-none transition-colors" title="Clear Search">
+            <input id="searchInput" type="text" class="form-control pl-10 pr-10 py-2.5 rounded-xl text-sm border-slate-200 focus:border-amber-500 focus:ring-0 shadow-none bg-white transition-all" placeholder="Search by ID, name, department, or role...">
+            <button onclick="clearSearchInput()" id="clearSearchBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-amber-700 d-none transition-colors" title="Clear Search">
               <i class="bi bi-x-circle-fill text-base"></i>
             </button>
           </div>
 
           <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-            <button onclick="exportTableToCSV()" class="btn btn-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all transform hover:scale-105">
-              <i class="bi bi-file-earmark-arrow-down-fill text-emerald-600"></i> Export CSV
+            <button onclick="exportTableToCSV()" class="btn btn-sm bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all transform hover:scale-105">
+              <i class="bi bi-file-earmark-arrow-down-fill text-amber-500"></i> Export CSV
             </button>
             <button onclick="window.print()" class="btn btn-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all transform hover:scale-105">
               <i class="bi bi-printer-fill text-slate-600"></i> Print List
@@ -379,8 +383,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
         <div class="flex flex-wrap items-center justify-between gap-3 px-2">
           <div class="flex items-center gap-2 flex-wrap" id="departmentFilterPills">
-            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-1"><i class="bi bi-funnel-fill text-[#ff6b4a]"></i> Filter Dept:</span>
-            <button onclick="filterByDepartment('All')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#ff6b4a] text-white shadow-sm transition-all transform hover:scale-105 active">All Departments</button>
+            <span class="text-xs font-semibold text-amber-900 uppercase tracking-wide mr-1"><i class="bi bi-funnel-fill text-amber-500"></i> Filter Dept:</span>
+            <button onclick="filterByDepartment('All')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 text-white shadow-sm transition-all transform hover:scale-105 active">All Departments</button>
           </div>
 
           <div class="flex items-center gap-2">
@@ -397,17 +401,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         </div>
       </div>
 
-      <!-- TABLES SECTION -->
-      <div class="bg-white-50 rounded-2xl shadow-sm border border-slate-200/80 p-6 overflow-hidden transition-all duration-300">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 overflow-hidden transition-all duration-300">
         
         <div class="table-responsive bg-white rounded-xl overflow-hidden border border-slate-200/60 p-2 relative">
           
           <div id="tableLoadingOverlay" class="absolute inset-0 bg-white/80 backdrop-blur-xs z-20 flex flex-col items-center justify-center transition-opacity d-none">
-            <div class="w-8 h-8 border-3 border-[#ff6b4a] border-t-transparent rounded-full animate-spin mb-2"></div>
+            <div class="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mb-2"></div>
             <span class="text-xs font-semibold text-slate-600">Updating table view...</span>
           </div>
 
-          <!-- 1. NEWLY HIRED TABLE -->
           <table id="newlyHiredTable" class="table table-hover align-middle mb-0 text-sm animate-fade-in">
             <thead>
               <tr class="border-b border-slate-200">
@@ -420,7 +422,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <tbody id="newlyHiredBody"></tbody>
           </table>
 
-          <!-- 2. PERSONAL DETAILS TABLE -->
           <table id="personalTable" class="table table-hover align-middle mb-0 text-sm d-none animate-fade-in">
             <thead>
               <tr class="border-b border-slate-200">
@@ -435,7 +436,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <tbody id="personalBody"></tbody>
           </table>
 
-          <!-- 3. PAYROLL PROFILE TABLE -->
           <table id="payrollTable" class="table table-hover align-middle mb-0 text-sm d-none animate-fade-in">
             <thead>
               <tr class="border-b border-slate-200">
@@ -462,20 +462,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       </div>
     </div>
 
-    <!-- PAYSLIP MODAL -->
+    <!-- Payslip Modal -->
     <div class="modal fade" id="payslipModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-3xl shadow-2xl border-0 overflow-hidden animate-fade-in">
           <div class="modal-header border-0 bg-slate-50 px-6 py-4 no-print">
             <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2">
-              <i class="bi bi-receipt text-[#ff6b4a]"></i> Corporate Payroll Statement (PH Standards)
+              <i class="bi bi-receipt text-amber-500"></i> Corporate Payroll Statement (PH Standards)
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-6" id="printArea"></div>
           <div class="modal-footer border-0 bg-slate-50 px-6 py-4 no-print">
             <button type="button" class="btn btn-light font-semibold border text-slate-600 px-4 rounded-xl" data-bs-dismiss="modal">Close</button>
-            <button type="button" id="btnPrintStatement" class="btn font-semibold bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white border-0 px-5 rounded-xl flex items-center gap-2 shadow-sm transition-all duration-200">
+            <button type="button" id="btnPrintStatement" class="btn font-semibold bg-amber-500 hover:bg-amber-700 text-white border-0 px-5 rounded-xl flex items-center gap-2 shadow-sm transition-all duration-200">
               <i class="bi bi-printer"></i> Print Statement
             </button>
           </div>
@@ -483,14 +483,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       </div>
     </div>
 
-    <!-- ONBOARDING FORM MODAL -->
+    <!-- Onboarding Modal -->
     <div class="modal fade" id="onboardingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-3xl shadow-2xl border-0 overflow-hidden animate-fade-in">
           <div class="modal-header border-0 bg-slate-50 px-6 py-4">
-            <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2">
-              <i class="bi bi-person-check text-[#ff6b4a]"></i> Complete Onboarding Details
-            </h5>
+            <div class="flex items-center gap-3">
+              <div id="modalProfileAvatar" class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-md">A</div>
+              <div>
+                <h5 class="modal-title font-bold text-slate-800 flex items-center gap-2 mb-0">
+                  Complete Onboarding Details
+                </h5>
+                <p id="modalProfileSubtitle" class="text-xs text-slate-400 mb-0">Setup profile and employment configuration</p>
+              </div>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form id="onboardingForm" onsubmit="submitOnboarding(event)">
@@ -504,29 +510,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Number</label>
-                  <input type="text" id="modalContactNumber" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="e.g. 09123456789">
+                  <input type="text" id="modalContactNumber" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" placeholder="e.g. 09123456789">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Name</label>
-                  <input type="text" id="modalCompanyName" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="PannaKoda Stores Inc.">
+                  <input type="text" id="modalCompanyName" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" value="PannaKoda Stores Inc.">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Address</label>
-                  <input type="text" id="modalCompanyAddress" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="e.g. Dasmarinas Cavite">
+                  <input type="text" id="modalCompanyAddress" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" placeholder="e.g. Dasmarinas Cavite">
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date of Birth</label>
-                  <input type="date" id="modalDob" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <input type="date" id="modalDob" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Civil Status</label>
-                  <select id="modalCivilStatus" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <select id="modalCivilStatus" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                     <option value="Single">Single</option>
                     <option value="Married">Married</option>
                     <option value="Widowed">Widowed</option>
@@ -534,14 +540,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nationality</label>
-                  <input type="text" id="modalNationality" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="Filipino">
+                  <input type="text" id="modalNationality" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" value="Filipino">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Gender</label>
-                  <select id="modalGender" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <select id="modalGender" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
@@ -549,7 +555,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Location</label>
-                  <input type="text" id="modalWorkLocation" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="Main Office">
+                  <input type="text" id="modalWorkLocation" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" value="Main Office">
                 </div>
               </div>
 
@@ -561,18 +567,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Email (Initial)</label>
-                  <input type="text" id="modalEmployeeGmail" class="form-control text-sm rounded-xl border-slate-200 text-[#ff6b4a] font-medium" placeholder="employee@gmail.com">
+                  <input type="text" id="modalEmployeeGmail" class="form-control text-sm rounded-xl border-slate-200 text-amber-700 font-medium" placeholder="employee@gmail.com">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Company Gmail</label>
-                  <input type="text" id="modalCompanyGmail" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-emerald-700 font-medium">
+                  <input type="text" id="modalCompanyGmail" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-amber-700 font-medium">
                 </div>
               </div>
 
               <div>
                 <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Set Password</label>
-                <input type="text" id="modalPassword" value="@Lozada23" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-[#ff6b4a] font-semibold cursor-not-allowed">
-                <div id="passwordFeedback" class="text-[11px] mt-1 text-emerald-600 font-semibold">
+                <input type="text" id="modalPassword" value="@Lozada23" readonly class="form-control bg-slate-100 text-sm rounded-xl border-slate-200 text-amber-800 font-semibold cursor-not-allowed">
+                <div id="passwordFeedback" class="text-[11px] mt-1 text-amber-500 font-semibold">
                   <i class="bi bi-check-circle-fill"></i> Fixed Default Password
                 </div>
               </div>
@@ -580,18 +586,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Department</label>
-                  <input type="text" id="modalDepartment" required class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
+                  <input type="text" id="modalDepartment" required class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" placeholder="e.g. HR, Finance, Manager, Staff" oninput="updateModalGmailPreview()">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Role / Position Tier</label>
-                  <select id="modalRole" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" onchange="updateDefaultSalary()">
+                  <select id="modalRole" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" onchange="updateDefaultSalary()">
                     <option value="Staff">Staff</option>
                     <option value="Manager">Manager</option>
                   </select>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Employment Type</label>
-                  <select id="modalEmploymentType" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <select id="modalEmploymentType" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                     <option value="Regular">Regular</option>
                     <option value="Probationary">Probationary</option>
                     <option value="Part-Time">Part-Time</option>
@@ -603,33 +609,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Immediate Supervisor</label>
-                  <input type="text" id="modalSupervisor" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="Supervisor Name">
+                  <input type="text" id="modalSupervisor" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" placeholder="Supervisor Name">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Base Salary (PHP)</label>
-                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" placeholder="Base salary">
+                  <input type="number" step="0.01" id="modalSalary" required class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" placeholder="Base salary">
                 </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date Hired</label>
-                  <input type="date" id="modalDateHired" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <input type="date" id="modalDateHired" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract Start Date</label>
-                  <input type="date" id="modalContractStart" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <input type="date" id="modalContractStart" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract End Date</label>
-                  <input type="date" id="modalContractEnd" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0">
+                  <input type="date" id="modalContractEnd" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Contract Duration (Years)</label>
-                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm rounded-xl border-slate-200 focus:border-[#ff6b4a] focus:ring-0" value="1.0">
+                  <input type="number" step="0.1" id="modalContractDuration" class="form-control text-sm rounded-xl border-slate-200 focus:border-amber-500 focus:ring-0" value="1.0">
                 </div>
               </div>
 
@@ -656,7 +662,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             </div>
             <div class="modal-footer border-0 bg-slate-50 px-6 py-4">
               <button type="button" class="btn btn-light font-semibold border text-slate-600 px-4 rounded-xl" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn font-semibold bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white border-0 px-5 rounded-xl shadow-sm transition-all duration-200">Fully Hired & Save</button>
+              <button type="submit" class="btn font-semibold bg-amber-500 hover:bg-amber-700 text-white border-0 px-5 rounded-xl shadow-sm transition-all duration-200">Fully Hired & Save</button>
             </div>
           </form>
         </div>
@@ -675,6 +681,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
     let selectedDepartmentFilter = 'All';
     let currentPage = 1;
     let rowsPerPage = 10;
+
+    // Helper function to generate unique colors per name for avatar badges
+    function getUniqueAvatarStyle(name) {
+      if (!name) name = "Employee";
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const colorPalettes = [
+        'linear-gradient(135deg, #d97706, #b45309)', // Amber
+        'linear-gradient(135deg, #f59e0b, #d97706)', // Yellow/Amber
+        'linear-gradient(135deg, #fbbf24, #f59e0b)', // Light Amber
+        'linear-gradient(135deg, #e11d48, #be123c)', // Rose contrast
+        'linear-gradient(135deg, #ea580c, #c2410c)', // Orange
+        'linear-gradient(135deg, #ca8a04, #a16207)', // Dark Yellow/Gold
+        'linear-gradient(135deg, #854d0e, #713f12)', // Warm Brown/Mustard
+        'linear-gradient(135deg, #eab308, #ca8a04)'  // Yellow Gold
+      ];
+      const index = Math.abs(hash) % colorPalettes.length;
+      return colorPalettes[index];
+    }
 
     async function loadEmployees() {
       showTableLoading(true);
@@ -723,12 +750,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const deptContainer = document.getElementById('deptBreakdownContainer');
       deptContainer.innerHTML = '';
       if (Object.keys(deptCounts).length === 0) {
-        deptContainer.innerHTML = `<span class="text-xs text-slate-400 italic">No department data.</span>`;
+        deptContainer.innerHTML = `<span class="text-xs text-purple-400 italic">No department data.</span>`;
       } else {
         for (const [dept, count] of Object.entries(deptCounts)) {
           const badge = document.createElement('div');
-          badge.className = "bg-orange-50 border border-orange-100 text-orange-800 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 hover:bg-orange-100 transform hover:scale-105";
-          badge.innerHTML = `<span>${dept}:</span> <span class="bg-[#ff6b4a] text-white px-2 py-0.5 rounded-lg text-[10px] font-bold">${count}</span>`;
+          badge.className = "bg-purple-100/80 border border-purple-200 text-purple-900 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 hover:bg-purple-200 transform hover:scale-105";
+          badge.innerHTML = `<span>${dept}:</span> <span class="bg-purple-600 text-white px-2 py-0.5 rounded-lg text-[10px] font-bold">${count}</span>`;
           deptContainer.appendChild(badge);
         }
       }
@@ -736,8 +763,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
 
     function buildDepartmentFilterPills() {
       const container = document.getElementById('departmentFilterPills');
-      const allBtnHTML = `<span class="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-1"><i class="bi bi-funnel-fill text-[#ff6b4a]"></i> Filter Dept:</span>
-        <button onclick="filterByDepartment('All')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold ${selectedDepartmentFilter === 'All' ? 'bg-[#ff6b4a] text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} transition-all transform hover:scale-105">All Departments</button>`;
+      const allBtnHTML = `<span class="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-1"><i class="bi bi-funnel-fill text-amber-500"></i> Filter Dept:</span>
+        <button onclick="filterByDepartment('All')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold ${selectedDepartmentFilter === 'All' ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} transition-all transform hover:scale-105">All Departments</button>`;
       
       let depts = new Set();
       allEmployees.forEach(e => { if(e.department) depts.add(e.department); });
@@ -745,7 +772,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       let pillsHTML = allBtnHTML;
       depts.forEach(d => {
         const isActive = selectedDepartmentFilter === d;
-        pillsHTML += `<button onclick="filterByDepartment('${d}')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold ${isActive ? 'bg-[#ff6b4a] text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} transition-all transform hover:scale-105">${d}</button>`;
+        pillsHTML += `<button onclick="filterByDepartment('${d}')" class="dept-pill px-3 py-1.5 rounded-xl text-xs font-semibold ${isActive ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} transition-all transform hover:scale-105">${d}</button>`;
       });
       container.innerHTML = pillsHTML;
     }
@@ -815,7 +842,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         const name = String(emp.full_name || '').toLowerCase();
         const dept = String(emp.department || '').toLowerCase();
         const role = String(emp.role || '').toLowerCase();
-        const gmail = String(emp.email || '').toLowerCase(); // Pinalitan ang employee_gmail ng email
+        const gmail = String(emp.email || '').toLowerCase();
         
         const matchesSearch = customId.includes(query) || name.includes(query) || dept.includes(query) || role.includes(query) || gmail.includes(query);
         const matchesDept = selectedDepartmentFilter === 'All' || emp.department === selectedDepartmentFilter;
@@ -838,70 +865,82 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       personalBody.innerHTML = '';
       payrollBody.innerHTML = '';
 
-      let onboardingCount = 0;
-      let hiredPersonalCount = 0;
-      let activePayrollCount = 0;
-
       paginatedItems.forEach(emp => {
         const status = (emp.status || 'onboarding').toLowerCase();
         const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
         
         const displayRole = (emp.role && emp.role.trim() !== '') ? emp.role : 'Staff';
-        const roleClass = displayRole === 'Manager' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200';
+        const roleClass = displayRole === 'Manager' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-50 text-slate-700 border-slate-200';
+
+        const fullName = emp.full_name || 'Unknown';
+        const firstLetter = fullName.trim().charAt(0).toUpperCase();
+        const avatarBg = getUniqueAvatarStyle(fullName);
 
         if (status !== 'hired') {
-          onboardingCount++;
           const trNew = document.createElement('tr');
-          trNew.className = "border-b border-slate-100 hover:bg-orange-50/40 transition-all duration-200";
+          trNew.className = "border-b border-slate-100 hover:bg-amber-50/45 transition-all duration-200";
           trNew.innerHTML = `
-            <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
+            <td class="py-3.5 px-4 font-semibold text-slate-800">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0" style="background: ${avatarBg};">${firstLetter}</div>
+                <span>${fullName}</span>
+              </div>
+            </td>
             <td class="py-3.5 px-4"><span class="${roleClass} px-3 py-1 rounded-lg text-xs font-semibold border">${displayRole}</span></td>
-            <td class="py-3.5 px-4"><span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Onboarding</span></td>
+            <td class="py-3.5 px-4"><span class="bg-amber-50 text-amber-800 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Onboarding</span></td>
             <td class="py-3.5 px-4 text-center">
-              <button onclick="openOnboardingModal(${emp.id})" class="btn btn-sm py-1.5 px-3.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white border-0 shadow-sm transition-all duration-200 hover:scale-105">
+              <button onclick="openOnboardingModal(${emp.id})" class="btn btn-sm py-1.5 px-3.5 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-amber-500 hover:bg-amber-700 text-white border-0 shadow-sm transition-all duration-200 hover:scale-105">
                 <i class="bi bi-person-check-fill"></i> Setup Form / Onboarding
               </button>
             </td>
           `;
           newlyHiredBody.appendChild(trNew);
         } else {
-          hiredPersonalCount++;
           const trPersonal = document.createElement('tr');
-          trPersonal.className = "border-b border-slate-100 hover:bg-orange-50/40 transition-all duration-200";
+          trPersonal.className = "border-b border-slate-100 hover:bg-amber-50/45 transition-all duration-200";
           trPersonal.innerHTML = `
             <td class="px-6 py-4 font-mono text-slate-600">${emp.display_emp_id || ''}</td>
-            <td class="px-6 py-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
-            <td class="px-6 py-4 font-mono text-xs text-[#ff6b4a]">${emp.email || 'Not registered'}</td>
+            <td class="px-6 py-4 font-semibold text-slate-800">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0" style="background: ${avatarBg};">${firstLetter}</div>
+                <span>${fullName}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4 font-mono text-xs text-amber-800">${emp.email || 'Not registered'}</td>
             <td class="px-6 py-4">
               <div class="font-semibold text-slate-800">${emp.department || 'Unassigned'}</div>
               <span class="${roleClass} px-2.5 py-0.5 rounded-md text-[11px] font-medium border inline-block mt-1">${displayRole}</span>
             </td>
             <td class="px-6 py-4 text-center">
-              <button onclick="viewEmployeeContract(${emp.id})" class="btn btn-sm bg-orange-50 hover:bg-orange-100 text-[#ff6b4a] border border-orange-200 py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto transition-all">
+              <button onclick="viewEmployeeContract(${emp.id})" class="btn btn-sm bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto transition-all">
                 <i class="bi bi-file-earmark-text-fill"></i> View Contract
               </button>
             </td>
             <td class="px-6 py-4 text-center">
-              <button onclick="triggerDelete(${emp.id}, '${(emp.full_name || '').replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-danger py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1 mx-auto transition-all duration-200 hover:scale-105">
+              <button onclick="triggerDelete(${emp.id}, '${(fullName).replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-danger py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1 mx-auto transition-all duration-200 hover:scale-105">
                 <i class="bi bi-trash3"></i> Delete
               </button>
             </td>
           `;
           personalBody.appendChild(trPersonal);
 
-          activePayrollCount++;
           const trPayroll = document.createElement('tr');
-          trPayroll.className = "border-b border-slate-100 hover:bg-orange-50/40 transition-all duration-200";
+          trPayroll.className = "border-b border-slate-100 hover:bg-amber-50/45 transition-all duration-200";
           trPayroll.innerHTML = `
-            <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.full_name || ''}</td>
-            <td class="py-3.5 px-4 font-semibold text-xs ${displayRole === 'Manager' ? 'text-orange-600' : 'text-slate-700'}">${displayRole}</td>
+            <td class="py-3.5 px-4 font-semibold text-slate-800">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0" style="background: ${avatarBg};">${firstLetter}</div>
+                <span>${fullName}</span>
+              </div>
+            </td>
+            <td class="py-3.5 px-4 font-semibold text-xs ${displayRole === 'Manager' ? 'text-amber-800' : 'text-slate-700'}">${displayRole}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.sss_id || '33-1234567-8'}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.philhealth_id || '12-345678901-2'}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.pagibig_id || '1210-9876-5432'}</td>
             <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${emp.gsis_id || '-'}</td>
             <td class="py-3.5 px-4 text-end font-bold text-slate-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
             <td class="py-3.5 px-4 text-center">
-              <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-orange-50 text-[#ff6b4a] hover:bg-[#ff6b4a] hover:text-white border border-orange-200 transition-all duration-200">
+              <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm py-1.5 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 mx-auto bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-white border border-amber-200 transition-all duration-200">
                 <i class="bi bi-file-earmark-spreadsheet"></i> Payslip
               </button>
             </td>
@@ -929,7 +968,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       
       for(let i=1; i<=totalPages; i++) {
         if(i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-          html += `<button onclick="changePage(${i})" class="px-3 py-1 rounded-lg border text-xs font-semibold ${currentPage === i ? 'bg-[#ff6b4a] text-white border-[#ff6b4a]' : 'bg-white text-slate-600 hover:bg-slate-100'}">${i}</button>`;
+          html += `<button onclick="changePage(${i})" class="px-3 py-1 rounded-lg border text-xs font-semibold ${currentPage === i ? 'bg-amber-500 text-white border-amber-500 font-bold' : 'bg-white text-slate-600 hover:bg-slate-100'}">${i}</button>`;
         } else if(i === currentPage - 2 || i === currentPage + 2) {
           html += `<span class="px-2 text-slate-400">...</span>`;
         }
@@ -992,13 +1031,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const formattedSalary = baseSalary.toLocaleString('en-US', {minimumFractionDigits: 2});
 
       Swal.fire({
-        title: `<div class="text-left"><h4 class="font-bold text-slate-900 text-base mb-0"><i class="bi bi-file-earmark-text text-[#ff6b4a]"></i> Employment Contract Agreement</h4><span class="text-xs text-slate-400 font-normal">Reference ID: ${emp.display_emp_id}</span></div>`,
+        title: `<div class="text-left"><h4 class="font-bold text-slate-900 text-base mb-0"><i class="bi bi-file-earmark-text text-amber-500"></i> Employment Contract Agreement</h4><span class="text-xs text-slate-400 font-normal">Reference ID: ${emp.display_emp_id}</span></div>`,
         html: `
           <div class="text-left text-xs space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 max-h-[60vh] overflow-y-auto">
             <div class="border-b border-slate-200 pb-2">
               <p class="font-bold text-slate-800 text-sm mb-1">${emp.full_name}</p>
-              <p class="text-slate-500"><strong>Email:</strong> <span class="text-[#ff6b4a] font-mono">${emp.email || 'N/A'}</span></p>
-              <p class="text-slate-500"><strong>Company Email:</strong> <span class="text-emerald-700 font-mono">${emp.company_gmail || 'N/A'}</span></p>
+              <p class="text-slate-500"><strong>Email:</strong> <span class="text-amber-800 font-mono">${emp.email || 'N/A'}</span></p>
+              <p class="text-slate-500"><strong>Company Email:</strong> <span class="text-amber-700 font-mono">${emp.company_gmail || 'N/A'}</span></p>
             </div>
             
             <div class="grid grid-cols-2 gap-2">
@@ -1024,7 +1063,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         `,
         width: '600px',
         confirmButtonText: 'Close Contract',
-        confirmButtonColor: '#ff6b4a',
+        confirmButtonColor: '#d97706',
         customClass: {
           popup: 'rounded-3xl shadow-2xl'
         }
@@ -1035,8 +1074,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       const emp = allEmployees.find(e => e.id == id);
       if (!emp) return;
 
+      const fullName = emp.full_name || '';
       document.getElementById('modalId').value = emp.id;
-      document.getElementById('modalName').value = emp.full_name || '';
+      document.getElementById('modalName').value = fullName;
       document.getElementById('modalContactNumber').value = emp.contact_number || emp.phone || '';
       document.getElementById('modalCompanyName').value = emp.company_name || 'PannaKoda Stores Inc.';
       document.getElementById('modalCompanyAddress').value = emp.company_address || '123 Business Corporate Center, Cavite, Philippines';
@@ -1046,6 +1086,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalGender').value = emp.gender || 'Male';
       document.getElementById('modalWorkLocation').value = emp.work_location || 'Main Office';
       document.getElementById('modalDepartment').value = emp.department || '';
+
+      const firstLetter = fullName.trim().charAt(0).toUpperCase() || 'A';
+      const avatarEl = document.getElementById('modalProfileAvatar');
+      avatarEl.innerText = firstLetter;
+      avatarEl.style.background = getUniqueAvatarStyle(fullName);
+      document.getElementById('modalProfileSubtitle').innerText = `ID: ${emp.display_emp_id || 'EMP-NEW'} • Setup Profile`;
 
       document.getElementById('modalEmployeeGmail').value = emp.email || '';
       updateModalGmailPreview();
@@ -1068,7 +1114,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       document.getElementById('modalGsis').value = emp.gsis_id || '-';
 
       document.getElementById('modalPassword').value = '@Lozada23';
-      document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-emerald-600 font-semibold";
+      document.getElementById('passwordFeedback').className = "text-[11px] mt-1 text-amber-500 font-semibold";
       document.getElementById('passwordFeedback').innerHTML = '<i class="bi bi-check-circle-fill"></i> Fixed Default Password';
 
       if (!onboardingModalInstance) {
@@ -1132,7 +1178,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
         text: `Are you sure you want to delete this data "${name}"?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ff6b4a',
+        confirmButtonColor: '#d97706',
         cancelButtonColor: '#64748b',
         confirmButtonText: 'Yes',
         cancelButtonText: 'Cancel'
@@ -1233,7 +1279,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <h3 class="font-black text-xl tracking-wide uppercase text-slate-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
             <p class="text-[11px] text-slate-400 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
             <p class="text-[11px] text-slate-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
-            <div class="mt-3 inline-block bg-orange-50 text-orange-800 font-mono text-[11px] font-bold px-3 py-1 rounded-lg border border-orange-100">
+            <div class="mt-3 inline-block bg-amber-50 text-amber-900 font-mono text-[11px] font-bold px-3 py-1 rounded-lg border border-amber-100">
               OFFICIAL PAYSLIP STATEMENT | ${cutOffPeriod}
             </div>
           </div>
@@ -1242,13 +1288,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
              <div>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employee ID:</span> <span class="font-mono font-bold text-slate-800">${emp.display_emp_id}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employee Name:</span> <span class="font-bold text-slate-800">${emp.full_name}</span></p>
-              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Email:</span> <span class="font-mono text-[#ff6b4a]">${emp.email || 'N/A'}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Email:</span> <span class="font-mono text-amber-800">${emp.email || 'N/A'}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Department:</span> <span class="font-semibold text-slate-800">${emp.department}</span></p>
              </div>
              <div>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-slate-800">${emp.role}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-slate-800">${payDateStr}</span></p>
-              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-[#ff6b4a]">${emp.employment_type || 'Regular'}</span></p>
+              <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-amber-800">${emp.employment_type || 'Regular'}</span></p>
               <p class="mb-1"><span class="text-slate-400 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-slate-400 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
              </div>
           </div>
@@ -1267,7 +1313,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
                 </div>
                 <div class="flex justify-between py-2 font-bold text-slate-900 bg-slate-50 px-2.5 rounded-lg mt-1">
                   <span>Gross Pay (Period)</span> 
-                  <span class="font-mono text-emerald-600">₱${f(kinsenasGross)}</span>
+                  <span class="font-mono text-amber-700">₱${f(kinsenasGross)}</span>
                 </div>
               </div>
             </div>
@@ -1306,13 +1352,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
             <div><span class="font-semibold text-slate-700">Monthly Net Pay Reference:</span> ₱${f(monthlyNet)}</div>
           </div>
 
-          <div class="bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] text-white p-4 rounded-2xl flex justify-between items-center shadow-md border border-[#ff6b4a]/30">
+          <div class="bg-gradient-to-r from-amber-500 via-amber-700 to-amber-800 text-white p-4 rounded-2xl flex justify-between items-center shadow-md border border-amber-500/40">
             <div>
-              <h4 class="text-[10px] uppercase tracking-widest text-[#ff6b4a] font-semibold">Net Pay for this Period</h4>
-              <p class="text-[10px] text-slate-400">Kinsenas Payout (15-Day Cycle)</p>
+              <h4 class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">Net Pay for this Period</h4>
+              <p class="text-[10px] text-amber-100">Kinsenas Payout (15-Day Cycle)</p>
             </div>
             <div class="text-right">
-              <h2 class="text-2xl font-black text-[#ff6b4a] font-mono">₱${f(kinsenasNet)}</h2>
+              <h2 class="text-2xl font-black text-amber-100 font-mono">₱${f(kinsenasNet)}</h2>
             </div>
           </div>
         </div>
@@ -1331,9 +1377,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_employee' && $_SERVER[
       tabs.forEach(id => {
         const btn = document.getElementById(id);
         if (id === activeBtnId) {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-[#ff6b4a] text-white shadow-md font-semibold transform hover:scale-[1.02]";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 bg-amber-500 text-white shadow-md font-bold transform hover:scale-[1.02]";
         } else {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-slate-300 hover:text-white hover:bg-[#ff6b4a]/20";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 text-white hover:text-amber-500 ";
         }
       });
 

@@ -1,22 +1,18 @@
 <?php
 session_start();
 
-// 1. Siguraduhin muna na may naka-login na user
 if (!isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
 }
 
-// 2. Kunin ang role at gawing lowercase para iwas sa error sa malaki/maliit na titik
 $current_role = strtolower($_SESSION['role']);
 
-// 3. Harangin kung HINDI siya admin at HINDI rin hr
 if ($current_role !== 'admin' && $current_role !== 'hr' && $current_role !== 'finance') {
-    header("Location: login.php"); // Pwedeng palitan ng unauthorized.php
+    header("Location: login.php"); 
     exit();
 }
 
-// Set system time zone to Philippines
 date_default_timezone_set('Asia/Manila');
 
 $host = "localhost";
@@ -29,12 +25,8 @@ if ($conn->connect_error) {
     die("Database Connection Failed: " . $conn->connect_error);
 }
 
-// REMOVED STRICT SESSION ROLE CHECK FOR INSTANT ACCESS
-
-// Filter para sa petsa (Default ay ang kasalukuyang araw ngayon)
 $filter_date = isset($_GET['search_date']) ? $_GET['search_date'] : date('Y-m-d');
 
-// Query para pagsamahin ang info ng Employee, Attendance, at Overtime Logs
 $query = "SELECT 
             e.id AS emp_raw_id,
             e.full_name,
@@ -79,16 +71,16 @@ $result = $stmt->get_result();
           
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-5 mb-6 gap-4">
               <div>
-                  <h1 class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                      <i class="bi bi-calendar-check-fill text-orange-500"></i> Master Attendance & Overtime Logs
+                  <h1 class="text-2xl font-black text-amber-500 tracking-tight flex items-center gap-2">
+                      <i class="bi bi-calendar-check-fill text-amber-500"></i> Master Attendance & Overtime Logs
                   </h1>
                   <p class="text-xs text-slate-400">Monitor daily log entries, late marks, and system auto-closures.</p>
               </div>
               
               <form method="GET" class="flex items-center gap-2 bg-slate-100 p-2 rounded-xl border">
                   <label class="text-xs font-bold text-slate-500 px-2 uppercase">Select Date:</label>
-                  <input type="date" name="search_date" value="<?= htmlspecialchars($filter_date) ?>" class="bg-white border rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-orange-500">
-                  <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-4 py-1.5 rounded-lg transition-all">
+                  <input type="date" name="search_date" value="<?= htmlspecialchars($filter_date) ?>" class="bg-white border rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-amber-500">
+                  <button type="submit" class="bg-amber-500 hover:bg-blue-900 text-white font-bold text-xs px-4 py-1.5 rounded-lg transition-all">
                       Filter
                   </button>
               </form>
@@ -112,7 +104,7 @@ $result = $stmt->get_result();
                       <?php if ($result->num_rows == 0): ?>
                           <tr>
                               <td colspan="8" class="p-8 text-center text-sm font-medium text-slate-400 bg-slate-50/50">
-                                  <i class="bi bi-folder-x text-2xl block mb-2 text-slate-300"></i>
+                                  <i class="bi bi-folder-x text-2xl block mb-2 text-amber-500"></i>
                                   No active system logs recorded for <?= date('F d, Y', strtotime($filter_date)) ?>.
                               </td>
                           </tr>
@@ -198,63 +190,46 @@ $result = $stmt->get_result();
     document.addEventListener("DOMContentLoaded", function () {
         highlightActiveSidebarLink();
         
-        // Logout SweetAlert2
-       document.addEventListener("DOMContentLoaded", function () {
-    // Pag-highlight ng active menu
-    const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll(".sidebar-link");
-    
-    navLinks.forEach(link => {
-        const linkPath = link.getAttribute("href");
-        if (linkPath && currentPath.endsWith(linkPath)) {
-            link.classList.remove("text-white/80", "hover:bg-white/10", "hover:text-white", "text-inherit");
-            link.classList.add("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault(); 
+                Swal.fire({
+                    title: 'Log out',
+                    text: "Are you sure you want to Log out",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#172554', 
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes',
+                    cancelButtonText: 'Cancel',
+                    background: '#ffffff',
+                    color: '#212121'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "logout.php"; 
+                    }
+                });
+            });
         }
     });
 
-    // SweetAlert2 para sa Logout Confirmation
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault(); 
-            Swal.fire({
-                title: 'Log out',
-                text: "Are you sure you want to Log out",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#FF8C00', 
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes',
-                cancelButtonText: 'Cancel',
-                background: '#ffffff',
-                color: '#212121'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = "logout.php"; 
-                }
-            });
-        });
-    }
-});
-    });
-
-    // Sidebar Highlighting Function
     function highlightActiveSidebarLink() {
         const currentPath = window.location.pathname.toLowerCase();
-        const navLinks = document.querySelectorAll(".nav-link");
+        const navLinks = document.querySelectorAll(".nav-link, .sidebar-link");
         
         navLinks.forEach(link => {
             const linkPath = link.getAttribute("href").toLowerCase();
             if (linkPath && currentPath.endsWith(linkPath)) {
                 link.classList.remove("text-white/80", "hover:bg-white/10", "hover:text-white");
-                link.classList.add("bg-[#FF8C00]", "text-white", "shadow-md", "font-semibold");
+                link.classList.add("bg-amber-500", "text-white", "shadow-md", "font-semibold");
             }
         });
     }
-    // Magre-refresh ang buong pahina tuwing 30 segundo
-setInterval(function() {
-    location.reload();
-}, 30000); // 30000 milliseconds = 30 seconds
+
+    setInterval(function() {
+        location.reload();
+    }, 30000);
   </script>
   
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>

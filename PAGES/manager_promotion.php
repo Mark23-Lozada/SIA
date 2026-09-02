@@ -126,7 +126,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hired_employees') {
       
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Employee Promotion & Salary Adjustment</h1>
+          <h1 class="text-2xl font-bold text-amber-500 tracking-tight">Employee Promotion & Salary Adjustment</h1>
           <p class="text-sm text-gray-500">Select an employee from the list to begin the form.</p>
         </div>
       </div>
@@ -300,7 +300,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hired_employees') {
             <div class="modal-footer border-0 bg-slate-50 rounded-b-2xl px-6 py-3 flex justify-end">
               <div class="flex gap-2">
                 <button type="button" class="btn btn-light font-semibold border text-gray-600 text-xs px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" id="submitBtn" class="btn btn-dark font-semibold bg-amber-600 hover:bg-amber-700 border-0 text-xs px-4">
+                <button type="submit" id="submitBtn" class="btn btn-dark font-semibold bg-amber-600 hover:bg-amber-500 border-0 text-xs px-4">
                   <i class="bi bi-send-check"></i> Submit Request
                 </button>
               </div>
@@ -350,18 +350,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hired_employees') {
         const baseSalary = emp.salary ? parseFloat(emp.salary) : 0;
         const tr = document.createElement('tr');
         tr.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
-        tr.innerHTML = `
-          <td class="py-3 px-4 font-mono font-semibold text-gray-700">${emp.display_emp_id}</td>
-          <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name}</td>
-          <td class="py-3 px-4"><span class="bg-blue-50 text-blue-700 border-blue-200 px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role}</span></td>
-          <td class="py-3 px-4 text-gray-600">${emp.department || 'Unassigned'}</td>
-          <td class="py-3 px-4 text-end font-bold text-gray-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-          <td class="py-3 px-4 text-center">
-            <button onclick="openPromotionModal(${emp.id})" class="btn btn-sm btn-dark py-1.5 px-3 text-xs font-semibold rounded-lg flex items-center gap-1.5 mx-auto bg-amber-600 hover:bg-amber-700 border-0 shadow-sm">
-              <i class="bi bi-award-fill"></i> Promote / Adjust
-            </button>
-          </td>
-        `;
+      tr.innerHTML = `
+  <td class="py-3 px-4 font-mono font-semibold text-gray-700">${emp.display_emp_id}</td>
+  <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name}</td>
+  <td class="py-3 px-4">
+    <span class="bg-blue-50 text-blue-700 border-blue-200 px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role}</span>
+  </td>
+  <td class="py-3 px-4">
+    <span class="bg-emerald-50 text-emerald-700 border-emerald-200 px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.department || 'Unassigned'}</span>
+  </td>
+  <td class="py-3 px-4 text-end">
+    <span class="bg-amber-50 text-amber-500 border-amber-200 px-2.5 py-1 rounded-md text-xs font-bold border">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+  </td>
+  <td class="py-3 px-4 text-center">
+    <button onclick="openPromotionModal(${emp.id})" class="btn btn-sm btn-dark py-1.5 px-3 text-xs font-semibold rounded-lg flex items-center gap-1.5 mx-auto bg-amber-600 hover:bg-amber-500 border-0 shadow-sm">
+      <i class="bi bi-award-fill"></i> Promote / Adjust
+    </button>
+  </td>
+`;
         tbody.appendChild(tr);
       });
     }

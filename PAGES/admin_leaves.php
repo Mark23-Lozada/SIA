@@ -22,84 +22,7 @@ $dbname = "pos";
 
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// ==========================================
-// PHPMailer Setup & Professional Email Templates
-// ==========================================
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require '../LIBRARIES/PHPMailer-master/src/Exception.php';
-require '../LIBRARIES/PHPMailer-master/src/PHPMailer.php';
-require '../LIBRARIES/PHPMailer-master/src/SMTP.php';
-
-function sendLeaveStatusEmail($recipient_email, $recipient_name, $subject, $message_body) {
-    if (empty($recipient_email) || !filter_var($recipient_email, FILTER_VALIDATE_EMAIL)) {
-        return false;
-    }
-
-    $mail = new PHPMailer(true);
-    try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        
-        $mail->Username   = 'markjosephlozada251@gmail.com'; 
-        $mail->Password   = 'rhjd rqed rhdh qkbd';    
-
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
-
-        $mail->setFrom('markjosephlozada251@gmail.com', 'Pannakoda Executive Board');
-        $mail->addAddress($recipient_email, $recipient_name);
-
-        $mail->isHTML(true);
-        $mail->Subject = $subject;
-        $mail->Body    = "
-            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155;'>
-                <h2 style='color: #212121; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0;'>Leave Application Status Update</h2>
-                <p>Dear <b>{$recipient_name}</b>,</p>
-                <p>We hope this email finds you well.</p>
-                <div style='background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;'>
-                    {$message_body}
-                </div>
-                <p>Should you have any inquiries regarding your leave status, please reach out to HR or administration.</p>
-                <br>
-                <p>Best regards,</p>
-                <p><b>Executive Management Team</b><br>Pannakoda</p>
-            </div>
-        ";
-
-        $mail->send();
-        return true;
-    } catch (Exception $e) {
-        return false;
-    }
-}
-
-// ==========================================
-// Background Request Continuation Helper
-// ==========================================
-function respond_now_then_continue() {
-    if (session_id()) {
-        session_write_close();
-    }
-
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-        return;
-    }
-
-    ignore_user_abort(true);
-    header('Connection: close');
-    $size = ob_get_length();
-    if ($size !== false) {
-        header('Content-Length: ' . $size);
-    }
-    @ob_end_flush();
-    @flush();
-}
-
-// 1. FETCH LEAVE REQUESTS VIA AJAX
+// 1. FETCH LEAVE REQUESTS VIA AJAX[cite: 1]
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_leaves') {
     header('Content-Type: application/json');
     $conn = new mysqli($host, $user, $pass, $dbname);
@@ -131,7 +54,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_leaves') {
     exit;
 }
 
-// 2. PROCESS LEAVE APPROVAL ACTION
+// 2. PROCESS LEAVE APPROVAL ACTION[cite: 1]
 if (isset($_GET['action']) && $_GET['action'] === 'admin_approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $request_id = isset($_POST['request_id']) ? intval($_POST['request_id']) : 0;
@@ -139,12 +62,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_approve' && $_SERVER['R
     if ($request_id > 0) {
         $conn = new mysqli($host, $user, $pass, $dbname);
         
-        $emp_query = $conn->prepare("SELECT lr.leave_type, lr.reason, e.full_name, e.email FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = ?");
-        $emp_query->bind_param("i", $request_id);
-        $emp_query->execute();
-        $emp_res = $emp_query->get_result()->fetch_assoc();
-        $emp_query->close();
-
         $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Approved', notified = 0 WHERE id = ? AND status = 'Pending Admin'");
         $stmt->bind_param("i", $request_id);
         $stmt->execute();
@@ -154,13 +71,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_approve' && $_SERVER['R
 
         if ($affected > 0) {
             echo json_encode(['success' => true, 'message' => 'Leave application has been officially Approved!']);
-            respond_now_then_continue();
-
-            if ($emp_res && !empty($emp_res['email'])) {
-                $subject = "Leave Application Approved";
-                $body = "We are pleased to inform you that your leave request (<b>Type: {$emp_res['leave_type']}</b>) has been officially <b>Approved</b> by the Executive Administration.";
-                sendLeaveStatusEmail($emp_res['email'], $emp_res['full_name'], $subject, $body);
-            }
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to approve request or already processed.']);
         }
@@ -170,19 +80,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_approve' && $_SERVER['R
     exit;
 }
 
-// 3. PROCESS LEAVE REJECTION ACTION
+// 3. PROCESS LEAVE REJECTION ACTION[cite: 1]
 if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $request_id = isset($_POST['request_id']) ? intval($_POST['request_id']) : 0;
 
     if ($request_id > 0) {
         $conn = new mysqli($host, $user, $pass, $dbname);
-
-        $emp_query = $conn->prepare("SELECT lr.leave_type, lr.reason, e.full_name, e.email FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = ?");
-        $emp_query->bind_param("i", $request_id);
-        $emp_query->execute();
-        $emp_res = $emp_query->get_result()->fetch_assoc();
-        $emp_query->close();
 
         $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Rejected', notified = 0 WHERE id = ?");
         $stmt->bind_param("i", $request_id);
@@ -192,13 +96,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
 
         if ($success) {
             echo json_encode(['success' => true, 'message' => 'Leave application officially rejected.']);
-            respond_now_then_continue();
-
-            if ($emp_res && !empty($emp_res['email'])) {
-                $subject = "Leave Application Status Update: Rejected";
-                $body = "We regret to inform you that your leave request (<b>Type: {$emp_res['leave_type']}</b>) has been <b>Rejected</b> by the Executive Administration.";
-                sendLeaveStatusEmail($emp_res['email'], $emp_res['full_name'], $subject, $body);
-            }
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to reject request.']);
         }
@@ -237,7 +134,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
         }
     </style>
 </head>
-<body class="bg-white text-slate-800 font-sans antialiased h-screen overflow-hidden">
+<body class="bg-white text-amber-500 font-sans antialiased h-screen overflow-hidden">
 
     <div class="flex h-screen w-full overflow-hidden">
         <?php include 'sidebar.php'; ?>
@@ -249,12 +146,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
                 <!-- Top Header & Live Philippine Time Clock Widget -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4" data-aos="fade-down" data-aos-duration="800">
                     <div>
-                        <h1 class="text-2xl font-extrabold text-[#ff6b4a] tracking-tight">EXECUTIVE LEAVE REVIEW</h1>
+                        <h1 class="text-2xl font-extrabold text-amber-500 tracking-tight">EXECUTIVE LEAVE REVIEW</h1>
                         <p class="text-sm text-slate-500 mt-1">Final authorization deck for employee leave requests endorsed and passed up by HR Screening.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-2xl shadow-sm border border-slate-200/80">
-                            <i class="bi bi-clock text-[#ff6b4a]"></i> 
+                            <i class="bi bi-clock text-amber-500"></i> 
                             <span class="text-slate-700 font-medium text-xs" id="phTimeDisplay">Loading PH Time...</span>
                         </div>
                         <div class="flex items-center gap-3 bg-orange-50/60 px-4 py-2 rounded-2xl shadow-sm border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-105">
@@ -271,14 +168,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
                 <div class="flex items-center gap-3 bg-slate-50 p-4 rounded-3xl shadow-sm border border-slate-200/80 admin-card-glow" data-aos="fade-up" data-aos-duration="900">
                     <div class="relative flex-1">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400"><i class="bi bi-search"></i></span>
-                        <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/30 focus:border-[#ff6b4a] transition-all duration-300" placeholder="Search by employee name, department, leave type, or reason...">
+                        <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm text-amber-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/30 focus:border-[#ff6b4a] transition-all duration-300" placeholder="Search by employee name, department, leave type, or reason...">
                     </div>
                 </div>
 
                 <!-- TABLE 1: NEW REQUESTS / PENDING ADMIN DATA -->
                 <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 admin-card-glow" data-aos="fade-up" data-aos-duration="1000">
-                    <h2 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <div class="p-2 bg-[#ff6b4a]/10 text-[#ff6b4a] rounded-xl border border-[#ff6b4a]/20">
+                    <h2 class="text-md font-bold text-amber-500 mb-4 flex items-center gap-2">
+                        <div class="p-2 bg-[#ff6b4a]/10 text-amber-500 rounded-xl border border-[#ff6b4a]/20">
                             <i class="bi bi-clock-history"></i>
                         </div> 
                         New Requests / Awaiting Executive Sign-off
@@ -301,7 +198,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
 
                 <!-- TABLE 2: APPROVED / PROCESSED RECORDS -->
                 <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 admin-card-glow" data-aos="fade-up" data-aos-duration="1100">
-                    <h2 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <h2 class="text-md font-bold text-amber-500 mb-4 flex items-center gap-2">
                         <div class="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl border border-emerald-500/20">
                             <i class="bi bi-check-circle-fill"></i>
                         </div> 
@@ -389,7 +286,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
                     tr.className = "border-b border-slate-100 hover:bg-orange-50/20 transition-colors";
                     tr.innerHTML = `
                         <td class="py-3.5 px-4">
-                            <div class="font-bold text-slate-800">${escapeHtml(req.full_name)}</div>
+                            <div class="font-bold text-amber-500">${escapeHtml(req.full_name)}</div>
                             <div class="text-xs text-slate-500">Dept: ${escapeHtml(req.department || 'N/A')}</div>
                         </td>
                         <td class="py-3.5 px-4">
@@ -441,7 +338,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'admin_reject' && $_SERVER['RE
                     tr.className = "border-b border-slate-100 hover:bg-orange-50/20 transition-colors";
                     tr.innerHTML = `
                         <td class="py-3.5 px-4">
-                            <div class="font-bold text-slate-800">${escapeHtml(proc.full_name)}</div>
+                            <div class="font-bold text-amber-500">${escapeHtml(proc.full_name)}</div>
                             <div class="text-xs text-slate-500">Dept: ${escapeHtml(proc.department || 'N/A')}</div>
                         </td>
                         <td class="py-3.5 px-4">

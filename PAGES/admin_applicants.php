@@ -114,7 +114,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_applicants') {
         while($row = $result->fetch_assoc()) {
             $row['id'] = isset($row['id']) ? intval($row['id']) : 0;
             $status_check = strtolower(trim($row['status'] ?? ''));
-            if ($status_check === '' || ($status_check !== 'pending' && $status_check !== 'for final interview' && $status_check !== 'contract')) {
+            // Updated allowed status schema: Pending, Contract, Rejected
+            if ($status_check === '' || ($status_check !== 'pending' && $status_check !== 'contract' && $status_check !== 'rejected')) {
                 $row['status'] = 'Pending';
             }
             $applicants[] = $row;
@@ -151,7 +152,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_form_submissions') {
     exit;
 }
 
-// 1b. FETCH SALARY PER DEPARTMENT
+// 1b. FETCH SALARY PER DEPARTMENT (from Recruitment job postings)
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_job_salaries') {
     header('Content-Type: application/json');
     $conn = new mysqli($host, $user, $pass, $dbname);
@@ -178,8 +179,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_job_salaries') {
     exit;
 }
 
-// 2. APPROVE APPLICANT
-if (isset($_GET['action']) && $_GET['action'] === 'approve_applicant' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+// REJECT APPLICANT
+if (isset($_GET['action']) && $_GET['action'] === 'reject_applicant' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
@@ -192,7 +193,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'approve_applicant' && $_SERVE
         $res_get = $stmt_get->get_result()->fetch_assoc();
         $stmt_get->close();
 
-        $stmt = $conn->prepare("UPDATE applicants SET status = 'For Final Interview' WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE applicants SET status = 'Rejected' WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $stmt->close();
@@ -202,8 +203,42 @@ if (isset($_GET['action']) && $_GET['action'] === 'approve_applicant' && $_SERVE
         respond_now_then_continue();
 
         if ($res_get) {
-            $subject = "Progression to Final Interview";
-            $body = "We are pleased to inform you that your profile has been reviewed and approved by management to move forward to the <b>Final Interview</b> stage. Our team will contact you shortly with the finalized schedule details.";
+            $subject = "Application Status Update";
+            $body = "Thank you for your interest in joining Pannakoda. After careful review, we regret to inform you that we will not be moving forward with your application at this time. We wish you the best in your professional endeavors.";
+            sendAdminApplicantEmail($res_get['email'], $res_get['full_name'], $subject, $body);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
+    }
+    exit;
+}
+
+// PROCEED DIRECTLY TO CONTRACT STAGE (Approve Applicant & Open Contract Agreement Modal)
+if (isset($_GET['action']) && $_GET['action'] === 'proceed_contract' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+    if ($id > 0) {
+        $conn = new mysqli($host, $user, $pass, $dbname);
+
+        $stmt_get = $conn->prepare("SELECT full_name, email FROM applicants WHERE id = ?");
+        $stmt_get->bind_param("i", $id);
+        $stmt_get->execute();
+        $res_get = $stmt_get->get_result()->fetch_assoc();
+        $stmt_get->close();
+
+        $stmt = $conn->prepare("UPDATE applicants SET status = 'Contract' WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+
+        echo json_encode(['success' => true]);
+        respond_now_then_continue();
+
+        if ($res_get) {
+            $subject = "Employment Contract Stage Reached";
+            $body = "Congratulations! Your application has been approved and advanced directly to the <b>Employment Contract Stage</b>. Please coordinate with our administration desk for contract agreement reviews.";
             sendAdminApplicantEmail($res_get['email'], $res_get['full_name'], $subject, $body);
         }
     } else {
@@ -302,41 +337,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'approve_form_submission' && $
     exit;
 }
 
-// 3. PROCEED TO CONTRACT
-if (isset($_GET['action']) && $_GET['action'] === 'proceed_contract' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Content-Type: application/json');
-    $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-
-    if ($id > 0) {
-        $conn = new mysqli($host, $user, $pass, $dbname);
-
-        $stmt_get = $conn->prepare("SELECT full_name, email FROM applicants WHERE id = ?");
-        $stmt_get->bind_param("i", $id);
-        $stmt_get->execute();
-        $res_get = $stmt_get->get_result()->fetch_assoc();
-        $stmt_get->close();
-
-        $stmt = $conn->prepare("UPDATE applicants SET status = 'Contract' WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $stmt->close();
-        $conn->close();
-
-        echo json_encode(['success' => true]);
-        respond_now_then_continue();
-
-        if ($res_get) {
-            $subject = "Employment Contract Stage Reached";
-            $body = "Congratulations! Following a successful final evaluation, your application has advanced to the <b>Employment Contract Stage</b>. Please coordinate with our administration desk for contract agreement reviews.";
-            sendAdminApplicantEmail($res_get['email'], $res_get['full_name'], $subject, $body);
-        }
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
-    }
-    exit;
-}
-
-// 4. PROCEED TO ONBOARDING
+// 4. PROCEED TO ONBOARDING (From Contract Modal)
 if (isset($_GET['action']) && $_GET['action'] === 'proceed_onboarding' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
@@ -468,6 +469,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
   <script src="../LIBRARIES/tailwind.js"></script> 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   
+  <!-- AOS Library CSS & JS -->
   <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
   <script src="../LIBRARIES/AOS/AOS.js"></script>
 
@@ -493,24 +495,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
           box-shadow: 0 0 35px rgba(255, 107, 74, 0.25);
           border-color: rgba(255, 107, 74, 0.5);
       }
-      @media print {
-          body * {
-              visibility: hidden;
-          }
-          #resumeViewerFrame, #resumeViewerFrame * {
-              visibility: visible;
-          }
-          #resumeModal {
-              position: absolute;
-              left: 0;
-              top: 0;
-              margin: 0;
-              padding: 0;
-              width: 100%;
-              height: 100%;
-              background: white !important;
-          }
-      }
   </style>
 </head>
 <body class="bg-white text-slate-800 font-sans antialiased h-screen overflow-hidden">
@@ -521,12 +505,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       <!-- Top Header & Live Philippine Time Clock Widget -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4" data-aos="fade-down" data-aos-duration="800">
         <div>
-          <h1 class="text-2xl font-extrabold text-[#ff6b4a] tracking-tight">APPLICANT MANAGEMENT</h1>
-          <p class="text-sm text-slate-500 mt-1">Manage interviews, review contracts, and transfer newly hired applicants.</p>
+          <h1 class="text-2xl font-extrabold text-amber-500 tracking-tight">APPLICANT MANAGEMENT</h1>
+          <p class="text-sm text-slate-500 mt-1">Select an applicant from the table below to trigger pipeline actions, review contracts, and manage hiring stages.</p>
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-2xl shadow-sm border border-slate-200/80">
-            <i class="bi bi-clock text-[#ff6b4a]"></i> 
+            <i class="bi bi-clock text-amber-500"></i> 
             <span class="text-slate-700 font-medium text-xs" id="phTimeDisplay">Loading PH Time...</span>
           </div>
           <div class="flex items-center gap-3 bg-orange-50/60 px-4 py-2 rounded-2xl shadow-sm border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-105">
@@ -538,9 +522,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
           </div>
         </div>
       </div>
+
+      <!-- FLOATING ACTION TOOLBAR -->
+      <div id="actionToolbar" class="mb-6 bg-slate-50 p-4 rounded-3xl shadow-sm border border-slate-200/80 admin-card-glow flex flex-col md:flex-row items-center justify-between gap-4" data-aos="fade-up" data-aos-duration="850">
+        <div class="flex items-center gap-3 px-2">
+          <span class="relative flex h-3 w-3">
+            <span id="toolbarDot" class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+          </span>
+          <span id="toolbarSelectionText" class="text-xs font-extrabold uppercase tracking-wider text-slate-700">NO APPLICANT SELECTED</span>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+          <!-- Note: Interview Button removed per user procedure guidelines -->
+          <button id="toolbarApproveBtn" class="btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed shadow-none" disabled onclick="executeToolbarAction('approve')">
+            <i class="bi bi-check-circle me-1"></i> Approve / Contract
+          </button>
+          <button id="toolbarRejectBtn" class="btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed shadow-none" disabled onclick="executeToolbarAction('reject')">
+            <i class="bi bi-x-circle me-1"></i> Reject
+          </button>
+        </div>
+      </div>
       
       <!-- Search & Filter Bar -->
-      <div class="mb-6 flex items-center gap-3 bg-slate-50 p-4 rounded-3xl shadow-sm border border-slate-200/80 admin-card-glow" data-aos="fade-up" data-aos-duration="900">
+      <div class="mb-6 flex items-center gap-3 bg-slate-50 p-4 rounded-3xl shadow-sm border border-slate-200/80 admin-card-glow" data-aos="fade-up" data-aos-duration="950">
         <div class="relative flex-1">
           <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400"><i class="bi bi-search"></i></span>
           <input id="searchInput" type="text" class="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#ff6b4a]/30 focus:border-[#ff6b4a] transition-all duration-300" placeholder="Search applicants by name, email, or position...">
@@ -550,22 +553,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       <!-- MAIN APPLICANTS TABLE -->
       <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 admin-card-glow" data-aos="fade-up" data-aos-duration="1000">
         <h3 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <div class="p-2 bg-[#ff6b4a]/10 text-[#ff6b4a] rounded-xl border border-[#ff6b4a]/20">
+          <div class="p-2 bg-amber-500 text-white rounded-xl border border-amber-500">
             <i class="bi bi-people-fill"></i>
           </div> 
-          Main Applicants List
+          Main Applicants List (Click row to select)
         </h3>
-        <div class="table-responsive bg-white rounded-2xl overflow-hidden border border-slate-100">
+        <div class="table-responsive  text-white rounded-2xl overflow-hidden border border-slate-100">
           <table id="applicantsTable" class="table table-hover align-middle mb-0 text-sm">
             <thead class="table-dark">
               <tr>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Applicant ID</th>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Email</th>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Position Applied</th>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Resume</th>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0">Status</th>
-                <th class="py-3 px-4 bg-[#1a1010] text-white font-semibold border-0 text-center">Actions</th>
+                <th class="py-3 px-4  font-semibold border-0">Applicant ID</th>
+                <th class="py-3 px-4  font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4  font-semibold border-0">Email</th>
+                <th class="py-3 px-4  font-semibold border-0">Position Applied</th>
+                <th class="py-3 px-4  font-semibold border-0">Status</th>
               </tr>
             </thead>
             <tbody id="applicantsBody"></tbody>
@@ -603,35 +604,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
     </div>
   </div>
 
-  <!-- Resume Viewer Modal (Only Resume content with Print & Close buttons) -->
-  <div class="modal fade" id="resumeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-      <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
-        <div class="modal-header bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] text-white px-6 py-4 flex items-center justify-between">
-          <h5 class="modal-title font-bold text-base flex items-center gap-2">
-            <i class="bi bi-file-earmark-pdf-fill text-[#ff6b4a]"></i> <span id="resumeModalTitle">Applicant Resume Preview</span>
-          </h5>
-          <div class="flex items-center gap-2">
-            <button type="button" class="btn btn-sm btn-orange rounded-xl px-3 py-1.5 text-xs font-semibold bg-[#ff6b4a] hover:bg-[#e05638] text-white flex items-center gap-1.5 border-0 shadow-sm" onclick="printResumeFromModal()">
-              <i class="bi bi-printer-fill"></i> Print
-            </button>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-        </div>
-        <div class="modal-body p-0 bg-slate-100 h-[75vh]">
-          <iframe id="resumeViewerFrame" src="" class="w-full h-full border-0 bg-white"></iframe>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- CONTRACT MODAL -->
   <div class="modal fade" id="contractModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
       <div class="modal-content rounded-3xl border-0 shadow-2xl overflow-hidden">
         <div class="modal-header bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] text-white px-6 py-4">
           <h5 class="modal-title font-bold text-base flex items-center gap-2">
-            <i class="bi bi-file-earmark-text-fill text-[#ff6b4a]"></i> Employment Contract Agreement
+            <i class="bi bi-file-earmark-text-fill text-amber-500"></i> Employment Contract Agreement
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -639,7 +618,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
           <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200/80 shadow-sm">
             <h4 class="font-extrabold text-slate-800 text-center mb-4 tracking-tight">OFFER OF EMPLOYMENT & CONTRACT TERMS</h4>
             <div class="row g-2 mb-4 text-sm bg-white p-4 rounded-2xl border border-slate-200">
-              <div class="col-md-6"><strong>Applicant Name:</strong> <span id="modalApplicantName" class="text-[#ff6b4a] font-semibold"></span></div>
+              <div class="col-md-6"><strong>Applicant Name:</strong> <span id="modalApplicantName" class="text-amber-500 font-semibold"></span></div>
               <div class="col-md-6"><strong>Email:</strong> <span id="modalApplicantEmail" class="text-slate-500"></span></div>
               <div class="col-md-6"><strong>Position Applied:</strong> <span id="modalApplicantPosition" class="text-slate-800 font-semibold"></span></div>
               <div class="col-md-6"><strong>Stage:</strong> <span class="badge bg-[#ff6b4a]">Contract Verification</span></div>
@@ -759,6 +738,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
 
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
   <script>
+    // Real-time Philippine Time Clock Function
     function updatePhilippineTime() {
         const options = {
             timeZone: 'Asia/Manila',
@@ -782,6 +762,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
 
     let allApplicants = [];
     let formSubmissions = [];
+    let selectedApplicantId = null;
     let activeContractModal = null;
     let deptSalaryMap = {};
     const phpEndpoint = "<?php echo $current_page; ?>";
@@ -791,6 +772,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         const response = await fetch(`${phpEndpoint}?action=fetch_applicants`);
         allApplicants = await response.json();
         renderTable();
+        if (selectedApplicantId) {
+          const stillExists = allApplicants.find(a => String(a.id) === String(selectedApplicantId));
+          if (!stillExists) {
+            clearSelection();
+          }
+        }
       } catch (err) { console.error("Failed to load applicants:", err); }
     }
 
@@ -817,6 +804,83 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       }
     }
 
+    function selectApplicant(id) {
+      selectedApplicantId = id;
+      renderTable();
+      updateToolbar();
+    }
+
+    function clearSelection() {
+      selectedApplicantId = null;
+      renderTable();
+      updateToolbar();
+    }
+
+    function updateToolbar() {
+      const dot = document.getElementById('toolbarDot');
+      const text = document.getElementById('toolbarSelectionText');
+      const approveBtn = document.getElementById('toolbarApproveBtn');
+      const rejectBtn = document.getElementById('toolbarRejectBtn');
+
+      if (!selectedApplicantId) {
+        dot.className = "relative inline-flex rounded-full h-3 w-3 bg-amber-500";
+        text.textContent = "NO APPLICANT SELECTED";
+
+        approveBtn.className = "btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed shadow-none";
+        approveBtn.disabled = true;
+
+        rejectBtn.className = "btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed shadow-none";
+        rejectBtn.disabled = true;
+        return;
+      }
+
+      const app = allApplicants.find(a => String(a.id) === String(selectedApplicantId));
+      if (!app) {
+        clearSelection();
+        return;
+      }
+
+      const rawStatus = (app.status || 'pending').trim().toLowerCase();
+      dot.className = "relative inline-flex rounded-full h-3 w-3 bg-emerald-500";
+      text.textContent = `SELECTED: #${app.id} - ${app.full_name} (${app.status || 'Pending'})`;
+
+      // Direct Approval / Contract flow (Pending -> Contract -> Onboarding)
+      if (rawStatus === 'pending' || rawStatus === 'contract') {
+        approveBtn.className = "btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm";
+        approveBtn.disabled = false;
+        approveBtn.innerHTML = rawStatus === 'contract' ? `<i class="bi bi-file-earmark-text me-1"></i> Open Contract` : `<i class="bi bi-check-circle me-1"></i> Approve / Contract`;
+      } else {
+        approveBtn.className = "btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed shadow-none";
+        approveBtn.disabled = true;
+      }
+
+      if (rawStatus !== 'rejected') {
+        rejectBtn.className = "btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-sm";
+        rejectBtn.disabled = false;
+      } else {
+        rejectBtn.className = "btn btn-sm rounded-xl px-4 py-2 font-semibold text-xs border bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed shadow-none";
+        rejectBtn.disabled = true;
+      }
+    }
+
+    async function executeToolbarAction(actionType) {
+      if (!selectedApplicantId) return;
+      const app = allApplicants.find(a => String(a.id) === String(selectedApplicantId));
+      if (!app) return;
+
+      const rawStatus = (app.status || '').trim().toLowerCase();
+
+      if (actionType === 'approve') {
+        if (rawStatus === 'pending') {
+          await proceedContract(app.id, app.full_name, app.email, app.position_applied || app.position, app.department);
+        } else if (rawStatus === 'contract') {
+          openContractModal(app.id, app.full_name, app.email, app.position_applied || app.position, app.department);
+        }
+      } else if (actionType === 'reject') {
+        await rejectApplicant(app.id, app.full_name);
+      }
+    }
+
     function renderTable() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       const tbody = document.getElementById('applicantsBody');
@@ -831,77 +895,38 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 italic">No applicant records found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 italic">No applicant records found.</td></tr>`;
         return;
       }
 
       filtered.forEach(app => {
         let statusBadge = '';
-        let actionButtons = '';
         const rawStatus = (app.status || 'pending').trim().toLowerCase();
-        const safeName = (app.full_name || '').replace(/'/g, "\\'");
-        const safeEmail = (app.email || '').replace(/'/g, "\\'");
-        const safePosition = (app.position_applied || app.position || 'Staff').replace(/'/g, "\\'");
-        const safeDept = (app.department || 'Unassigned').replace(/'/g, "\\'");
+        const isSelected = String(app.id) === String(selectedApplicantId);
 
         if (rawStatus === 'pending') {
           statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Pending Review</span>';
-          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 border-0 shadow-sm"><i class="bi bi-check-lg"></i> Admin Approve</button>`;
-        } else if (rawStatus === 'for final interview') {
-          statusBadge = '<span class="bg-indigo-50 text-indigo-700 border-indigo-200 px-3 py-1 rounded-lg text-xs font-semibold border">For Final Interview</span>';
-          actionButtons = `<button onclick="proceedContract(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}', '${safeDept}')" class="btn btn-sm btn-primary py-1.5 px-3 text-xs font-semibold rounded-xl bg-[#ff6b4a] hover:bg-[#e05638] border-0 shadow-sm"><i class="bi bi-file-earmark-text"></i> Proceed to Contract</button>`;
         } else if (rawStatus === 'contract') {
           statusBadge = '<span class="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1 rounded-lg text-xs font-semibold border">Contract Stage</span>';
-          actionButtons = `<button onclick="openContractModal(${app.id}, '${safeName}', '${safeEmail}', '${safePosition}', '${safeDept}')" class="btn btn-sm btn-outline-success py-1.5 px-3 text-xs font-semibold rounded-xl border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white"><i class="bi bi-file-earmark-text"></i> Open Contract</button>`;
+        } else if (rawStatus === 'rejected') {
+          statusBadge = '<span class="bg-red-50 text-red-700 border-red-200 px-3 py-1 rounded-lg text-xs font-semibold border">Rejected</span>';
         } else {
           statusBadge = '<span class="bg-amber-50 text-amber-700 border-amber-200 px-3 py-1 rounded-lg text-xs font-semibold border">Pending Review</span>';
-          actionButtons = `<button onclick="approveApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-success py-1.5 px-3 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 border-0 shadow-sm"><i class="bi bi-check-lg"></i> Admin Approve</button>`;
-        }
-
-        let resumeHtml = '';
-        if (app.resume_path && app.resume_path.trim() !== '') {
-          const safeResumePath = app.resume_path.replace(/'/g, "\\'");
-          resumeHtml = `<button onclick="openResumeModal('${safeResumePath}', '${safeName}')" class="btn btn-sm btn-outline-orange py-1 px-2.5 text-xs font-semibold rounded-lg border border-[#ff6b4a] text-[#ff6b4a] hover:bg-[#ff6b4a] hover:text-white"><i class="bi bi-file-earmark-pdf"></i> View</button>`;
-        } else {
-          resumeHtml = `<span class="text-slate-400 text-xs italic">No Resume</span>`;
         }
 
         const tr = document.createElement('tr');
-        tr.className = "border-b border-slate-100 hover:bg-orange-50/20 transition-colors";
+        tr.className = `border-b border-slate-100 transition-colors cursor-pointer ${isSelected ? 'bg-orange-50/70 border-l-4 border-l-[#ff6b4a]' : 'hover:bg-orange-50/20'}`;
+        tr.onclick = () => selectApplicant(app.id);
         tr.innerHTML = `
           <td class="py-3.5 px-4 font-mono font-bold text-slate-700">#${app.id}</td>
           <td class="py-3.5 px-4 font-semibold text-slate-800">${app.full_name || ''}</td>
           <td class="py-3.5 px-4 text-slate-600">${app.email || ''}</td>
           <td class="py-3.5 px-4 text-slate-600">${app.position_applied || app.position || 'Staff'}</td>
-          <td class="py-3.5 px-4">${resumeHtml}</td>
           <td class="py-3.5 px-4">${statusBadge}</td>
-          <td class="py-3.5 px-4 text-center flex justify-center items-center gap-2">
-            ${actionButtons}
-            <button onclick="deleteApplicant(${app.id}, '${safeName}')" class="btn btn-sm btn-outline-danger py-1.5 px-2.5 text-xs font-semibold rounded-xl border-red-500 text-red-500 hover:bg-red-500 hover:text-white"><i class="bi bi-trash3"></i></button>
-          </td>
         `;
         tbody.appendChild(tr);
       });
     }
-
-    function openResumeModal(resumePath, applicantName) {
-      document.getElementById('resumeModalTitle').textContent = `Resume Preview — ${applicantName}`;
-      document.getElementById('resumeViewerFrame').src = resumePath;
-      const resumeModal = new bootstrap.Modal(document.getElementById('resumeModal'));
-      resumeModal.show();
-    }
-
-    function printResumeFromModal() {
-      const iframe = document.getElementById('resumeViewerFrame');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      }
-    }
-
-    document.getElementById('resumeModal').addEventListener('hidden.bs.modal', function () {
-      document.getElementById('resumeViewerFrame').src = '';
-    });
 
     function renderFormSubmissionsTable() {
       const section = document.getElementById('formSubmissionsSection');
@@ -989,14 +1014,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
       }
     }
 
-    async function approveApplicant(id, name) {
+    async function rejectApplicant(id, name) {
+      if (!(await Swal.fire({ 
+        title: 'Reject Applicant?', 
+        text: `Are you sure you want to reject ${name}?`, 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Reject',
+        background: '#09090b',
+        color: '#ffffff',
+        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
+      })).isConfirmed) return;
+
       const fd = new FormData(); fd.append('id', id);
-      const res = await fetch(`${phpEndpoint}?action=approve_applicant`, { method: 'POST', body: fd });
+      const res = await fetch(`${phpEndpoint}?action=reject_applicant`, { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
         const app = allApplicants.find(a => String(a.id) === String(id));
-        if (app) app.status = 'For Final Interview';
+        if (app) app.status = 'Rejected';
         renderTable();
+        updateToolbar();
       }
     }
 
@@ -1008,6 +1047,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         const app = allApplicants.find(a => String(a.id) === String(id));
         if (app) app.status = 'Contract';
         renderTable();
+        updateToolbar();
         openContractModal(id, name, email, position, department);
       }
     }
@@ -1112,6 +1152,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
         
         if (data.success) {
           allApplicants = allApplicants.filter(app => String(app.id) !== String(applicantId));
+          if (String(selectedApplicantId) === String(applicantId)) {
+            clearSelection();
+          }
           renderTable();
           Swal.fire({ 
             title: 'Success!', 
@@ -1144,29 +1187,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_applicant' && $_SERVER
           color: '#ffffff',
           customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
         });
-      }
-    }
-
-    async function deleteApplicant(id, name) {
-      if (!(await Swal.fire({ 
-        title: 'Delete Applicant?', 
-        text: `Are you sure you want to delete ${name}?`, 
-        icon: 'warning', 
-        showCancelButton: true, 
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, Delete',
-        background: '#09090b',
-        color: '#ffffff',
-        customClass: { popup: 'rounded-3xl border border-[#ff6b4a]/30 shadow-2xl' }
-      })).isConfirmed) return;
-
-      const fd = new FormData(); fd.append('id', id);
-      const res = await fetch(`${phpEndpoint}?action=delete_applicant`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.success) {
-        allApplicants = allApplicants.filter(app => String(app.id) !== String(id));
-        renderTable();
       }
     }
 

@@ -40,7 +40,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'apply') {
             echo json_encode(["status" => "error", "message" => "Failed to save application: " . $stmt->error]);
         }
         $stmt->close();
-    
     } else {
         echo json_encode(["status" => "error", "message" => "Database table error: " . $db->error]);
     }
@@ -80,59 +79,75 @@ if(isset($_POST['login'])){
             exit();
         } else {
             $message = "Incorrect password for Admin.";
-            $messageClass = "bg-rose-500/20 border-rose-500/30 text-rose-200 animate-shake";
+            $messageClass = "bg-rose-50 border-rose-200 text-rose-600";
         }
     } 
     else {
-        $emp_query = "SELECT id, full_name, email, employee_gmail, company_gmail, employee_password, department, position FROM employees WHERE email = ? OR employee_gmail = ? OR company_gmail = ? LIMIT 1";
+        // Merged multi-candidate check from Source 1 with proper redirection structure from Source 2
+        $emp_query = "SELECT id, full_name, email, employee_gmail, company_gmail, employee_password, department, position FROM employees WHERE email = ? OR employee_gmail = ? OR company_gmail = ?";
         $stmt2 = $db->prepare($emp_query);
         $stmt2->bind_param("sss", $gmail, $gmail, $gmail);
         $stmt2->execute();
         $emp_result = $stmt2->get_result();
 
-        if($emp_row = $emp_result->fetch_assoc()){
-            if (password_verify($password, $emp_row['employee_password'])) {
-                session_unset();
-                $_SESSION['user_id'] = $emp_row['id']; 
-                $_SESSION['fullname'] = $emp_row['full_name'];
-                $_SESSION['employee_gmail'] = $emp_row['employee_gmail'] ?? $emp_row['company_gmail'];
-                
-                $department = strtolower(trim($emp_row['department']));
-                $_SESSION['role'] = $department; 
+        $matched_row = null;
 
-                $is_employee_gmail_login = ($gmail === $emp_row['email'] || $gmail === $emp_row['employee_gmail']);
+        while ($candidate = $emp_result->fetch_assoc()) {
+            if (password_verify($password, $candidate['employee_password'])) {
+                $matched_row = $candidate;
+                break;
+            }
+        }
 
-                if ($is_employee_gmail_login) {
-                    header("Location: info.php"); 
+        if ($matched_row) {
+            $emp_row = $matched_row;
+
+            session_unset();
+            $_SESSION['user_id'] = $emp_row['id']; 
+            $_SESSION['fullname'] = $emp_row['full_name'];
+            $_SESSION['employee_gmail'] = $emp_row['employee_gmail'] ?? $emp_row['company_gmail'];
+            
+            $department = strtolower(trim($emp_row['department']));
+            $_SESSION['role'] = $department; 
+
+            $is_employee_gmail_login = ($gmail === $emp_row['email'] || $gmail === $emp_row['employee_gmail']);
+
+            if ($is_employee_gmail_login) {
+                header("Location: info.php"); 
+                exit();
+            } else {
+                if ($department === 'admin') {
+                    header("Location: ../project-test1/FORNTEND/sales_day.php"); 
+                    exit();
+                } elseif ($department === 'hr') {
+                    header("Location: dashboard.php"); 
+                    exit();
+                } elseif ($department === 'finance') {
+                    header("Location: all_sales.php"); 
+                    exit();
+                } elseif ($department === 'manager') {
+                    header("Location: ../project-test1/FRONTEND/add_item.php"); 
+                    exit();
+                } elseif ($department === 'cashier'){
+                    header("Location: ../project-test1/FRONTEND/checkout.php"); 
                     exit();
                 } else {
-                    if ($department === 'admin') {
-                        header("Location: ../project-test1/FORNTEND/sales_day.php"); 
-                        exit();
-                    } elseif ($department === 'hr') {
-                        header("Location: dashboard.php"); 
-                        exit();
-                    } elseif ($department === 'finance') {
-                        header("Location: ../project-test1/FRONTEND/history.php"); 
-                        exit();
-                    } elseif ($department === 'manager') {
-                        header("Location: ../project-test1/FRONTEND/add_item.php"); 
-                    } elseif ($department === 'cashier'){
-                        header("Location: ../project-test1/FRONTEND/checkout.php"); 
-                    
-                        exit();
-                    } else {
-                        header("Location: ../project-test1/FRONTEND/pos_dash.php"); 
-                        exit();
-                    }
+                    header("Location: ../project-test1/FRONTEND/pos_dash.php"); 
+                    exit();
                 }
-            } else {
-                $message = "Incorrect password.";
-                $messageClass = "bg-rose-500/20 border-rose-500/30 text-rose-200 animate-shake";
             }
         } else {
-            $message = "Gmail address not found in our records.";
-            $messageClass = "bg-rose-500/20 border-rose-500/30 text-rose-200 animate-shake";
+            $exists_check = $db->prepare("SELECT COUNT(*) as c FROM employees WHERE email = ? OR employee_gmail = ? OR company_gmail = ?");
+            $exists_check->bind_param("sss", $gmail, $gmail, $gmail);
+            $exists_check->execute();
+            $exists_row = $exists_check->get_result()->fetch_assoc();
+
+            if ($exists_row['c'] > 0) {
+                $message = "Incorrect password.";
+            } else {
+                $message = "Gmail address not found in our records.";
+            }
+            $messageClass = "bg-rose-50 border-rose-200 text-rose-600";
         }
     }
 }
@@ -144,19 +159,28 @@ ob_end_flush();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pannakoda Enterprise OS - System Login</title>
+    <!-- Tailwind CSS -->
     <script src="../LIBRARIES/tailwind.js"></script>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- AOS Library CSS -->
- <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
-<script src="../LIBRARIES/AOS/AOS.js"></script>
+    <link href="../LIBRARIES/AOS/aos.css" rel="stylesheet">
+    <script src="../LIBRARIES/AOS/AOS.js"></script>
     <style>
         :root {
             --sidebar-bg: linear-gradient(135deg, #0f0f11 0%, #1a1518 100%);
             --text-white: #ffffff;
             --accent-coral: #ff6b4a; 
             --accent-glow: rgba(255, 107, 74, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
         }
 
         @keyframes fadeIn {
@@ -248,21 +272,19 @@ ob_end_flush();
                 <span class="text-[9px] font-mono tracking-widest block font-semibold" style="color: #ff6b4a;">ENTERPRISE OS</span>
             </div>
         </div>
+        
+        <?php if (!$admin_exists): ?>
+            <button type="button" onclick="location.href='register.php'" 
+                    class="bg-white/10 hover:bg-[#ff6b4a]/20 text-orange-200 font-bold text-[11px] uppercase tracking-wider py-1.5 px-3.5 rounded-xl border border-white/20 transition-all duration-150 hover:scale-105 active:scale-95 shadow-sm">
+                Register Admin
+            </button>
+        <?php endif; ?>
     </header>
 
-    <!-- Main Content / Login Form Container (Lagyan ng AOS at Floating Animation) -->
+    <!-- Main Content / Login Form Container -->
     <div class="flex-1 flex items-center justify-center p-3 relative z-10">
         <div class="w-full max-w-[420px] glass-container flex flex-col justify-between p-6 sm:p-7 rounded-[28px] animate-fade-in animate-float" data-aos="zoom-in-up" data-aos-duration="1000" data-aos-easing="ease-out-back">
             
-            <div class="flex justify-end items-center gap-3 mb-1">
-                <?php if (!$admin_exists): ?>
-                    <button type="button" onclick="location.href='register.php'" 
-                            class="bg-white/10 hover:bg-[#ff6b4a]/20 text-orange-200 font-bold text-[11px] uppercase tracking-wider py-1.5 px-3.5 rounded-xl border border-white/20 transition-all duration-150 hover:scale-105 active:scale-95 shadow-sm">
-                        Register Admin
-                    </button>
-                <?php endif; ?>
-            </div>
-
             <div class="w-full py-1">
                 <div class="mb-5 transition-transform duration-500 hover:translate-x-1" data-aos="fade-right" data-aos-delay="200">
                     <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-wide font-sans">Login</h2>
@@ -277,12 +299,12 @@ ob_end_flush();
                 <?php endif; ?>
 
                 <form method="POST" class="space-y-3.5" onsubmit="handleLoginSubmit(event)">
-                    <!-- 3 Boxes / Input Fields binigyan ng AOS -->
+                    <!-- Input Fields -->
                     <div class="input-effect" data-aos="fade-up" data-aos-delay="300">
                         <div class="relative">
                             <input type="email" name="gmail" id="floatingGmail" placeholder="User Name / Email" required
                                    class="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/15 text-white placeholder-orange-200/50 focus:outline-none focus:ring-2 focus:ring-[#ff6b4a] focus:border-[#ff6b4a] transition-all text-sm shadow-inner pr-12">
-                            <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-orange-200/70 transition-transform duration-300 group-focus-within:scale-110"><i class="bi bi-person text-lg"></i></span>
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-orange-200/70 transition-transform duration-300"><i class="bi bi-person text-lg"></i></span>
                         </div>
                     </div>
 
@@ -331,10 +353,7 @@ ob_end_flush();
     </div>
 
 <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
-<!-- AOS Library JS -->
-
 <script>
-    // Initialize AOS
     AOS.init({
         once: false,
         mirror: true

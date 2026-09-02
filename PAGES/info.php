@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
         }
     </style>
 </head>
-<body class="bg-purple-50/40 font-sans antialiased h-screen overflow-hidden">
+<body class="bg-amber-50/40 font-sans antialiased h-screen overflow-hidden">
 
 <div class="flex h-screen w-full overflow-hidden">
     
@@ -203,22 +203,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
     <?php include 'sidebars.php'; ?>
 
     <!-- MAIN CONTENT AREA -->
-    <div class="flex-1 h-screen overflow-y-auto p-6 md:p-10 bg-purple-50/30 animate-fade-in">
+    <div class="flex-1 h-screen overflow-y-auto p-6 md:p-10 bg-amber-50/30 animate-fade-in">
         <div class="max-w-5xl mx-auto space-y-6">
             
-            <!-- Header Profile Banner (Modern White & Purple Theme) -->
-            <div class="bg-gradient-to-r from-white via-purple-50/50 to-white text-zinc-800 rounded-3xl p-8 shadow-xl shadow-purple-900/5 border border-purple-100 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-glow">
-                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <!-- Header Profile Banner (Modern White & amber Theme) -->
+            <div class="bg-gradient-to-r from-white via-amber-50/50 to-white text-zinc-800 rounded-3xl p-8 shadow-xl shadow-amber-900/5 border border-amber-100 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-glow">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-amber-600/10 rounded-full blur-3xl pointer-events-none"></div>
                 
                 <div class="flex items-center gap-5 z-10">
                     <!-- Profile Picture Container / Click to Change Image & Add Profile Button functionality -->
                     <div class="relative group cursor-pointer" onclick="document.getElementById('profilePicInput').click()" title="Click image to change profile">
                         <?php if (!empty($employee['profile_picture']) && file_exists($employee['profile_picture'])): ?>
-                            <div class=" rounded-2xl overflow-hidden shadow-lg shadow-purple-500/20 border-2 border-purple-500 transition-transform duration-300 group-hover:scale-105" style="border-radius: 50%; width: 180px; height: 200px ; ">
+                            <div class=" rounded-2xl overflow-hidden shadow-lg shadow-amber-500/20 border-2 border-amber-500 transition-transform duration-300 group-hover:scale-105" style="border-radius: 50%; width: 180px; height: 200px ; ">
                                 <img src="<?= htmlspecialchars($employee['profile_picture']) ?>" alt="Profile" class="w-full h-full object-cover">
                             </div>
                         <?php else: ?>
-                            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center text-white justify-center text-3xl font-black shadow-lg shadow-purple-500/20 transition-transform duration-300 group-hover:scale-105">
+                            <div class="w-20 h-20 rounded-2xl bg-amber-500 flex items-center text-white justify-center text-3xl font-black shadow-lg shadow-amber-500/20 transition-transform duration-300 group-hover:scale-105">
                                 <?= strtoupper(substr($employee['full_name'], 0, 1)) ?>
                             </div>
                         <?php endif; ?>
@@ -230,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
                     </div>
 
                     <div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-wider mb-2 border border-purple-200">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider mb-2 border border-amber-200">
                             <i class="bi bi-shield-check"></i> <?= htmlspecialchars($role) ?>
                         </div>
                         <h1 class="text-2xl md:text-3xl font-black tracking-tight text-zinc-900">
@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
 
                 <!-- Add Profile Button as requested -->
                 <div class="z-10">
-                    <button onclick="document.getElementById('profilePicInput').click()" class="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-bold text-xs shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-105 flex items-center gap-2">
+                    <button onclick="document.getElementById('profilePicInput').click()" class="px-5 py-3 bg-amber-600  text-white rounded-2xl font-bold text-xs shadow-lg shadow-amber-500/25 transition-all duration-300 hover:scale-105 flex items-center gap-2">
                         <i class="bi bi-person-plus-fill text-base"></i> Add / Change Profile
                     </button>
                 </div>
@@ -258,50 +258,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
             <!-- Credentials Grid Details -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2 space-y-6">
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-purple-100 transition-all hover:shadow-md">
-                        <h3 class="text-xs font-black text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 transition-all hover:shadow-md">
+                        <h3 class="text-xs font-black text-amber-600 uppercase tracking-wider mb-4 flex items-center gap-2">
                             <i class="bi bi-person-lines-fill"></i> Personal & Employment Details
                         </h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
-                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Full Name</span>
+                            <div class="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-100">
+                                <span class="block text-[11px] font-bold text-amber-400 uppercase">Full Name</span>
                                 <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($employee['full_name']); ?></span>
                             </div>
-                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
-                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Employee ID</span>
-                                <span class="font-mono font-bold text-purple-600 mt-0.5 block"><?php echo htmlspecialchars($employee['employee_id'] ?? 'EMP-2026-...'); ?></span>
+                            <div class="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-100">
+                                <span class="block text-[11px] font-bold text-amber-400 uppercase">Employee ID</span>
+                                <span class="font-mono font-bold text-amber-600 mt-0.5 block"><?php echo htmlspecialchars($employee['employee_id'] ?? 'EMP-2026-...'); ?></span>
                             </div>
-                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
-                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Department</span>
+                            <div class="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-100">
+                                <span class="block text-[11px] font-bold text-amber-400 uppercase">Department</span>
                                 <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($employee['department'] ?? 'Unassigned'); ?></span>
                             </div>
-                            <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100">
-                                <span class="block text-[11px] font-bold text-purple-400 uppercase">Position / Role</span>
+                            <div class="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-100">
+                                <span class="block text-[11px] font-bold text-amber-400 uppercase">Position / Role</span>
                                 <span class="font-bold text-zinc-800 mt-0.5 block"><?php echo htmlspecialchars($role); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Government Identifiers -->
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-purple-100 transition-all hover:shadow-md">
-                        <h3 class="text-xs font-black text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 transition-all hover:shadow-md">
+                        <h3 class="text-xs font-black text-amber-600 uppercase tracking-wider mb-4 flex items-center gap-2">
                             <i class="bi bi-shield-shaded"></i> Government Mandated Identifiers
                         </h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
-                                <span class="block text-[10px] text-purple-400 font-bold uppercase">SSS No.</span>
+                            <div class="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100">
+                                <span class="block text-[10px] text-amber-400 font-bold uppercase">SSS No.</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">33-1234567-8</span>
                             </div>
-                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
-                                <span class="block text-[10px] text-purple-400 font-bold uppercase">PhilHealth</span>
+                            <div class="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100">
+                                <span class="block text-[10px] text-amber-400 font-bold uppercase">PhilHealth</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">12-345678901-2</span>
                             </div>
-                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
-                                <span class="block text-[10px] text-purple-400 font-bold uppercase">Pag-IBIG</span>
+                            <div class="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100">
+                                <span class="block text-[10px] text-amber-400 font-bold uppercase">Pag-IBIG</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">1210-9876-5432</span>
                             </div>
-                            <div class="bg-purple-50/40 p-3.5 rounded-2xl border border-purple-100">
-                                <span class="block text-[10px] text-purple-400 font-bold uppercase">GSIS No.</span>
+                            <div class="bg-amber-50/40 p-3.5 rounded-2xl border border-amber-100">
+                                <span class="block text-[10px] text-amber-400 font-bold uppercase">GSIS No.</span>
                                 <span class="font-mono text-zinc-800 font-bold mt-1 block text-xs">N/A</span>
                             </div>
                         </div>
@@ -310,21 +310,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_advance'])) {
 
                 <!-- Right Column: Access Emails -->
                 <div class="space-y-6">
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-purple-100 flex flex-col justify-between h-full transition-all hover:shadow-md">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 flex flex-col justify-between h-full transition-all hover:shadow-md">
                         <div>
-                            <h3 class="text-xs font-black text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <h3 class="text-xs font-black text-amber-600 uppercase tracking-wider mb-4 flex items-center gap-2">
                                 <i class="bi bi-envelope-at-fill"></i> System Access Emails
                             </h3>
                             <div class="space-y-4">
-                                <div class="p-4 rounded-2xl bg-purple-50/60 border border-purple-100">
-                                    <span class="block text-[10px] text-purple-600 font-bold uppercase tracking-wide">Employee Email</span>
-                                    <span class="font-mono font-bold text-purple-950 text-xs block mt-1 break-all">
+                                <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-100">
+                                    <span class="block text-[10px] text-amber-600 font-bold uppercase tracking-wide">Employee Email</span>
+                                    <span class="font-mono font-bold text-amber-950 text-xs block mt-1 break-all">
                                         <?php echo htmlspecialchars($employee['employee_gmail'] ?? 'Not set'); ?>
                                     </span>
                                 </div>
-                                <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100">
-                                    <span class="block text-[10px] text-indigo-600 font-bold uppercase tracking-wide">Company Gmail</span>
-                                    <span class="font-mono font-bold text-indigo-950 text-xs block mt-1 break-all">
+                                <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-100">
+                                    <span class="block text-[10px] text-amber-600 font-bold uppercase tracking-wide">Company Gmail</span>
+                                    <span class="font-mono font-bold text-amber-950 text-xs block mt-1 break-all">
                                         <?php echo htmlspecialchars($employee['company_gmail'] ?? 'Not set'); ?>
                                     </span>
                                 </div>

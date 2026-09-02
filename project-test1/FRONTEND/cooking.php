@@ -30,7 +30,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
     if (empty($orders)) {
         echo '<div class="col-span-full flex flex-col items-center justify-center py-16 text-slate-400 animate-fade-in">
-                <div class="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-500 mb-3 shadow-inner">
+                <div class="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center text-amber-500 mb-3 shadow-inner border text-amber-500">
                     <i class="bi bi-cup-hot text-3xl"></i>
                 </div>
                 <p class="text-base font-semibold text-slate-600">No orders currently cooking.</p>
@@ -57,18 +57,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
         $seconds_remaining = max(0, (int)$order['seconds_remaining']);
         ?>
-        <div class="bg-white border border-purple-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between animate-fade-in group">
+        <div class="bg-white border text-amber-500/30 rounded-2xl p-5 shadow-sm hover:shadow-xl text-amber-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between animate-fade-in group">
             <div>
                 <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-                    <span class="font-bold text-purple-700 text-lg tracking-tight group-hover:text-purple-800 transition-colors">#TXN-<?php echo str_pad($order['id'], 5, '0', STR_PAD_LEFT); ?></span>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 shadow-sm countdown-badge" data-seconds="<?php echo $seconds_remaining; ?>">
+                    <span class="font-bold text-amber-500 text-lg tracking-tight text-amber-500 transition-colors">#TXN-<?php echo str_pad($order['id'], 5, '0', STR_PAD_LEFT); ?></span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold  text-amber-500 shadow-sm countdown-badge" data-seconds="<?php echo $seconds_remaining; ?>">
                         <i class="bi bi-clock-history animate-spin-slow"></i> <span class="countdown-text font-mono">--:--</span>
                     </span>
                 </div>
                 <ul class="space-y-2.5 text-slate-700 font-medium">
                     <?php foreach ($item_lines as $line): ?>
                         <li class="flex items-center gap-2 text-sm bg-slate-50/70 px-3 py-2 rounded-xl border border-slate-100/80">
-                            <span class="inline-block w-2 h-2 bg-purple-500 rounded-full shadow-sm"></span>
+                            <span class="inline-block w-2 h-2 text-amber-500 rounded-full shadow-sm"></span>
                             <?php echo $line; ?>
                         </li>
                     <?php endforeach; ?>
@@ -104,19 +104,19 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         <?php include '../../PAGES/sidebar.php'; ?>
         
         <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-purple-50/10 to-slate-50">
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-orange-50/10 to-slate-50">
             <div class="max-w-7xl mx-auto">
                 
                 <!-- Page Header -->
                 <div class="mb-8 border-b border-slate-200/80 pb-5 flex justify-between items-center">
                     <div>
-                        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Kitchen Display</h1>
+                        <h1 class="text-2xl font-extrabold text-amber-500 tracking-tight">Kitchen Display</h1>
                         <p class="text-sm text-slate-500 mt-0.5">Live cooking monitor and active preparation tracking</p>
                     </div>
-                    <div class="flex items-center gap-2.5 text-xs font-medium bg-white px-3.5 py-2 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2.5 text-xs font-medium bg-white px-3.5 py-2 rounded-xl shadow-sm border text-amber-500/20">
                         <span class="flex h-2.5 w-2.5 relative">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-600"></span>
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 text-amber-500"></span>
                         </span>
                         <span class="text-slate-600">Auto-refreshing</span>
                     </div>
@@ -125,7 +125,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                 <!-- Orders Grid Container -->
                 <div id="orders-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="col-span-full flex flex-col items-center justify-center py-16 text-slate-400">
-                        <div class="animate-spin rounded-full h-10 w-10 border-4 border-purple-600 border-t-transparent shadow-md"></div>
+                        <div class="animate-spin rounded-full h-10 w-10 border-4 text-amber-500 border-t-transparent shadow-md"></div>
                         <p class="mt-3 text-sm font-semibold text-slate-600">Loading active orders...</p>
                     </div>
                 </div>

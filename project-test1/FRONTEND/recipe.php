@@ -127,25 +127,23 @@ if ($selected_item_id > 0) {
         <div class="flex-1 flex flex-col h-full overflow-y-auto bg-white">
             <header class="flex items-center justify-between px-6 border-b border-gray-200 bg-white" style="min-height: 60px;">
                 <div class="flex items-center gap-4">
-                    <button class="p-2 text-white bg-orange-600 hover:bg-orange-700 rounded transition-colors" type="button" id="burgerToggle">
-                        <i class="bi bi-list text-xl"></i>
-                    </button>
-                    <h1 class="text-xl font-bold text-orange-600">Recipe Management</h1>
+            
+                    <h1 class="text-xl font-bold text-amber-500">Recipe Management</h1>
                 </div>
             </header>
 
             <main class="p-6 max-w-7xl w-full mx-auto">
 
                 <?php if (empty($all_items)): ?>
-                    <div class="p-4 mb-4 text-orange-800 bg-orange-50 border border-orange-200 rounded-lg">
-                        No menu items found. Please <a href="add_item.php" class="font-bold underline text-orange-700 hover:text-orange-900">add an item</a> first.
+                    <div class="p-4 mb-4 text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
+                        No menu items found. Please <a href="add_item.php" class="font-bold underline text-blue-700 hover:text-blue-900">add an item</a> first.
                     </div>
                 <?php else: ?>
 
                 <div class="mb-6 flex items-end gap-4 max-w-lg bg-gray-50 p-4 border border-gray-200 rounded-lg">
                     <div class="flex-grow">
-                        <label class="block text-sm font-bold text-orange-600 mb-2">Select Menu Item</label>
-                        <select class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2.5 transition-all" onchange="window.location.href='recipe.php?item_id=' + this.value">
+                        <label class="block text-sm font-bold text-amber-500 mb-2">Select Menu Item</label>
+                        <select class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-all" onchange="window.location.href='recipe.php?item_id=' + this.value">
                             <?php foreach ($all_items as $it): ?>
                                 <option value="<?php echo $it['id']; ?>" <?php echo ($it['id'] == $selected_item_id) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($it['item_name']); ?>
@@ -158,8 +156,8 @@ if ($selected_item_id > 0) {
                             <?php if (!empty($selected_item['image'])): ?>
                                 <img src="../<?php echo htmlspecialchars($selected_item['image']); ?>" alt="<?php echo htmlspecialchars($selected_item['item_name']); ?>" class="rounded-lg w-16 h-16 object-cover border border-gray-200 shadow-sm">
                             <?php else: ?>
-                                <div class="rounded-lg flex items-center justify-center w-16 h-16 bg-orange-5 border border-orange-100">
-                                    <i class="bi bi-image text-2xl text-orange-400"></i>
+                                <div class="rounded-lg flex items-center justify-center w-16 h-16 bg-blue-5 border border-blue-100">
+                                    <i class="bi bi-image text-2xl text-blue-400"></i>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -168,11 +166,11 @@ if ($selected_item_id > 0) {
 
                 <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm mb-6 bg-white">
                     <table class="w-full text-sm text-left text-gray-700">
-                        <thead class="text-xs text-orange-700 uppercase bg-orange-50 border-b border-gray-200">
+                        <thead class="text-xs text-blue-700 uppercase bg-blue-50 border-b border-gray-200">
                             <tr>
-                                <th scope="col" class="px-6 py-4 font-bold text-orange-600">Ingredient</th>
-                                <th scope="col" class="px-6 py-4 font-bold text-orange-600">Quantity Used Per Sale</th>
-                                <th scope="col" class="px-6 py-4 font-bold text-orange-600 text-center">Actions</th>
+                                <th scope="col" class="px-6 py-4 font-bold text-amber-500">Ingredient</th>
+                                <th scope="col" class="px-6 py-4 font-bold text-amber-500">Quantity Used Per Sale</th>
+                                <th scope="col" class="px-6 py-4 font-bold text-amber-500 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
@@ -192,7 +190,7 @@ if ($selected_item_id > 0) {
                                                 <input type="hidden" name="ingredient_id" value="<?php echo $line['ingredient_id']; ?>">
                                                 <input type="number" step="0.001" min="0.001" name="quantity_used"
                                                        value="<?php echo $line['quantity_used']; ?>"
-                                                       class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-1.5 w-24" required>
+                                                       class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 w-24" required>
                                                 <span class="text-xs text-gray-500 font-medium"><?php echo htmlspecialchars($line['unit']); ?></span>
                                                 <button type="submit" name="save_recipe_line" class="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">Save</button>
                                             </form>
@@ -215,14 +213,14 @@ if ($selected_item_id > 0) {
 
                 <?php if (!empty($available_ingredients)): ?>
                     <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm max-w-xl">
-                        <h6 class="text-base font-bold text-orange-600 mb-4 flex items-center gap-2">
+                        <h6 class="text-base font-bold text-amber-500 mb-4 flex items-center gap-2">
                             <i class="bi bi-plus-circle"></i> Add Ingredient to Recipe
                         </h6>
                         <form method="POST" action="recipe.php" class="flex flex-wrap items-center gap-3">
                             <input type="hidden" name="item_id" value="<?php echo $selected_item_id; ?>">
                             
                             <div class="w-full sm:w-auto flex-1 min-w-[200px]">
-                                <select name="ingredient_id" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2" required>
+                                <select name="ingredient_id" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2" required>
                                     <?php foreach ($available_ingredients as $ing): ?>
                                         <option value="<?php echo $ing['id']; ?>">
                                             <?php echo htmlspecialchars($ing['ingredient_name']); ?> (<?php echo htmlspecialchars($ing['unit']); ?>)
@@ -232,10 +230,10 @@ if ($selected_item_id > 0) {
                             </div>
 
                             <div class="w-full sm:w-auto">
-                                <input type="number" step="0.001" min="0.001" name="quantity_used" placeholder="Qty" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2 w-24" required>
+                                <input type="number" step="0.001" min="0.001" name="quantity_used" placeholder="Qty" class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 w-24" required>
                             </div>
 
-                            <button type="submit" name="save_recipe_line" class="w-full sm:w-auto px-4 py-2 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors shadow-sm">
+                            <button type="submit" name="save_recipe_line" class="w-full sm:w-auto px-4 py-2 text-sm font-bold text-white bg-blue-500 hover:bg-amber-500 rounded-lg transition-colors shadow-sm">
                                 Add
                             </button>
                         </form>

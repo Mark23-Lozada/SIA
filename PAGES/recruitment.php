@@ -207,7 +207,7 @@ if (isset($_GET['action'])) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-white">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -216,60 +216,73 @@ if (isset($_GET['action'])) {
   <script src="../LIBRARIES/tailwind.js"></script>
   <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+      #sidebar-container { transition: margin-left 0.3s ease-in-out; }
+      .sidebar-hidden #sidebar-container { margin-left: -16rem; }
+  </style>
 </head>
 
-<body class="bg-[whitesmoke] font-sans antialiased h-screen overflow-hidden">
+<body class="h-full text-slate-800 font-sans antialiased">
 
-  <div class="flex h-screen w-full overflow-hidden">
+  <div class="flex h-screen w-full overflow-hidden bg-white">
     
-    <?php include 'sidebar.php'; ?>
+    <div id="sidebar-container" class="flex-shrink-0 w-64 h-full bg-slate-900 shadow-xl transition-all duration-300">
+        <?php include 'sidebar.php'; ?>
+    </div>
     
     <!-- MAIN CONTENT -->
-    <div class="flex-1 h-screen overflow-y-auto p-8 bg-slate-100 min-w-0">
+    <div id="main-wrapper" class="flex-1 flex flex-col h-full overflow-hidden">
       
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-black text-gray-800 tracking-tight">Pancake Store Recruitment</h1>
-          <p class="text-sm text-gray-500">Manage store hiring slots and current availability status.</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap gap-4 mb-6">
-        <div class="flex items-center bg-[white] flex-col h-32 justify-center px-10 shadow-sm rounded-xl border border-gray-100 w-full sm:w-64">
-          <h1 class="font-black text-gray-400 text-sm tracking-wider uppercase mb-1">Active Store Posts</h1>
-          <span id="active-posts-count" class="font-black text-3xl text-gray-800">0</span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6 mb-6">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-            <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
-              <i class="bi bi-egg-fried text-[#FF8C00]"></i> Fixed Department Status
-            </h2>
-            <button onclick="openAddJobModal()" class="bg-[#FF8C00] hover:bg-orange-600 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm inline-flex items-center gap-2 border-0 cursor-pointer">
-              <i class="bi bi-plus-lg"></i> Add Job Posting
-            </button>
-          </div>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wider">
-                  <th class="pb-3 font-semibold">Store Department / Section</th>
-                  <th class="pb-3 font-semibold text-center">Target Slots</th>
-                  <th class="pb-3 font-semibold text-center">Status</th>
-                  <th class="pb-3 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="job-posts-table-body" class="text-sm divide-y divide-gray-50 text-gray-600">
-                <!-- Loaded via AJAX -->
-              </tbody>
-            </table>
+      <header class="flex items-center justify-between px-6 bg-white border-b border-amber-500/25 shadow-sm shrink-0" style="height: 60px;">
+        <div class="flex items-center gap-4">
+          <button id="burgerToggle" type="button" class="inline-flex items-center justify-center p-2 rounded-xl text-white bg-amber-500 hover:bg-blue-900 focus:outline-none transition-all transform hover:scale-105 active:scale-95 shadow-md">
+              <i class="bi bi-list text-xl leading-none"></i>
+          </button>
+          <div>
+            <h1 class="text-xl font-black text-amber-500 tracking-wide">Pancake Store Recruitment</h1>
           </div>
         </div>
-      </div>
+      </header>
 
+      <main class="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-gradient-to-br from-blue-50/40 via-white to-slate-50">
+
+        <div class="flex flex-wrap gap-4 mb-6">
+          <div class="flex items-center bg-white flex-col h-28 justify-center px-8 shadow-md rounded-2xl border border-amber-500/20 w-full sm:w-64">
+            <h1 class="font-black text-slate-400 text-xs tracking-wider uppercase mb-1">Active Store Posts</h1>
+            <span id="active-posts-count" class="font-black text-3xl text-amber-500">0</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 mb-6">
+          <div class="bg-white p-6 rounded-2xl shadow-xl border border-amber-500/20">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+              <h2 class="font-black text-lg text-slate-900 flex items-center gap-2">
+                <i class="bi bi-egg-fried text-amber-500"></i> Fixed Department Status
+              </h2>
+              <button onclick="openAddJobModal()" class="bg-amber-500 hover:bg-blue-900 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-amber-500/10 inline-flex items-center gap-2 border-0 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                <i class="bi bi-plus-lg"></i> Add Job Posting
+              </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-blue-50 bg-blue-50/70 text-amber-500 text-xs uppercase tracking-wider">
+                    <th class="px-6 py-4 font-black">Store Department / Section</th>
+                    <th class="px-6 py-4 font-black text-center">Target Slots</th>
+                    <th class="px-6 py-4 font-black text-center">Status</th>
+                    <th class="px-6 py-4 font-black text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="job-posts-table-body" class="text-sm divide-y divide-blue-50 text-slate-600">
+                  <!-- Loaded via AJAX -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </main>
     </div>
   </div>
 
@@ -284,6 +297,13 @@ if (isset($_GET['action'])) {
     document.addEventListener("DOMContentLoaded", function () {
       loadJobPosts();
 
+      const burgerToggle = document.getElementById('burgerToggle');
+      if (burgerToggle) {
+          burgerToggle.addEventListener('click', function () {
+              document.body.classList.toggle('sidebar-hidden');
+          });
+      }
+
       const currentPath = window.location.pathname;
       const navLinks = document.querySelectorAll(".sidebar-link, .nav-link");
       
@@ -291,7 +311,7 @@ if (isset($_GET['action'])) {
           const linkPath = link.getAttribute("href");
           if (linkPath && currentPath.endsWith(linkPath)) {
               link.classList.remove("text-white/80", "hover:bg-white/10", "hover:text-white", "text-inherit");
-              link.classList.add("bg-[#FF8C00]", "!text-[white]", "shadow-md", "font-semibold");
+              link.classList.add("bg-amber-500", "!text-[white]", "shadow-md", "font-semibold");
           }
       });
 
@@ -305,7 +325,7 @@ if (isset($_GET['action'])) {
                   icon: 'warning',
                   showConfirmButton: true,
                   showCancelButton: true,
-                  confirmButtonColor: '#FF8C00', 
+                  confirmButtonColor: '#090d16', 
                   cancelButtonColor: '#d33',
                   confirmButtonText: 'Yes',
                   cancelButtonText: 'Cancel',
@@ -342,11 +362,11 @@ if (isset($_GET['action'])) {
       tableBody.innerHTML = "";
 
       localJobOpenings.forEach(job => {
-        let statusClass = 'bg-green-100 text-green-700';
+        let statusClass = 'bg-emerald-100 text-emerald-700';
         let displayStatus = 'Active';
 
         if (job.openings <= 0 || job.status === 'Closed') {
-          statusClass = 'bg-red-100 text-red-700';
+          statusClass = 'bg-rose-100 text-rose-700';
           displayStatus = 'Closed';
         } else if (job.status === 'Paused') {
           statusClass = 'bg-amber-100 text-amber-700';
@@ -354,14 +374,14 @@ if (isset($_GET['action'])) {
         }
         
         const jobHTML = `
-          <tr>
-            <td class="py-3.5 font-medium text-gray-900">${job.department}</td>
-            <td class="py-3.5 text-center font-semibold">${job.openings} Slot${job.openings > 1 ? 's' : ''}</td>
-            <td class="py-3.5 text-center">
-              <span class="text-[11px] ${statusClass} px-2.5 py-1 rounded-md font-semibold">${displayStatus}</span>
+          <tr class="hover:bg-blue-50/40 transition-colors duration-150">
+            <td class="px-6 py-4 font-bold text-slate-900">${job.department}</td>
+            <td class="px-6 py-4 text-center font-bold">${job.openings} Slot${job.openings > 1 ? 's' : ''}</td>
+            <td class="px-6 py-4 text-center">
+              <span class="text-xs ${statusClass} px-3 py-1.5 rounded-full font-bold">${displayStatus}</span>
             </td>
-            <td class="py-3.5 text-right">
-              <button onclick="editJobPost(${job.id})" class="text-gray-600 hover:text-blue-600 bg-white p-1.5 rounded-xl border border-gray-200 shadow-xs text-xs font-semibold inline-flex items-center gap-1 bg-transparent">
+            <td class="px-6 py-4 text-right">
+              <button onclick="editJobPost(${job.id})" class="text-slate-600 hover:text-amber-500 bg-white hover:bg-blue-50 px-3.5 py-2 rounded-xl border border-slate-200 shadow-xs text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer">
                 <i class="bi bi-pencil-square text-sm"></i> Edit Update
               </button>
             </td>
@@ -380,7 +400,7 @@ if (isset($_GET['action'])) {
 
     window.openAddJobModal = function() {
       Swal.fire({
-        title: '<div class="text-lg font-black text-gray-800 pt-2">Add Job Posting</div>',
+        title: '<div class="text-lg font-black text-slate-900 pt-2">Add Job Posting</div>',
         html: buildJobFormHTML(null),
         showCancelButton: true,
         confirmButtonText: 'Create Posting',
@@ -401,9 +421,10 @@ if (isset($_GET['action'])) {
               loadJobPosts();
               Swal.fire({
                 icon: 'success',
-                title: '<div class="text-gray-800 font-bold text-base">Job Posting Created!</div>',
-                customClass: { popup: 'rounded-2xl p-4', confirmButton: 'bg-green-500 text-white px-5 py-2 rounded-xl font-bold text-sm border-0' },
-                buttonsStyling: false
+                title: '<div class="text-slate-900 font-bold text-base">Job Posting Created!</div>',
+                customClass: { popup: 'rounded-2xl p-4', confirmButton: 'bg-amber-500 text-white px-5 py-2 rounded-xl font-bold text-sm border-0' },
+                buttonsStyling: false,
+                confirmButtonColor: '#090d16'
               });
             } else {
               Swal.fire('Error', res.error, 'error');
@@ -418,7 +439,7 @@ if (isset($_GET['action'])) {
       if (!job) return;
 
       Swal.fire({
-        title: '<div class="text-lg font-black text-gray-800 flex items-center gap-2 pt-2"><i class="bi bi-pencil-square text-blue-600"></i> Update Job Posting</div>',
+        title: '<div class="text-lg font-black text-slate-900 flex items-center gap-2 pt-2"><i class="bi bi-pencil-square text-amber-500"></i> Update Job Posting</div>',
         html: buildJobFormHTML(job),
         showCancelButton: true,
         confirmButtonText: 'Save Changes',
@@ -440,9 +461,10 @@ if (isset($_GET['action'])) {
               loadJobPosts();
               Swal.fire({
                 icon: 'success',
-                title: '<div class="text-gray-800 font-bold text-base">Changes Saved Successfully!</div>',
-                customClass: { popup: 'rounded-2xl p-4', confirmButton: 'bg-green-500 text-white px-5 py-2 rounded-xl font-bold text-sm border-0' },
-                buttonsStyling: false
+                title: '<div class="text-slate-900 font-bold text-base">Changes Saved Successfully!</div>',
+                customClass: { popup: 'rounded-2xl p-4', confirmButton: 'bg-amber-500 text-white px-5 py-2 rounded-xl font-bold text-sm border-0' },
+                buttonsStyling: false,
+                confirmButtonColor: '#090d16'
               });
             } else {
               Swal.fire('Error', res.error, 'error');
@@ -465,17 +487,17 @@ if (isset($_GET['action'])) {
       return `
         <div class="text-left p-1 space-y-4 font-sans">
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Store Department</label>
-            <input id="swal-job-dept" type="text" value="${dept}" placeholder="e.g. Dishwasher" class="w-full text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none">
+            <label class="block text-xs font-black text-slate-600 uppercase tracking-wider mb-1">Store Department</label>
+            <input id="swal-job-dept" type="text" value="${dept}" placeholder="e.g. Dishwasher" class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Target Manpower Slots</label>
-              <input id="swal-job-openings" type="number" min="0" max="10" value="${openings}" class="w-full text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none" oninput="toggleStatusOptions(this.value)">
+              <label class="block text-xs font-black text-slate-600 uppercase tracking-wider mb-1">Target Manpower Slots</label>
+              <input id="swal-job-openings" type="number" min="0" max="10" value="${openings}" class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" oninput="toggleStatusOptions(this.value)">
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
-              <select id="swal-job-status" class="w-full text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none">
+              <label class="block text-xs font-black text-slate-600 uppercase tracking-wider mb-1">Status</label>
+              <select id="swal-job-status" class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
                 ${isZero ? `
                   <option value="Closed" selected>Closed</option>
                 ` : `
@@ -486,16 +508,16 @@ if (isset($_GET['action'])) {
             </div>
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Monthly Salary (₱)</label>
-            <input id="swal-job-salary" type="number" min="0" step="0.01" value="${salary}" placeholder="e.g. 18000" class="w-full text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none">
+            <label class="block text-xs font-black text-slate-600 uppercase tracking-wider mb-1">Monthly Salary (₱)</label>
+            <input id="swal-job-salary" type="number" min="0" step="0.01" value="${salary}" placeholder="e.g. 18000" class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Requirements</label>
-            <textarea id="swal-job-requirements" rows="3" placeholder="e.g. At least high school graduate, can work weekends, 1 year experience preferred" class="w-full text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none resize-none">${requirements}</textarea>
+            <label class="block text-xs font-black text-slate-600 uppercase tracking-wider mb-1">Requirements</label>
+            <textarea id="swal-job-requirements" rows="3" placeholder="e.g. At least high school graduate, can work weekends, 1 year experience preferred" class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none">${requirements}</textarea>
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Things to Know Before Applying</label>
-            <textarea id="swal-job-notes" rows="3" placeholder="e.g. Rotating shifts, standing for long periods, walk-in interviews only" class="w-full text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none resize-none">${notes}</textarea>
+            <label class="block text-xs font-black text-slate-600 uppercase tracking-wider mb-1">Things to Know Before Applying</label>
+            <textarea id="swal-job-notes" rows="3" placeholder="e.g. Rotating shifts, standing for long periods, walk-in interviews only" class="w-full text-sm px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none">${notes}</textarea>
           </div>
         </div>
       `;
@@ -551,9 +573,9 @@ if (isset($_GET['action'])) {
 
     function swalCustomClasses() {
       return {
-        popup: 'rounded-2xl shadow-xl border border-gray-100 p-4',
-        confirmButton: 'bg-[#FF8C00] hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm border-0 focus:outline-none',
-        cancelButton: 'bg-gray-100 hover:bg-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-semibold text-sm border-0 focus:outline-none'
+        popup: 'rounded-2xl shadow-2xl border border-amber-500/20 p-4',
+        confirmButton: 'bg-amber-500 hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm border-0 focus:outline-none shadow-lg shadow-amber-500/10 cursor-pointer',
+        cancelButton: 'bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-semibold text-sm border-0 focus:outline-none cursor-pointer'
       };
     }
   </script>

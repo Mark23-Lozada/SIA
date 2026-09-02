@@ -1,24 +1,18 @@
 <?php
 session_start();
 
-// 1. Ensure user is logged in[cite: 7]
 if (!isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
 }
 
-// 2. Get role and convert to lowercase to avoid case-sensitivity issues[cite: 7]
 $current_role = strtolower($_SESSION['role']);
 
-// 3. Block if user is neither admin nor hr[cite: 7]
 if ($current_role !== 'admin' && $current_role !== 'hr') {
     header("Location: login.php"); 
     exit();
 }
 
-// ==========================================
-// 1. DATABASE CONNECTION & INITIALIZATION
-// ==========================================
 $host = "localhost";
 $user = "root";
 $pass = "";
@@ -32,18 +26,13 @@ if ($conn->connect_error) {
 $status_message = "";
 $status_type = "success";
 
-// Determine active page in view (default is 'leaves')[cite: 7]
 $current_page = isset($_GET['page']) ? $_GET['page'] : 'leaves';
 
-// ==========================================
-// 2. BACKEND ACTION HANDLERS (HR/SUPERVISOR NODE)[cite: 7]
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hr_action'])) {
     $request_id = intval($_POST['request_id']);
     $action = $_POST['hr_action'];
 
     if ($action === 'hr_approve') {
-        // Forward to Admin Board[cite: 7]
         $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Pending Admin' WHERE id = ?");
         $stmt->bind_param("i", $request_id);
         if ($stmt->execute()) {
@@ -52,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hr_action'])) {
         }
         $stmt->close();
     } elseif ($action === 'hr_reject') {
-        // Set to 'Rejected' so it no longer shows in the new requests list[cite: 7]
         $stmt = $conn->prepare("UPDATE leave_requests SET status = 'Rejected' WHERE id = ?");
         $stmt->bind_param("i", $request_id);
         if ($stmt->execute()) {
@@ -63,10 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hr_action'])) {
     }
 }
 
-// ==========================================
-// 3. DATA QUERIES[cite: 7]
-// ==========================================
-// A. Fetch incoming requests (Pending or Pending HR)[cite: 7]
 $sql_pending = "SELECT lr.*, e.full_name, e.department 
                 FROM leave_requests lr 
                 JOIN employees e ON lr.employee_id = e.id 
@@ -74,7 +58,6 @@ $sql_pending = "SELECT lr.*, e.full_name, e.department
                 ORDER BY lr.id DESC";
 $hr_leave_queue = $conn->query($sql_pending);
 
-// B. Fetch approved, forwarded, or processed records[cite: 7]
 $sql_processed = "SELECT lr.*, e.full_name, e.department 
                   FROM leave_requests lr 
                   JOIN employees e ON lr.employee_id = e.id 
@@ -104,13 +87,13 @@ $hr_processed_queue = $conn->query($sql_processed);
             <div class="max-w-6xl mx-auto space-y-10">
                 
                 <div class="mb-2">
-                    <h1 class="text-3xl font-black text-zinc-800 tracking-tight">HR Leave Screening</h1>
-                    <p class="text-sm text-zinc-500">Initial verification queue for incoming employee leave files. Approved data transfers up to Executive Board[cite: 7].</p>
+                    <h1 class="text-3xl font-black text-amber-500 tracking-tight">HR Leave Screening</h1>
+                    <p class="text-sm text-zinc-500">Initial verification queue for incoming employee leave files. Approved data transfers up to Executive Board.</p>
                 </div>
 
-                <!-- TABLE 1: NEW DATA (PENDING QUEUE)[cite: 7] -->
+                <!-- TABLE 1: NEW DATA (PENDING QUEUE) -->
                 <div>
-                    <h2 class="text-lg font-bold text-zinc-700 mb-3 flex items-center gap-2">
+                    <h2 class="text-lg font-bold text-amber-500 mb-3 flex items-center gap-2">
                         <i class="bi bi-clock-history text-amber-500"></i> New / Pending Requests
                     </h2>
                     <div class="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
@@ -127,7 +110,7 @@ $hr_processed_queue = $conn->query($sql_processed);
                             <tbody class="text-sm text-zinc-700 divide-y divide-zinc-200">
                                 <?php if (!$hr_leave_queue || $hr_leave_queue->num_rows == 0): ?>
                                     <tr>
-                                        <td colspan="5" class="p-10 text-center text-zinc-400 font-medium">Clear! No leave requests pending for HR screening evaluation[cite: 7].</td>
+                                        <td colspan="5" class="p-10 text-center text-zinc-400 font-medium">Clear! No leave requests pending for HR screening evaluation.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php while($req = $hr_leave_queue->fetch_assoc()): ?>
@@ -149,7 +132,7 @@ $hr_processed_queue = $conn->query($sql_processed);
                                             </td>
                                             <td class="p-4 text-center">
                                                 <div class="flex justify-center gap-2">
-                                                    <button onclick="triggerAction(<?= $req['id'] ?>, 'hr_approve')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1 shadow-sm">
+                                                    <button onclick="triggerAction(<?= $req['id'] ?>, 'hr_approve')" class="px-3 py-1.5 bg-amber-500 hover:bg-blue-900 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1 shadow-sm">
                                                         <i class="bi bi-chevron-right"></i> Transfer to Admin
                                                     </button>
                                                     <button onclick="triggerAction(<?= $req['id'] ?>, 'hr_reject')" class="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs rounded-lg transition-all flex items-center gap-1">
@@ -165,10 +148,10 @@ $hr_processed_queue = $conn->query($sql_processed);
                     </div>
                 </div>
 
-                <!-- TABLE 2: APPROVED / FORWARDED RECORDS[cite: 7] -->
+                <!-- TABLE 2: APPROVED / FORWARDED RECORDS -->
                 <div class="pt-4">
-                    <h2 class="text-lg font-bold text-zinc-700 mb-3 flex items-center gap-2">
-                        <i class="bi bi-check-circle-fill text-blue-500"></i> Approved & Forwarded Records
+                    <h2 class="text-lg font-bold text-amber-500 mb-3 flex items-center gap-2">
+                        <i class="bi bi-check-circle-fill text-amber-500"></i> Approved & Forwarded Records
                     </h2>
                     <div class="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
                         <table class="w-full text-left border-collapse">
@@ -228,10 +211,8 @@ $hr_processed_queue = $conn->query($sql_processed);
 
     <script>
        document.addEventListener("DOMContentLoaded", function () {
-        // 1. Sidebar Highlight Logic
         highlightActiveSidebarLink();
 
-        // 2. Logout Button Logic
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', function(e) {
@@ -241,7 +222,7 @@ $hr_processed_queue = $conn->query($sql_processed);
                     text: "Are you sure you want to exit the system?",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#FF8C00', 
+                    confirmButtonColor: '#172554', 
                     cancelButtonColor: '#d33',
                     cancelButtonText: 'Cancel',
                     confirmButtonText: 'Yes'
@@ -253,7 +234,6 @@ $hr_processed_queue = $conn->query($sql_processed);
             });
         }
 
-        // 3. Auto-refresh Logic
         setInterval(function() {
             if (document.querySelector('.swal2-container') === null) {
                 location.reload();
@@ -261,15 +241,14 @@ $hr_processed_queue = $conn->query($sql_processed);
         }, 30000);
     });
 
-    // 4. Global Function 
     function triggerAction(requestId, action) {
         const isApprove = action === 'hr_approve';
         Swal.fire({
             title: isApprove ? 'Forward Data Packet?' : 'Reject Request Pipeline?',
-            text: isApprove ? "This file moves out of HR and transfers to the Executive Admin Control Board[cite: 7]." : "This record stops here and reflects as Rejected[cite: 7].",
+            text: isApprove ? "This file moves out of HR and transfers to the Executive Admin Control Board." : "This record stops here and reflects as Rejected.",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: isApprove ? 'blue' : '#dc2626',
+            confirmButtonColor: isApprove ? '#172554' : '#dc2626',
             confirmButtonText: isApprove ? 'Yes, Forward' : 'Yes, Deny File'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -286,7 +265,7 @@ $hr_processed_queue = $conn->query($sql_processed);
         navLinks.forEach(link => {
             const linkPath = link.getAttribute("href");
             if (linkPath && currentPath.endsWith(linkPath)) {
-                link.classList.add("bg-[#FF8C00]", "!text-white", "shadow-md", "font-semibold");
+                link.classList.add("bg-amber-500", "!text-white", "shadow-md", "font-semibold");
             }
         });
     }

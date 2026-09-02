@@ -15,7 +15,6 @@ $frontendPrefix = $inFrontendFolder ? '' : '../project-test1/FRONTEND/';
 $logoutActionUrl = $hrmsPrefix . 'logout.php';
 ?>
 
-<!-- AGAD NA SCRIPT PARA SA STATE BAGO MAG-RENDER ANG PAGE -->
 <script>
     if (localStorage.getItem('sidebar_collapsed') === 'true') {
         document.documentElement.classList.add('sidebar-collapsed-mode', 'preload-no-transition');
@@ -23,11 +22,14 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
 </script>
 
 <style>
+    /* WHITE BACKGROUND & DENIM BLACK / MUSTARD HOVER PALETTE */
     :root {
-        --sidebar-bg: #ffffff;
-        --text-dark: #1f2937;
-        --accent-coral: #ff6b4a; 
-        --accent-glow: rgba(255, 107, 74, 0.2);
+        --sidebar-bg: #FFFFFF;      /* White Background */
+        --text-normal: #1B1E23;     /* Denim Black Normal Text */
+        --text-mustard: #D4A017;    /* Mustard Text on Hover/Active */
+        --active-bg: #D4A017;       /* Mustard Accent for Active State */
+        --text-white: #FFFFFF;      /* White text on active mustard pill for readability */
+        --accent-glow: rgba(212, 160, 23, 0.2); 
     }
     
     .nav-item-container {
@@ -39,35 +41,40 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
         position: relative;
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         backdrop-filter: blur(8px);
-        color: #4b5563 !important; 
+        color: var(--text-normal) !important; 
+        font-size: 3.0rem;
     }
 
     .nav-link-pill:not(.nav-link-active):hover {
-        color: #ff6b4a !important;
-        background: rgba(255, 107, 74, 0.1) !important;
+        color: var(--text-mustard) !important;
+        background: rgba(212, 160, 23, 0.1) !important;
         transform: translateX(3px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     .nav-link-pill:not(.nav-link-active):hover i {
-        color: #ff6b4a !important;
+        color: var(--text-mustard) !important;
         transform: scale(1.12) rotate(4deg);
     }
   
     .nav-link-active {
-        background: #ff6b4a!important; 
+        background: #f59e0b; 
         color: white !important; 
-        font-weight: 600;
+        font-weight: 700;
         border-radius: 12px !important;
         margin-right: 4px;
         margin-left: 4px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9);
         transform: scale(1.01);
+   
+    }
+
+    .nav-link-active span {
+        color: var(--text-white) !important;
     }
 
     .nav-link-active i {
-        color: white !important;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+        color: var(--text-white) !important;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
 
     .section-title { 
@@ -77,7 +84,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
         font-family: ui-monospace, monospace; 
         font-weight: 700 !important; 
         letter-spacing: 0.1em; 
-        color: #ff6b4a !important; 
+        color: #f59e0b !important; /* Denim Black Section Headers */
         text-transform: uppercase; 
         display: flex; 
         align-items: center; 
@@ -86,29 +93,30 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
         opacity: 0.95; 
     }
 
+
+
     .section-title i { 
         font-size: 13px !important; 
-        color: #ff6b4a; 
+        color:#f59e0b !important; 
     }
 
-    /* SIDEBAR HOVER ANIMATION & GLOW - White Background */
+    /* SIDEBAR HOVER ANIMATION & GLOW - White Theme */
     #sidebar {
         width: 270px;
         min-width: 80px;
-        max-width: 280px;
+        max-width: 250px;
         height: 100vh;
         overflow: hidden !important;
         position: sticky;
         top: 0;
         will-change: width, box-shadow, border-color;
         transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
-        background: #ffffff !important;
-        border-right: 1px solid rgba(229, 231, 235, 1);
-        box-shadow: 15px 0 35px rgba(0, 0, 0, 0.04);
+        border-right: 1px solid rgba(27, 30, 35, 0.15);
+        box-shadow: 15px 0 35px rgba(0, 0, 0, 0.05);
     }
 
     #sidebar:hover {
-        border-right-color: rgba(209, 213, 219, 1);
+        border-right-color: rgba(212, 160, 23, 0.3);
         box-shadow: 20px 0 45px rgba(0, 0, 0, 0.08);
     }
 
@@ -141,7 +149,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
     }
 
     .sidebar-collapsed-mode .section-title {
-        border-top: 1px solid rgba(229, 231, 235, 1);
+        border-top: 1px solid rgba(27, 30, 35, 0.2);
         margin-top: 10px !important;
         padding-top: 0 !important;
         height: 2px;
@@ -163,7 +171,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
     }
 
     @keyframes pulseGlow {
-        0%, 100% { opacity: 0.6; transform: scale(1); }
+        0%, 100% { opacity: 0.85; transform: scale(1); }
         50% { opacity: 1; transform: scale(1.05); }
     }
     .logo-pulse {
@@ -171,19 +179,19 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
     }
 </style>
 
-<div id="sidebar" class="text-gray-800 px-3 py-3.5 flex flex-col flex-shrink-0 z-30">
+<div id="sidebar" class="px-3 py-3.5 flex flex-col flex-shrink-0 z-30" style="background-color: var(--sidebar-bg); color: var(--text-normal);">
    
   <div id="sidebarHeader" class="flex items-center justify-between mb-3 px-2 flex-shrink-0 transition-all duration-300">
     <div class="flex items-center gap-2.5 overflow-hidden">
-      <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-orange-950/10 flex-shrink-0 logo-pulse border border-orange-500/20" style="background: linear-gradient(135deg, #ff6b4a 0%, #fa4b2a 100%);">
-         <img src="../LIBRARIES/5501d331-f1e5-4dcc-ab9b-8fd56a2b5ea5.png" alt="logo" class="w-7 h-7 rounded-lg object-cover">
+      <div class="w-10 h-10 flex items-center justify-center shadow-lg shadow-black/10 flex-shrink-0 logo-pulse border border-gray-300" style="border-radius: 100%; background: #F8F9FA;">
+         <img src="<?php echo $inFrontendFolder ? '../../LIBRARIES/' : '../LIBRARIES/'; ?>5501d331-f1e5-4dcc-ab9b-8fd56a2b5ea5.png" alt="logo" class="w-10 h-10 object-cover" style="border-radius: 100%;">
       </div>
       <div class="hide-on-collapse whitespace-nowrap">
-        <span class="font-bold text-l tracking-wider block text-gray-900 font-sans uppercase">Pannakoda</span>
-        <span class="text-[10px] font-mono tracking-widest block font-semibold" style="color: #ff6b4a;">ENTERPRISE OS</span>
+        <span class="font-bold text-l tracking-wider block font-sans uppercase text-amber-500" >Pannakoda</span>
+        <span class="text-[10px] font-mono tracking-widest block font-semibold text-gray-500">ENTERPRISE OS</span>
       </div>
     </div>
-    <button type="button" id="sidebarToggleBtn" class="text-gray-600 hover:text-[#ff6b4a] hover:bg-gray-100 p-1.5 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95">
+    <button type="button" id="sidebarToggleBtn" class=" text-yellow-600 p-1.5 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95 text-gray-700">
       <i class="bi bi-layout-sidebar-inset text-base"></i>
     </button>
   </div>
@@ -198,7 +206,7 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
       function renderCompactLink($url, $label, $icon, $current) {
           $isActive = (basename($url) === $current);
           $activeClass = $isActive ? 'nav-link-active' : '';
-          $iconColor = $isActive ? 'text-[#ff6b4a]' : 'text-gray-600 group-hover:text-[#ff6b4a]'; 
+          $iconColor = $isActive ? 'text-white' : 'text-[#1B1E23] group-hover:text-[#D4A017]'; 
           
           echo "<div class='nav-item-container' title='$label'>
                   <a href='$url' class='compact-link nav-link-pill group flex items-center gap-2.5 rounded-xl transition-all duration-200 $activeClass'>
@@ -262,8 +270,8 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           <i class="bi bi-bar-chart-fill"></i> <span class="hide-on-collapse">Inventory Analytics</span>
         </div>
         <?php
-          renderCompactLink($frontendPrefix . 'history.php', 'Sales', 'bi bi-bar-chart-line-fill', $exact_current_page);
-          renderCompactLink($frontendPrefix . 'sales_day.php', 'Daily Sales', 'bi bi-graph-up-arrow', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'all_sales.php', 'Sale Dashboard', 'bi bi-grid-1x2-fill', $exact_current_page);
+          renderCompactLink($hrmsPrefix . 'manager_promotion.php', 'Employee Promotion', 'bi bi-award-fill', $exact_current_page);
         ?>
         <div class="section-title">
           <i class="bi bi-cpu-fill"></i> <span class="hide-on-collapse">Plant Operations</span>
@@ -276,7 +284,6 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           renderCompactLink($frontendPrefix . 'items.php', 'Manage Items', 'bi bi-grid-3x3-gap-fill', $exact_current_page);
           renderCompactLink($frontendPrefix . 'inventory.php', 'Refill', 'bi bi-arrow-repeat', $exact_current_page);
           renderCompactLink($frontendPrefix . 'ingredients.php', 'Ingredients', 'bi bi-basket-fill', $exact_current_page);
-          renderCompactLink($hrmsPrefix . 'manager_promotion.php', 'Employee Promotion', 'bi bi-award-fill', $exact_current_page);
         ?>
     <?php 
       endif; 
@@ -300,15 +307,16 @@ $logoutActionUrl = $hrmsPrefix . 'logout.php';
           <i class="bi bi-file-earmark-medical-fill"></i> <span class="hide-on-collapse">Financial Review</span>
         </div>
         <?php
+        renderCompactLink($hrmsPrefix . 'finance_budget_approve.php', 'Budget Approval', 'bi bi-basket-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'finance_promotion.php', 'Promotion Review', 'bi bi-award-fill', $exact_current_page);
           renderCompactLink($hrmsPrefix . 'finance_cash_review.php', 'Cash Advance Review', 'bi bi-cash-coin', $exact_current_page);
         ?>
     <?php endif; ?>
   </nav>
 
-  <div class="pt-2 mt-auto border-t border-gray-200 flex-shrink-0">
-    <button type="button" id="sidebarLogoutBtn" title="Log out" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-600 hover:text-white hover:bg-red-500 transition-all duration-200 text-xs group border border-transparent hover:border-red-600 active:scale-95 shadow-sm">
-      <i class="bi bi-box-arrow-right text-sm text-red-500 group-hover:text-white transition-transform group-hover:-translate-x-0.5"></i> 
+  <div class="pt-2 mt-auto border-t border-gray-200 flex-shrink-0" style="border-color: rgba(27, 30, 35, 0.15);">
+    <button type="button" id="sidebarLogoutBtn" title="Log out" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-600 hover: hover:bg-red-600 transition-all duration-200 text-xs group border border-transparent active:scale-95 shadow-sm" style="background-color: rgba(0, 0, 0, 0.03);">
+      <i class="bi bi-box-arrow-right text-sm text-red-500 group-hover: transition-transform group-hover:-translate-x-0.5"></i> 
       <span class="font-mono hide-on-collapse font-semibold tracking-wide">Sign Out</span>
     </button>
   </div>
@@ -350,14 +358,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     text: "Are you sure you want to end your current session?",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#ff6b4a', 
+                    confirmButtonColor: '#D4A017', 
                     cancelButtonColor: '#ef4444',
                     confirmButtonText: 'Yes, Sign Out',
                     cancelButtonText: 'Cancel',
-                    background: '#ffffff',
-                    color: '#1f2937',
+                    background: '#FFFFFF',
+                    color: '#1B1E23',
                     customClass: {
-                        popup: 'rounded-2xl border border-gray-200 shadow-2xl backdrop-blur-xl'
+                        popup: 'rounded-2xl border border-yellow-500/20 shadow-2xl backdrop-blur-xl'
                     }
                 }).then((result) => {
                     if (result.isConfirmed && logoutUrl && logoutUrl !== '#') {

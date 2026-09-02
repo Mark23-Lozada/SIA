@@ -276,12 +276,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
         <!-- Top Header & Live Philippine Time Clock Widget -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4" data-aos="fade-down" data-aos-duration="800">
           <div>
-            <h1 class="text-2xl font-extrabold text-[#ff6b4a] tracking-tight">PROMOTION & SALARY APPROVALS</h1>
+            <h1 class="text-2xl font-extrabold text-amber-500 tracking-tight">PROMOTION & SALARY APPROVALS</h1>
             <p class="text-sm text-slate-500 mt-1">Review and give final executive approval for promotion requests forwarded by Finance.</p>
           </div>
           <div class="flex items-center gap-3">
             <div class="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-2xl shadow-sm border border-slate-200/80">
-              <i class="bi bi-clock text-[#ff6b4a]"></i> 
+              <i class="bi bi-clock text-amber-500"></i> 
               <span class="text-slate-700 font-medium text-xs" id="phTimeDisplay">Loading PH Time...</span>
             </div>
             <div class="flex items-center gap-3 bg-orange-50/60 px-4 py-2 rounded-2xl shadow-sm border border-[#ff6b4a]/20 transition-transform duration-300 hover:scale-105">
@@ -305,7 +305,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_admin_promotions') {
         <!-- MAIN TABLE SECTION -->
         <div class="bg-slate-50 rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 admin-card-glow" data-aos="fade-up" data-aos-duration="1000">
           <h2 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <div class="p-2 bg-[#ff6b4a]/10 text-[#ff6b4a] rounded-xl border border-[#ff6b4a]/20">
+              <div class="p-2 bg-[#ff6b4a]/10 text-amber-500 rounded-xl border border-[#ff6b4a]/20">
                   <i class="bi bi-award-fill"></i>
               </div> 
               Pending Promotion Requests Awaiting Admin Action

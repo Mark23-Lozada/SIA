@@ -24,7 +24,7 @@ function modifier_multiplier($value) {
 }
 
 // ===================================================================
-// FETCH BEST SELLERS FROM SALES HISTORY
+// FETCH BEST SELLERS FROM SALES HISTORY (Dagdagan ang limit para masulit ang pag-slide)
 // ===================================================================
 $best_sellers_array = [];
 $best_sellers_query = "
@@ -34,7 +34,7 @@ $best_sellers_query = "
     WHERE items.is_available = 1
     GROUP BY sales_items.item_id
     ORDER BY total_qty DESC
-    LIMIT 6";
+    LIMIT 10";
 $best_sellers_result = $conn->query($best_sellers_query);
 if ($best_sellers_result) {
     while ($row = $best_sellers_result->fetch_assoc()) {
@@ -120,7 +120,8 @@ if ($items_result) {
             'available'  => (int)$available_qty,
             'has_recipe' => $has_recipe,
             'recipe'     => $recipe_for_frontend,
-            'category'   => $clean_cat
+            'category'   => $clean_cat,
+            'cat_original' => $item['cat_name']
         ];
     }
 }
@@ -286,14 +287,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     <title>Pannakoda - Point of Sale</title>
     <link href="../LIBRARIES/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- AOS Library CSS -->
+    <link href="../../LIBRARIES/AOS/aos.css" rel="stylesheet">
+    <!-- Swiper CSS para sa 3D Slider effect -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <script src="../LIBRARIES/sweetalert2.all.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --purple-primary: #8b5cf6;
-            --purple-hover: #7c3aed;
-            --purple-light: #f5f3ff;
-            --purple-border: #ddd6fe;
+            --primary-accent: #e5a912;
+            --primary-hover: #c9930f;
+            --primary-light: #fef9e7;
+            --primary-border: #fce8b2;
             --bg-main: #f8fafc;
         }
 
@@ -304,47 +309,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             overflow-x: hidden;
         }
 
-        /* Top Bar Navigation */
-        .pos-topbar {
-            height: 65px;
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
+        /* Sidebar Navigation Layout with Glassmorphism / Modern Touch */
+        .pos-sidebar {
+            width: 260px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid #e2e8f0;
             position: fixed;
             top: 0;
+            bottom: 0;
             left: 0;
-            right: 0;
             z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
         }
 
         .brand-title {
-            color: var(--purple-primary);
+            color: var(--primary-accent);
             letter-spacing: 0.5px;
             font-size: 1.05rem;
         }
 
         #main-wrapper {
-            margin-top: 75px;
-            padding: 20px;
+            margin-left: 260px;
+            padding: 30px;
             transition: all 0.3s ease;
         }
 
         .search-box {
             position: relative;
-            max-width: 380px;
             width: 100%;
         }
         .search-box input {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 8px 14px 8px 38px;
+            border-radius: 14px;
+            padding: 10px 14px 10px 38px;
             font-size: 0.85rem;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .search-box input:focus {
             background: #fff;
-            border-color: var(--purple-primary);
-            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 4px rgba(229, 169, 18, 0.15);
+            transform: translateY(-1px);
         }
         .search-box i {
             position: absolute;
@@ -354,203 +366,183 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             color: #94a3b8;
         }
 
-        /* Category Navigation Bar */
-        .pos-category-bar {
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            position: fixed;
-            top: 65px;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            padding: 10px 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-
+        /* Sidebar Category Tab Buttons - Modernized with Accent Theme */
         .category-tab-btn {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: transparent;
+            border: 1px solid transparent;
             border-radius: 12px;
             color: #64748b;
             font-weight: 600;
             font-size: 0.85rem;
-            padding: 8px 18px;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 110px;
-            text-align: center;
+            padding: 10px 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: left;
+            width: 100%;
         }
 
         .category-tab-btn:hover, .category-tab-btn.active {
-            background-color: var(--purple-light);
-            color: var(--purple-primary) !important;
-            border-color: var(--purple-primary);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
-            transform: translateY(-1px);
+            background-color: var(--primary-light);
+            color: var(--primary-accent) !important;
+            border-color: var(--primary-border);
+            transform: translateX(6px);
+            box-shadow: 0 4px 12px rgba(229, 169, 18, 0.08);
         }
 
-        /* --- TACO BELL STYLE BANNER (OPTIMIZED IMAGES) --- */
-        .bestseller-hero-wrapper {
+        /* --- 3D SWIPER CAROUSEL STYLES --- */
+        .swiper {
+            width: 100%;
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+
+        .swiper-slide {
+            background-position: center;
+            background-size: cover;
+            width: 400px;
+            height: 240px;
+            border-radius: 20px;
+            cursor: grab;
+        }
+
+        .bestseller-card-3d {
             position: relative;
             width: 100%;
-            height: 280px;
+            height: 100%;
             border-radius: 20px;
             overflow: hidden;
-            background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%);
-            cursor: pointer;
-            box-shadow: 0 10px 25px rgba(76, 29, 149, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, #e5a912 0%, #c9930f 100%);
+            box-shadow: 0 10px 25px rgba(229, 169, 18, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .bestseller-hero-wrapper:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(76, 29, 149, 0.25);
+            padding-left: 20px;
+
         }
 
-        /* Left Side Text Content */
-        .bestseller-banner-content {
+        .bestseller-card-content {
             flex: 1.2;
-            padding: 35px;
             color: #ffffff;
             z-index: 2;
         }
 
-        /* Right Side Image Container (Fixed Scaling) */
-        .bestseller-banner-img-container {
+        .bestseller-card-img-container {
             flex: 1;
             height: 100%;
+
             position: relative;
             display: flex;
+            background: #FAF2EF;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            padding: 15px;
         }
-        .bestseller-hero-img {
-            max-width: 100%;
-            max-height: 100%;
+
+        .bestseller-card-img {
+            max-width: 180px;
+            max-height: 150px;
             object-fit: contain;
             filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.5s ease;
         }
-        .bestseller-hero-wrapper:hover .bestseller-hero-img {
-            transform: scale(1.06) rotate(1deg);
-        }
+      
 
         .bestseller-order-btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background-color: #d97706;
-            color: #fff;
-            font-size: 0.85rem;
+            gap: 6px;
+            background-color: #ffffff;
+            color: var(--primary-accent);
+            font-size: 0.75rem;
             font-weight: 700;
-            padding: 10px 20px;
+            padding: 8px 14px;
             border-radius: 50rem;
             border: none;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
-            margin-top: 15px;
-            transition: background-color 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
         .bestseller-order-btn:hover {
-            background-color: #b45309;
-            transform: scale(1.02);
+            background-color: var(--primary-light);
+            transform: scale(1.05);
+          
         }
 
-        /* Dots styling for switching items */
-        .dots-container {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 14px;
+        .swiper-pagination-bullet-active {
+            background-color: var(--primary-accent) !important;
+              width: 19px !important;
         }
 
-        .dot {
-            height: 8px;
-            width: 8px;
-            background-color: #cbd5e1;
-            border-radius: 50%;
-            display: inline-block;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .dot.active {
-            width: 24px;
-            border-radius: 4px;
-            background-color: var(--purple-primary);
-        }
-        .dot:hover {
-            background-color: var(--purple-primary);
-        }
-
-        /* Modern Product Card Layout (Optimized Images) */
+.swiper-pagination-bullet {
+    width: 13x !important;    
+    height: 12px !important;   
+    margin: 0 6px !important;  
+}
+   
         .product-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 18px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
             position: relative;
         }
         .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px -6px rgba(139, 92, 246, 0.15);
-            border-color: var(--purple-border);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 30px -8px rgba(229, 169, 18, 0.18);
+            border-color: var(--primary-border);
+            z-index: 10;
         }
         
         .product-img-wrapper {
-            height: 135px;
-            background: radial-gradient(circle, #fbf7ff 0%, #f3e8ff 100%);
+            height: 145px;
+            background: radial-gradient(circle, #fef9e7 0%, #fef3c7 100%);
             position: relative;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 12px;
+            padding: 15px;
             border-bottom: 1px solid #f1f5f9;
         }
         .product-img-wrapper img {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Prevents stretching and cropping */
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.06));
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            object-fit: contain;
+            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.06));
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .product-card:hover .product-img-wrapper img {
-            transform: scale(1.1);
+            transform: scale(1.12) rotate(1deg);
         }
 
         .card-action-btn {
-            width: 32px;
-            height: 32px;
-            background: var(--purple-light);
-            border: 1px solid var(--purple-border);
+            width: 34px;
+            height: 34px;
+            background: var(--primary-light);
+            border: 1px solid var(--primary-border);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--purple-primary);
-            transition: all 0.2s ease;
+            color: var(--primary-accent);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .product-card:hover .card-action-btn {
-            background: var(--purple-primary);
+            background: var(--primary-accent);
             color: #fff;
-            transform: scale(1.1);
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 4px 12px rgba(229, 169, 18, 0.3);
         }
 
         .out-of-stock-card {
-            opacity: 0.55;
-            cursor: not-allowed;
-            filter: grayscale(30%);
+            cursor: default;
         }
+        
         .out-of-stock-card:hover {
             transform: none;
-            box-shadow: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
             border-color: #e2e8f0;
         }
 
@@ -559,17 +551,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.04);
             position: sticky;
-            top: 135px;
+            top: 20px;
             transition: all 0.3s ease;
         }
-
+  
         .receipt-card {
             background: #fff;
             color: #000;
             font-family: 'Courier New', Courier, monospace;
             border: 1px dashed #000;
+        }
+
+        /* Smooth Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
 
         @media print {
@@ -582,37 +590,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 </head>
 <body class="pb-5 mb-5">
 
-    <!-- Top Navigation Bar -->
-    <header class="navbar pos-topbar px-4 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
-            <div class="d-flex align-items-center">
-                <div class="bg-purple bg-opacity-10 p-2 rounded-3 me-2 text-purple" style="background-color: var(--purple-light); color: var(--purple-primary);">
-                    <i class="bi bi-cup-hot-fill fs-6"></i>
-                </div>
+    <!-- Left Sidebar Navigation -->
+    <aside class="pos-sidebar" data-aos="fade-right" data-aos-duration="600">
+        <!-- Brand Logo & Name -->
+        <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+            <div class="p-1 rounded-3 me-2">
+                <img src="../../LIBRARIES/5501d331-f1e5-4dcc-ab9b-8fd56a2b5ea5.png" style="width: 38px; height: 38px; border-radius: 100%;">
+            </div>
+            <div>
                 <h4 class="brand-title fw-bold m-0">PANNAKODA</h4>
+            <span style="font-size: small;">Pancake & Pastries</span>
             </div>
         </div>
 
-        <div class="search-box mx-3">
+        <!-- Search Box inside Sidebar -->
+        <div class="search-box mb-4">
             <i class="bi bi-search"></i>
-            <input type="text" id="productSearch" class="form-control" placeholder="Search menu items..." oninput="filterProductsByName(this.value)">
+            <input type="text" id="productSearch" class="form-control" placeholder="Search menu..." oninput="filterProductsByName(this.value)">
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-light border btn-sm rounded-3 px-2 py-1 text-secondary" title="Network Status"><i class="bi bi-hdd-network"></i></button>
-            <button class="btn btn-light border btn-sm rounded-3 px-2 py-1 text-secondary" title="Store Info"><i class="bi bi-shop"></i></button>
-            <button class="btn btn-light border btn-sm rounded-3 px-2 py-1 text-danger" id="logoutBtn" title="Logout Staff"><i class="bi bi-box-arrow-right"></i></button>
+        <!-- Menu Modal Trigger Button -->
+        <div class="mb-4">
+            <button type="button" class="btn w-100 py-2.5 fw-bold text-white shadow-sm d-flex align-items-center justify-content-center gap-2 rounded-3" style="background-color: var(--primary-accent); border: none; transition: all 0.3s ease;" data-bs-toggle="modal" data-bs-target="#menuCatalogModal" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 15px rgba(229, 169, 18, 0.35)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                <i class="bi bi-journal-text fs-5"></i> View Full Menu
+            </button>
         </div>
-    </header>
 
-    <!-- Fixed Category Navigation Bar -->
-    <div class="pos-category-bar">
-        <div class="container-fluid">
-            <div class="d-flex align-items-center justify-content-start gap-2 overflow-auto py-1" id="sidebarCategoryTabs" role="tablist">
+        <!-- Categories List -->
+        <div class="mb-3">
+            <span class="text-uppercase fw-bold px-2 mb-2 d-block" style="font-size: 0.80rem; color: #e5a912; letter-spacing: 0.5px;">Categories</span>
+            <div class="d-flex flex-column gap-2" id="sidebarCategoryTabs" role="tablist">
                 <?php foreach ($categories_array as $index => $cat): 
                     $target_id = strtolower(str_replace(' ', '', $cat['name']));
                 ?>
-                    <button class="btn category-tab-btn d-flex align-items-center justify-content-center gap-2 py-2 <?php echo $index === 0 ? 'active' : ''; ?>" 
+                    <button class="btn category-tab-btn d-flex align-items-center gap-2 <?php echo $index === 0 ? 'active' : ''; ?>" 
                             id="<?php echo $target_id; ?>-tab" data-bs-toggle="pill" data-bs-target="#cat-<?php echo $target_id; ?>" type="button" role="tab">
                         <i class="bi bi-grid fs-6"></i>
                         <span><?php echo htmlspecialchars($cat['name']); ?></span>
@@ -620,41 +631,107 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 <?php endforeach; ?>
             </div>
         </div>
+
+        <!-- Sidebar Footer / Utility Controls -->
+        <div class="mt-auto pt-3 border-top d-flex align-items-center justify-content-between">
+            <button class="btn btn-outline-danger btn-sm rounded-3 px-2 py-1.5 w-100" id="logoutBtn" title="Logout Staff" style="transition: all 0.2s;">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Full Menu Modal -->
+    <div class="modal fade" id="menuCatalogModal" tabindex="-1" aria-labelledby="menuCatalogModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-xl">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="background-color: #ffffff;">
+                <div class="modal-header text-white" style="background-color: var(--primary-accent); border-bottom: 2px solid rgba(0,0,0,0.05);">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded-3" style="background-color: rgba(255,255,255,0.2);">
+                            <i class="bi bi-book-half text-white fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold m-0" id="menuCatalogModalLabel">MENU CATALOG</h5>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Pancakes & Pastries </small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto; background-color: #f8fafc;">
+                    
+                    <!-- Reference-style Paper Layout Container -->
+                    <div class="p-4 rounded-4 shadow-sm position-relative" style="background-color: #ffffff; border: 1px solid #e2e8f0;">
+                        
+                        <!-- Header & Brand Top Section -->
+                        <div class="row align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-10">
+                            <div class="col-md-7">
+                                <h2 class="fw-bold text-uppercase m-0" style="font-family: serif; color: #1e293b; letter-spacing: 1px;">MENU CATALOG</h2>
+
+                            </div>
+                            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                                <div class="d-inline-flex align-items-center gap-2 p-2 rounded-3 bg-white border shadow-sm">
+                                    <div class="rounded-circle p-1 text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: var(--primary-accent);">
+                                        <i class="bi bi-cup-hot-fill fs-6"></i>
+                                    </div>
+                                    <div class="text-start">
+                                        <h6 class="fw-bold m-0" style="font-size: 0.8rem; color: #1e293b;">PANNAKODA</h6>
+                                        <small class="text-muted" style="font-size: 0.65rem;">PANCAKE & PASTRIES</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Grid with Images and Explanations -->
+                        <div class="row g-4" id="modal-menu-categories-container">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+
+                      
+                    </div>
+
+                </div>
+                <div class="modal-footer bg-white border-top py-3">
+                    <button type="button" class="btn btn-dark px-4 fw-bold rounded-pill" data-bs-dismiss="modal">Close Menu</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Main Content Wrapper -->
-    <div id="main-wrapper" style="margin-top: 135px;">
+    <div id="main-wrapper">
         <div class="row g-4 align-items-start">
             
             <!-- Menu Catalog Display Area (Left Side) -->
             <div class="col-lg-8 pb-5">
                 
-                <!-- Bestseller Banner Section (Taco Bell Style Layout) -->
+                <!-- 3D Bestseller Slider Section -->
                 <?php if (!empty($best_sellers_array)): ?>
-                <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h5 class="fw-bold m-0" style="color: var(--purple-primary);">
+                <div class="main-container p-3 rounded-4 shadow-sm border mb-4" data-aos="fade-up" data-aos-duration="600">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h5 class="fw-bold m-0 text-amber-500" >
                             <i class="bi bi-fire text-danger me-2"></i>Popular Picks & Best Sellers
                         </h5>
-                        <span class="badge bg-light text-secondary border fw-semibold px-2 py-1" style="font-size: 0.7rem;">Click dots to switch items</span>
                     </div>
                     
-                    <div id="bestseller-widget-wrapper">
-                        <!-- Rendered dynamically via JS below -->
+                    <!-- Swiper 3D Effect Container -->
+                    <div class="swiper bestsellerSwiper">
+                        <div class="swiper-wrapper" id="bestseller-slider-wrapper">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                        <div class="swiper-pagination"></div>
                     </div>
                 </div>
                 <?php endif; ?>
 
-                <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
+                <div class="bg-white p-4 rounded-4 shadow-sm border mb-4" data-aos="fade-up" data-aos-duration="800" style="overflow: visible;">
                     <div class="tab-content" id="categoryTabContent">
                         <?php foreach ($categories_array as $index => $cat): 
                             $target_id = strtolower(str_replace(' ', '', $cat['name']));
                         ?>
                             <div class="tab-pane fade show <?php echo $index === 0 ? 'active' : ''; ?>" id="cat-<?php echo $target_id; ?>" role="tabpanel">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h5 class="fw-bold m-0" style="color: var(--purple-primary);"><i class="bi bi-bookmark-fill me-2 small"></i><?php echo htmlspecialchars($cat['name']); ?></h5>
+                                    <h5 class="fw-bold m-0" style="color: var(--primary-accent);"><i class="bi bi-bookmark-fill me-2 small"></i><?php echo htmlspecialchars($cat['name']); ?></h5>
                                 </div>
-                                <div class="row g-3" id="grid-<?php echo $target_id; ?>"></div>
+                                <div class="row g-3" id="grid-<?php echo $target_id; ?>" style="overflow: visible;"></div>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -662,53 +739,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             </div>
 
             <!-- Right Side: Current Active Order & Checkout Section -->
-            <div class="col-lg-4">
+            <div class="col-lg-4" data-aos="fade-left" data-aos-duration="700">
                 <div class="cart-panel-box p-4">
                     <div id="checkout-interactive-pane">
                         <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                            <h5 class="fw-bold m-0 text-dark">Current Order</h5>
-                            <span class="badge rounded-pill px-2 py-1 small fw-bold" style="background-color: var(--purple-light); color: var(--purple-primary);">Active POS</span>
+                            <h5 class="fw-bold m-0 " style="color: var(--primary-accent);">Current Order</h5>
+                            <span class="badge rounded-pill px-2.5 py-1 fw-bold" style="background-color: var(--primary-light); color: var(--primary-accent); font-size: 0.75rem;">Active POS</span>
                         </div>
 
-                        <div class="p-2 rounded-3 bg-light border mb-3">
-                            <div class="d-flex justify-content-between text-muted fw-bold px-1 mb-2" style="font-size: 0.75rem;">
-                                <span>Item Name</span>
-                                <span class="text-center">QTY</span>
-                                <span class="text-end">Price</span>
+                        <div class="p-3 rounded-3 bg-light border mb-3">
+                            <div class="d-flex justify-content-between  fw-bold px-1 mb-2" style="font-size: 0.75rem;">
+                                <span style="color: var(--primary-accent);">Item Name</span>
+                                <span class="text-center" style="margin-right: 15px; color: var(--primary-accent);">QTY</span>
+                                <span class="text-end" style="color: var(--primary-accent);">Price</span>
                             </div>
-                            <div id="cart-items-container" class="d-flex flex-column gap-2" style="max-height: 220px; overflow-y: auto; padding-right: 4px;">
+                            <div id="cart-items-container" class="d-flex flex-column gap-2" style="max-height: 240px; overflow-y: auto; padding-right: 4px;">
                                 <p class="text-muted text-center small my-auto py-4">No items added yet.<br>Click a menu item to start.</p>
                             </div>
-                            <hr class="border-secondary opacity-25 my-2">
+                            <hr class="border-secondary opacity-25 my-3">
                             
-                            <div class="d-flex justify-content-between align-items-center px-1 mb-1">
+                            <div class="d-flex justify-content-between align-items-center px-1 mb-1.5">
                                 <span class="small text-muted">Discount (%)</span>
                                 <span class="small fw-bold">0%</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center px-1 mb-1">
+                            <div class="d-flex justify-content-between align-items-center px-1 mb-1.5">
                                 <span class="small text-muted">Sub Total</span>
                                 <span class="small fw-bold" id="subtotal-amount-display">₱0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center px-1 mb-2">
-                                <span class="small text-muted">Tax <span class="text-success" style="font-size: 0.7rem;">0.0%</span></span>
+                            <div class="d-flex justify-content-between align-items-center px-1 mb-2.5">
+                                <span class="small text-muted">Tax <span style="color: var(--primary-accent); font-size: 0.7rem;">0.0%</span></span>
                                 <span class="small fw-bold">₱0.00</span>
                             </div>
-                            <hr class="border-secondary opacity-25 my-1">
+                            <hr class="border-secondary opacity-25 my-2">
                             <div class="d-flex justify-content-between align-items-center px-1">
                                 <span class="small fw-bold text-dark">Total</span>
-                                <span class="fs-4 fw-bold" style="color: var(--purple-primary);" id="total-amount-display">₱0.00</span>
+                                <span class="fs-4 fw-bold" style="color: var(--primary-accent);" id="total-amount-display">₱0.00</span>
                             </div>
                         </div>
 
                         <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-secondary mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">SELECT PAYMENT METHOD:</label>
                             <div class="dropdown">
-                                <button class="btn btn-light border w-100 text-dark fw-semibold text-start d-flex justify-content-between align-items-center py-2 bg-white" type="button" id="paymentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <span id="selected-payment-text"><i class="bi bi-wallet2 text-purple me-2"></i>Choose Option</span>
-                                    <i class="bi bi-chevron-down small"></i>
+                                <button class="btn btn-light border w-100 text-dark fw-semibold text-start d-flex justify-content-between align-items-center py-2.5 bg-white rounded-3 shadow-sm" type="button" id="paymentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span id="selected-payment-text"><i class="bi bi-wallet2 me-2" style="color: var(--primary-accent);"></i>Choose Option</span>
+                                    <i class="bi bi-chevron-down small text-muted"></i>
                                 </button>
-                                <ul class="dropdown-menu w-100 shadow-sm border py-2 mt-1" style="z-index: 1080;">
-                                    <li><a class="dropdown-item py-2 fw-medium" href="#" onclick="selectPayment('Cash')"><i class="bi bi-cash-stack text-success me-2"></i>Cash Payment</a></li>
+                                <ul class="dropdown-menu w-100 shadow-sm border py-2 mt-1 rounded-3" style="z-index: 1080;">
+                                    <li><a class="dropdown-item py-2 fw-medium" href="#" onclick="selectPayment('Cash')"><i class="bi bi-cash-stack me-2" style="color: var(--primary-accent);"></i>Cash Payment</a></li>
                                     <li><a class="dropdown-item py-2 fw-medium" href="#" onclick="selectPayment('Card')"><i class="bi bi-credit-card text-primary me-2"></i>Card Terminal</a></li>
                                 </ul>
                             </div>
@@ -732,7 +809,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                             <span class="fs-5 fw-bold text-dark" id="change-display">₱0.00</span>
                         </div>
 
-                        <button type="button" class="btn btn-lg w-100 mt-2 py-3 fw-bold text-white shadow-sm rounded-3" style="background-color: var(--purple-primary); border: none; transition: all 0.2s ease;" onclick="processCheckout()">
+                        <button type="button" class="btn btn-lg w-100 mt-2 py-3 fw-bold text-white shadow-sm rounded-3" style="background-color: var(--primary-accent); border: none; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='var(--primary-hover)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.backgroundColor='var(--primary-accent)'; this.style.transform='translateY(0)';" onclick="processCheckout()">
                             Pay <span id="pay-btn-amount">(₱0.00)</span> <i class="bi bi-arrow-right-circle-fill ms-1"></i>
                         </button>
                     </div>
@@ -745,54 +822,132 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     </div>
 
     <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
+    <!-- AOS Library JS -->
+    <script src="../../LIBRARIES/AOS/AOS.js"></script>
+    <!-- Swiper JS para sa 3D Slider -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
+        // Initialize AOS animations
+        AOS.init({
+            once: true,
+            offset: 50,
+            duration: 600,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+        });
+
         let products = <?php echo json_encode($products_json); ?>;
         let bestSellers = <?php echo json_encode($best_sellers_array); ?>;
+        let categoriesList = <?php echo json_encode($categories_array); ?>;
         let cart = [], totalAmount = 0, selectedPaymentMethod = '';
-        
-        let currentBestSellerIndex = 0;
 
         function renderBestSellerWidget() {
-            const container = document.getElementById('bestseller-widget-wrapper');
-            if (!container || bestSellers.length === 0) return;
+            const wrapper = document.getElementById('bestseller-slider-wrapper');
+            if (!wrapper || bestSellers.length === 0) return;
 
-            const bs = bestSellers[currentBestSellerIndex];
-            const matched_prod = products.find(p => p.id === bs.id);
-            const isOut = matched_prod ? (matched_prod.available <= 0) : true;
+            wrapper.innerHTML = '';
+            bestSellers.forEach((bs, index) => {
+                const matched_prod = products.find(p => p.id === bs.id);
+                const isOut = matched_prod ? (matched_prod.available <= 0) : true;
 
-            let dotsHTML = '';
-            bestSellers.forEach((item, idx) => {
-                const activeClass = idx === currentBestSellerIndex ? 'active' : '';
-                dotsHTML += `<span class="dot ${activeClass}" onclick="switchBestSeller(${idx})"></span>`;
-            });
+                const slide = document.createElement('div');
+                slide.className = 'swiper-slide';
+                slide.addEventListener('click', () => {
+                    if (swiperInstance) {
+                        swiperInstance.slideToLoop(index);
+                    }
+                });
 
-            container.innerHTML = `
-                <div class="bestseller-hero-wrapper ${isOut ? 'out-of-stock-card' : ''}" ${isOut ? '' : `onclick="addToCart(${bs.id})"`} style="cursor: ${isOut ? 'not-allowed' : 'pointer'};">
-                    <!-- Left Side Text & Action -->
-                    <div class="bestseller-banner-content">
-                        <h3 class="fw-bold text-white mb-1 text-uppercase" style="letter-spacing: 0.5px; font-size: 1.4rem;">${bs.name}</h3>
-                        <div class="fs-4 fw-bold text-warning mb-2">₱${parseFloat(bs.price).toFixed(2)}</div>
-                        <p class="text-light opacity-75 small mb-3">Your favorites, made better. Click to add directly to order.</p>
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="bestseller-order-btn m-0">
-                                Order Now <i class="bi bi-arrow-right"></i>
-                            </button>
-                            <span class="badge bg-dark bg-opacity-25 text-light border border-light border-opacity-25 ms-2"><i class="bi bi-bag-check-fill text-success me-1"></i>${bs.qty} sold</span>
+                slide.innerHTML = `
+                    <div class="bestseller-card-3d">
+                        <div class="bestseller-card-content">
+                            <h4 class="fw-bold text-white mb-1" style="font-size: 1.05rem; white-space: normal; word-break: break-word; line-height: 1.2;" title="${bs.name}">${bs.name}</h4>
+                            <div class="fs-5 fw-bold text-white mb-1">₱${parseFloat(bs.price).toFixed(2)}</div>
+                            <span class="badge bg-dark bg-opacity-25 text-white border border-white border-opacity-25 mb-2" style="font-size: 0.65rem;">
+                                <i class="bi bi-bag-check-fill text-white me-1"></i>${bs.qty} sold 
+                                ${isOut ? ' | <span class="text-white fw-bold" style="font-size: 0.55rem;">OUT OF STOCK</span>' : ''}
+                            </span>
+                            <div>
+                                <button class="bestseller-order-btn" ${isOut ? 'disabled style="opacity: 0.6; cursor: not-allowed; background-color: #e2e8f0; color: #94a3b8;"' : `onclick="addToCart(event, ${bs.id})"`}>
+                                    ${isOut ? 'Out of Stock' : 'Order Now'} <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bestseller-card-img-container">
+                            ${bs.image ? `<img src="${bs.image}" alt="${bs.name}" class="bestseller-card-img">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-cup-hot fs-1 opacity-50"></i></div>`}
                         </div>
                     </div>
+                `;
+                wrapper.appendChild(slide);
+            });
 
-                    <!-- Right Side Big Image -->
-                    <div class="bestseller-banner-img-container">
-                        ${bs.image ? `<img src="${bs.image}" alt="${bs.name}" class="bestseller-hero-img">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted bg-light"><i class="bi bi-cup-hot fs-1 opacity-50"></i></div>`}
-                    </div>
-                </div>
-                <div class="dots-container">${dotsHTML}</div>
-            `;
+            // I-initialize ang Swiper 3D Coverflow Effect at idinagdag ang loop: true
+            window.swiperInstance = new Swiper(".bestsellerSwiper", {
+                effect: "coverflow",
+                grabCursor: true,
+                centeredSlides: true,
+                slidesPerView: "auto",
+                loop: true, // Ginawang infinite loop ang carousel
+                watchSlidesProgress: true,
+                coverflowEffect: {
+                    rotate: 30,
+                    stretch: 0,
+                    depth: 100,
+                    modifier: 1,
+                    slideShadows: false,
+                },
+                pagination: {
+                    el: ".swiper-pagination",
+                    clickable: true,
+                },
+            });
         }
 
-        function switchBestSeller(index) {
-            currentBestSellerIndex = index;
-            renderBestSellerWidget();
+        function renderModalMenuCatalog() {
+            const container = document.getElementById('modal-menu-categories-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            categoriesList.forEach(cat => {
+                const cleanCat = cat.name.toLowerCase().replace(/\s+/g, '');
+                const catProducts = products.filter(p => p.category === cleanCat);
+
+                let itemsHTML = '';
+                if (catProducts.length === 0) {
+                    itemsHTML = `<p class="text-muted small fst-italic mb-2">No menu items listed under this category yet.</p>`;
+                } else {
+                    catProducts.forEach(prod => {
+                        const description = prod.recipe && prod.recipe.length > 0 
+                            ? `Made with fresh ${prod.recipe.map(r => r.name).join(', ')}.` 
+                            : `A delightful house special crafted for your daily refreshment.`;
+
+                        itemsHTML += `
+                            <div class="d-flex align-items-center gap-3 p-3 mb-3 bg-white rounded-3 border shadow-sm transition-all" style="border-color: #e2e8f0 !important; transition: transform 0.2s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
+                                <div style="width: 65px; height: 65px; flex-shrink: 0;" class="rounded-2 overflow-hidden bg-light d-flex align-items-center justify-content-center border">
+                                    ${prod.image ? `<img src="${prod.image}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: contain;">` : `<i class="bi bi-cup-hot text-muted"></i>`}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="fw-bold text-dark m-0" style="font-size: 0.95rem;">${prod.name}</h6>
+                                        <span class="fw-bold" style="font-size: 0.95rem; color: var(--primary-accent);">₱${prod.price.toFixed(2)}</span>
+                                    </div>
+                                    <p class="text-muted m-0 mt-1" style="font-size: 0.8rem; line-height: 1.4;">${description}</p>
+                                </div>
+                            </div>`;
+                    });
+                }
+
+                container.innerHTML += `
+                    <div class="col-md-6">
+                        <div class="p-3 bg-white rounded-3 border shadow-sm h-100" style="border-color: #e2e8f0 !important;">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-3 text-white shadow-sm" style="background-color: var(--primary-accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">
+                                <i class="bi bi-cup-hot"></i> ${cat.name.toUpperCase()}
+                            </div>
+                            <div class="d-flex flex-column">
+                                ${itemsHTML}
+                            </div>
+                        </div>
+                    </div>`;
+            });
         }
 
         function renderProductGrid(filter = '') {
@@ -803,9 +958,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 grid.innerHTML = '';
                 const filtered = products.filter(p => p.category === cat && p.name.toLowerCase().includes(filter.toLowerCase()));
                 
-                filtered.forEach(prod => {
+                filtered.forEach((prod, idx) => {
                     const col = document.createElement('div');
-                    col.className = 'col-md-3 col-sm-6';
+                    col.className = 'col-md-4 col-sm-6';
                     const isOutOfStock = prod.available <= 0;
                     let stockBadge = '';
                     if (!prod.has_recipe) {
@@ -817,17 +972,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     }
 
                     col.innerHTML = `
-                        <div class="card product-card h-100 ${isOutOfStock ? 'out-of-stock-card' : ''}" ${isOutOfStock ? '' : `onclick="addToCart(${prod.id})"`}>
-                            <div class="product-img-wrapper">
+                        <div class="card product-card h-100 ${isOutOfStock ? 'out-of-stock-card' : ''}">
+                            <div class="product-img-wrapper" ${isOutOfStock ? '' : `onclick="addToCart(event, ${prod.id})"`}>
                                 ${prod.image ? `<img src="${prod.image}" alt="${prod.name}">` : `<div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-cup-hot fs-2 opacity-50"></i></div>`}
                             </div>
-                            <div class="card-body p-3 d-flex flex-column justify-content-between">
-                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-bold mb-1" style="font-size: 0.9rem; color: var(--purple-primary);">₱${prod.price.toFixed(2)}</div>
+                            <div class="card-body p-3 d-flex flex-column justify-content-between" style="overflow: visible;">
+                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2" style="overflow: visible;">
+                                    <div class="flex-grow-1" ${isOutOfStock ? '' : `onclick="addToCart(event, ${prod.id})"`} style="cursor: ${isOutOfStock ? 'not-allowed' : 'pointer'};">
+                                        <div class="fw-bold mb-1" style="font-size: 0.9rem; color: var(--primary-accent);">₱${prod.price.toFixed(2)}</div>
                                         <h6 class="fw-semibold text-dark m-0" style="font-size: 0.82rem; line-height: 1.2;" title="${prod.name}">${prod.name}</h6>
                                     </div>
-                                    <div class="card-action-btn shadow-sm flex-shrink-0">
+                                    <div class="card-action-btn shadow-sm" ${isOutOfStock ? '' : `onclick="addToCart(event, ${prod.id})"`}>
                                         <i class="bi bi-plus-lg fs-6"></i>
                                     </div>
                                 </div>
@@ -845,8 +1000,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
         function selectPayment(method) {
             selectedPaymentMethod = method;
-            const iconClass = method === 'Cash' ? 'bi-cash-stack text-success' : 'bi-credit-card text-primary';
-            document.getElementById('selected-payment-text').innerHTML = `<i class="bi ${iconClass} me-2"></i>${method}`;
+            const iconClass = method === 'Cash' ? 'bi-cash-stack' : 'bi-credit-card text-primary';
+            document.getElementById('selected-payment-text').innerHTML = `<i class="bi ${iconClass} me-2" style="${method === 'Cash' ? 'color: var(--primary-accent);' : ''}"></i>${method}`;
             
             const cashPanel = document.getElementById('cash-panel');
             const cardPanel = document.getElementById('card-panel');
@@ -873,7 +1028,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             return cart.filter(i => i.id === itemId).reduce((sum, i) => sum + i.quantity, 0);
         }
 
-        function addToCart(id) {
+        function addToCart(event, id) {
+            if (event) event.stopPropagation();
             const product = products.find(p => p.id === id);
             if (!product) return;
             if (product.available <= 0) return;
@@ -954,36 +1110,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                     const rows = recipe.map(ing => {
                         const current = (item.modifiers && item.modifiers[ing.ingredient_id]) || 'normal';
                         return `
-                            <div class="d-flex justify-content-between align-items-center py-1">
-                                <span class="small text-secondary">${ing.name}</span>
-                                <select class="form-select form-select-sm w-auto py-0 px-2" style="font-size: 0.75rem;" onchange="setModifier(${item.lineId}, ${ing.ingredient_id}, this.value)">
+                            <div class="d-flex justify-content-between align-items-center py-1.5">
+                                <span class="small text-secondary fw-medium">${ing.name}</span>
+                                <select class="form-select form-select-sm w-auto py-1 px-2 shadow-none" style="font-size: 0.75rem; border-color: #cbd5e1;" onchange="setModifier(${item.lineId}, ${ing.ingredient_id}, this.value)">
                                     <option value="normal" ${current === 'normal' ? 'selected' : ''}>Normal</option>
                                     <option value="remove" ${current === 'remove' ? 'selected' : ''}>No ${ing.name}</option>
                                     <option value="extra" ${current === 'extra' ? 'selected' : ''}>Extra ${ing.name}</option>
                                 </select>
                             </div>`;
                     }).join('');
-                    customizePanel = `<div class="mt-2 p-2 rounded-2 border bg-white">${rows}</div>`;
+                    customizePanel = `<div class="mt-2.5 p-2.5 rounded-3 border bg-white shadow-sm">${rows}</div>`;
                 }
 
                 container.innerHTML += `
-                    <div class="bg-white p-2 rounded-3 border shadow-sm">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div style="max-width: 120px;">
-                                <span class="fw-bold d-block text-dark text-truncate" style="font-size: 0.80rem;" title="${item.name}">${item.name}</span>
-                                ${modifierTags.length > 0 ? `<span class="d-block text-purple" style="font-size: 0.60rem; color: var(--purple-primary);">${modifierTags.join(', ')}</span>` : ''}
+                    <div class="bg-white p-3 rounded-3 border shadow-sm transition-all mb-2.5" style="transition: all 0.2s; border-color: #e2e8f0 !important;">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div style="flex: 2; min-width: 0;">
+                                <span class="fw-bold d-block text-dark text-wrap" style="font-size: 0.85rem; line-height: 1.2;" title="${item.name}">${item.name}</span>
+                                ${modifierTags.length > 0 ? `<span class="d-block mt-0.5" style="font-size: 0.7rem; color: var(--primary-accent); font-weight: 600;">${modifierTags.join(', ')}</span>` : ''}
                             </div>
-                            <div class="d-flex align-items-center gap-1 bg-light border rounded-pill px-1 py-0">
-                                <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" onclick="updateQuantity(${item.lineId}, -1)">-</button>
-                                <span class="fw-bold small px-1">${item.quantity}</span>
-                                <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" onclick="updateQuantity(${item.lineId}, 1)">+</button>
+                            <div class="d-flex align-items-center gap-1 bg-light border rounded-pill px-2 py-1 shadow-sm" style="flex-shrink: 0;">
+                                <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" style="font-size: 0.9rem;" onclick="updateQuantity(${item.lineId}, -1)">-</button>
+                                <span class="fw-bold small px-1 text-dark" style="min-width: 16px; text-align: center;">${item.quantity}</span>
+                                <button class="btn btn-sm btn-link text-dark p-0 px-1 text-decoration-none fw-bold" style="font-size: 0.9rem;" onclick="updateQuantity(${item.lineId}, 1)">+</button>
                             </div>
-                            <span class="fw-bold small text-dark">₱${(item.price * item.quantity).toFixed(2)}</span>
+                            <div style="flex: 0.9; text-align: right; flex-shrink: 0;">
+                                <span class="fw-bold small text-dark">₱${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
                         </div>
                         ${recipe.length > 0 ? `
-                            <div class="text-end mt-1">
-                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size: 0.65rem; color: var(--purple-primary);" onclick="toggleCustomize(${item.lineId})">
-                                    <i class="bi bi-sliders"></i> ${isExpanded ? 'Hide' : 'Customize'}
+                            <div class="text-end mt-2 pt-1 border-top border-light">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold" style="font-size: 0.7rem; color: var(--primary-accent);" onclick="toggleCustomize(${item.lineId})">
+                                    <i class="bi bi-sliders me-1"></i>${isExpanded ? 'Hide Options' : 'Customize Item'}
                                 </button>
                             </div>
                         ` : ''}
@@ -1018,11 +1176,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
         function processCheckout() {
             if (cart.length === 0) {
-                Swal.fire({ icon: 'warning', title: 'Empty Cart', text: 'Please add items to your basket before checking out.', confirmButtonColor: '#8b5cf6' });
+                Swal.fire({ icon: 'warning', title: 'Empty Cart', text: 'Please add items to your basket before checking out.', confirmButtonColor: '#e5a912' });
                 return;
             }
             if (!selectedPaymentMethod) {
-                Swal.fire({ icon: 'warning', title: 'Payment Method Required', text: 'Please choose a payment method.', confirmButtonColor: '#8b5cf6' });
+                Swal.fire({ icon: 'warning', title: 'Payment Method Required', text: 'Please choose a payment method.', confirmButtonColor: '#e5a912' });
                 return;
             }
 
@@ -1031,18 +1189,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
 
             if (selectedPaymentMethod === 'Cash') {
                 if (!amountTendered || parseFloat(amountTendered) < totalAmount) {
-                    Swal.fire({ icon: 'error', title: 'Insufficient Payment', text: `Amount entered is less than the total bill.`, confirmButtonColor: '#8b5cf6' });
+                    Swal.fire({ icon: 'error', title: 'Insufficient Payment', text: `Amount entered is less than the total bill.`, confirmButtonColor: '#e5a912' });
                     return;
                 }
                 if (parseFloat(amountTendered) > (totalAmount + 1000)) {
-                    Swal.fire({ icon: 'error', title: 'Excessive Amount', text: `Maximum allowed change is ₱1,000.`, confirmButtonColor: '#8b5cf6' });
+                    Swal.fire({ icon: 'error', title: 'Excessive Amount', text: `Maximum allowed change is ₱1,000.`, confirmButtonColor: '#e5a912' });
                     return;
                 }
             }
 
             if (selectedPaymentMethod === 'Card') {
                 if (cardDigits.length !== 4) {
-                    Swal.fire({ icon: 'error', title: 'Card Verification Required', text: 'Please input the last 4 digits of the card.', confirmButtonColor: '#8b5cf6' });
+                    Swal.fire({ icon: 'error', title: 'Card Verification Required', text: 'Please input the last 4 digits of the card.', confirmButtonColor: '#e5a912' });
                     return;
                 }
             }
@@ -1100,12 +1258,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         <div class="small mb-3">
                             <div class="d-flex justify-content-between"><span>TOTAL AMOUNT:</span><span class="fw-bold">₱${data.total.toFixed(2)}</span></div>
                             <div class="d-flex justify-content-between"><span>Payment Mode:<span><span>${data.payment_method}</span></div>
-                            <div class="d-flex justify-content-between"><span>Amount Paid:</span><span>₱${parseFloat(data.tendered).toFixed(2)}</span></div>
+                            <div class="d-flex justify-content-between"><span>Amount Paid:<span><span>₱${parseFloat(data.tendered).toFixed(2)}</span></div>
                             <div class="d-flex justify-content-between"><span>Change Due:</span><span class="fw-bold">₱${parseFloat(data.change).toFixed(2)}</span></div>
                         </div>
                         <div class="text-center no-print">
                             <button class="btn btn-sm btn-dark w-100 mb-2" onclick="window.print()"><i class="bi bi-printer"></i> Print Receipt</button>
-                            <button class="btn btn-sm text-white w-100" style="background-color: var(--purple-primary);" onclick="window.location.reload()">Done / New Order</button>
+                            <button class="btn btn-sm text-white w-100" style="background-color: var(--primary-accent);" onclick="window.location.reload()">Done / New Order</button>
                         </div>`;
 
                     document.getElementById('checkout-interactive-pane').classList.add('d-none');
@@ -1117,7 +1275,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                         icon: 'success',
                         title: 'Sale Completed',
                         html: `<div class="receipt-card p-2 rounded text-start">${receiptHTML}</div>`,
-                        confirmButtonColor: '#911d1d',
+                        confirmButtonColor: '#e5a912',
                         confirmButtonText: 'Close',
                         width: '600px'
                     });
@@ -1126,12 +1284,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 }
             })
             .catch(err => {
-                Swal.fire({ icon: 'error', title: 'Server Error', text: 'Checkout process encountered an error.', confirmButtonColor: '#8b5cf6' });
+                Swal.fire({ icon: 'error', title: 'Server Error', text: 'Checkout process encountered an error.', confirmButtonColor: '#e5a912' });
             });
         }
 
         renderProductGrid();
         renderBestSellerWidget();
+        renderModalMenuCatalog();
 
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
@@ -1140,7 +1299,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
                 text: "You will be logged out of your account.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#8b5cf6',
+                confirmButtonColor: '#e5a912',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Yes, Log out',
                 cancelButtonText: 'Cancel',

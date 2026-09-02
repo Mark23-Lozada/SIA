@@ -103,7 +103,7 @@ if ($chart_res && $chart_res->num_rows > 0) {
 
         .table tbody tr:hover {
             transform: scale(1.004) translateY(-1px);
-            background-color: rgba(255, 107, 74, 0.05) !important;
+            background-color: rgba(234, 179, 8, 0.05) !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
 
@@ -131,28 +131,27 @@ if ($chart_res && $chart_res->num_rows > 0) {
         }
     </style>
 </head>
-<body class="bg-slate/50 text-gray-800 antialiased font-sans h-screen overflow-hidden">
+<body class="bg-white text-gray-800 antialiased font-sans h-screen overflow-hidden">
     <div class="flex h-screen w-full overflow-hidden">
         
         <div class="flex-shrink-0 h-full">
             <?php include 'sidebar.php'; ?>
         </div>
 
-        <div class="flex-1 flex flex-col overflow-y-auto p-8 bg-white">
+        <div class="flex-1 flex flex-col overflow-y-auto p-8 bg-amber-50/20">
             <header class="shrink-0 mb-6">
-                <div data-aos="fade-down" class="relative overflow-hidden bg-gradient-to-r from-[#1a1010] via-[#1f1212] to-[#09090b] rounded-3xl shadow-xl p-8 text-white border border-[#ff6b4a]/30 transition-all duration-300 hover:shadow-2xl">
-                    <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#ff6b4a]/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-                    <div class="absolute left-1/3 -top-20 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
-
+                <div data-aos="fade-down" class="relative overflow-hidden bg-amber-500 rounded-3xl shadow-xl p-8 text-white border border-amber-400/40 transition-all duration-300 hover:shadow-2xl">
+                    <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-amber-500/30 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+                  
                     <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div>
-                            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#ff6b4a]/20 backdrop-blur-md border border-[#ff6b4a]/30 text-xs font-semibold uppercase tracking-wider text-[white] mb-3 shadow-sm">
+                            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-900/30 backdrop-blur-md border border-amber-300/40 text-xs font-semibold uppercase tracking-wider text-amber-100 mb-3 shadow-sm">
                                 <i class="bi bi-graph-up-arrow"></i> ANALYTICS OVERVIEW
                             </div>
-                            <h1 class="text-3xl font-extrabold tracking-tight text-[white] mb-2">
+                            <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">
                                 Profit and Loss Statement & Financial Analytics (<?php echo date('F d, Y'); ?>)
                             </h1>
-                            <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                            <p class="text-sm text-amber-100 max-w-2xl leading-relaxed">
                                 Monitor real-time revenue streams, earnings, and system reports seamlessly with interactive filtering and export tools.
                             </p>
                         </div>
@@ -164,18 +163,18 @@ if ($chart_res && $chart_res->num_rows > 0) {
             <main class="space-y-6">
 
                 <!-- Advanced Filtering and Live Search Bar -->
-                <div data-aos="fade-up" data-aos-delay="100" class="bg-white-50 border border-slate-200/80 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                <div data-aos="fade-up" data-aos-delay="100" class="bg-white border border-amber-200/80 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                     <form method="GET" class="flex flex-wrap items-end gap-4 w-full md:w-auto">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Start Date</label>
-                            <input type="date" name="start_date" value="<?php echo isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-01-01'); ?>" class="form-control border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#ff6b4a]">
+                            <label class="block text-xs font-semibold text-amber-900 mb-1">Start Date</label>
+                            <input type="date" name="start_date" value="<?php echo isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-01-01'); ?>" class="form-control border-amber-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">End Date</label>
-                            <input type="date" name="end_date" value="<?php echo isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d'); ?>" class="form-control border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#ff6b4a]">
+                            <label class="block text-xs font-semibold text-amber-900 mb-1">End Date</label>
+                            <input type="date" name="end_date" value="<?php echo isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d'); ?>" class="form-control border-amber-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
                         </div>
                         <div>
-                            <button type="submit" class="bg-[#ff6b4a] hover:bg-[#fa4b2a] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
+                            <button type="submit" class="bg-amber-500 hover:bg-amber-700 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
                                 <i class="bi bi-filter"></i> Filter Report
                             </button>
                         </div>
@@ -183,61 +182,81 @@ if ($chart_res && $chart_res->num_rows > 0) {
 
                     <!-- Interactive Live Search for Ledger -->
                     <div class="w-full md:w-72">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Search Ledger</label>
+                        <label class="block text-xs font-semibold text-amber-900 mb-1">Search Ledger</label>
                         <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-400">
                                 <i class="bi bi-search"></i>
                             </span>
-                            <input type="text" id="ledgerSearchInput" onkeyup="filterLedgerTable()" placeholder="Search description or ref..." class="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-[#ff6b4a] transition-all">
+                            <input type="text" id="ledgerSearchInput" onkeyup="filterLedgerTable()" placeholder="Search description or ref..." class="w-full pl-9 pr-4 py-2 text-sm bg-white border border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
                         </div>
                     </div>
                 </div>
 
-                <div data-aos="fade-up" data-aos-delay="200" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-white-50 border border-slate-200/80 rounded-2xl p-5 shadow-sm border-l-4 border-l-emerald-500 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-1">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue (Sales)</p>
-                            <span class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><i class="bi bi-graph-up-arrow text-lg"></i></span>
-                        </div>
-                        <h3 class="text-2xl font-black text-slate-900">₱<?php echo number_format($total_revenue, 2); ?></h3>
-                        <p class="text-xs text-slate-500 mt-2"><?php echo $total_transactions; ?> total transactions recorded</p>
-                    </div>
+                <div data-aos="fade-up" data-aos-delay="200" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+    <!-- Card 1: Total Revenue (Sales) -->
+    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-slate-200/80 shadow-xl shadow-slate-950/5 border-l-8 border-l-emerald-500 transition-all duration-300 hover:shadow-2xl hover:border-emerald-500 hover:bg-emerald-50/10 group transform hover:-translate-y-1.5 cursor-pointer">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-bold text-emerald-700 group-hover:text-emerald-700 uppercase tracking-wider transition-colors">Total Revenue (Sales)</p>
+            <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-lg shrink-0 shadow-inner border border-emerald-500/30 transition-all group-hover:bg-emerald-500 group-hover:text-white group-hover:rotate-6">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-black text-emerald-500 group-hover:text-emerald-700 transition-colors">₱<?php echo number_format($total_revenue, 2); ?></h3>
+        <span class="bg-emerald-500/10 text-emerald-700 px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 mt-2 border border-emerald-500/20 shadow-sm w-fit transition-colors">
+            <i class="bi bi-receipt"></i> <?php echo $total_transactions; ?> total transactions
+        </span>
+    </div>
 
-                    <div class="bg-white-50 border border-slate-200/80 rounded-2xl p-5 shadow-sm border-l-4 border-l-blue-500 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-1">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Payroll & Salaries</p>
-                            <span class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i class="bi bi-people text-lg"></i></span>
-                        </div>
-                        <h3 class="text-2xl font-black text-blue-600">₱<?php echo number_format($total_payroll, 2); ?></h3>
-                        <p class="text-xs text-slate-500 mt-2">Employee payroll disbursements</p>
-                    </div>
+    <!-- Card 2: Payroll & Salaries -->
+    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-slate-200/80 shadow-xl shadow-slate-950/5 border-l-8 border-l-blue-500 transition-all duration-300 hover:shadow-2xl hover:border-blue-500 hover:bg-blue-50/10 group transform hover:-translate-y-1.5 cursor-pointer">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-bold text-blue-700 group-hover:text-blue-700 uppercase tracking-wider transition-colors">Payroll & Salaries</p>
+            <div class="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-600 flex items-center justify-center text-lg shrink-0 shadow-inner border border-blue-500/30 transition-all group-hover:bg-blue-500 group-hover:text-white group-hover:rotate-6">
+                <i class="bi bi-people"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-black text-blue-600 transition-colors">₱<?php echo number_format($total_payroll, 2); ?></h3>
+        <span class="bg-blue-500/10 text-blue-700 px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 mt-2 border border-blue-500/20 shadow-sm w-fit transition-colors">
+            <i class="bi bi-person-badge"></i> Employee payroll disbursements
+        </span>
+    </div>
 
-                    <div class="bg-white-50 border border-slate-200/80 rounded-2xl p-5 shadow-sm border-l-4 border-l-rose-500 transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-1">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Expenses & Costs</p>
-                            <span class="p-2 bg-rose-50 text-rose-600 rounded-xl"><i class="bi bi-graph-down-arrow text-lg"></i></span>
-                        </div>
-                        <h3 class="text-2xl font-black text-rose-600">₱<?php echo number_format($total_expenses, 2); ?></h3>
-                        <p class="text-xs text-slate-500 mt-2">Budget, operational, & salary advances</p>
-                    </div>
+    <!-- Card 3: Total Expenses & Costs -->
+    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-slate-200/80 shadow-xl shadow-slate-950/5 border-l-8 border-l-rose-500 transition-all duration-300 hover:shadow-2xl hover:border-rose-500 hover:bg-rose-50/10 group transform hover:-translate-y-1.5 cursor-pointer">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-bold text-rose-600 group-hover:text-rose-700 uppercase tracking-wider transition-colors">Total Expenses & Costs</p>
+            <div class="w-10 h-10 rounded-2xl bg-rose-500/15 text-rose-600 flex items-center justify-center text-lg shrink-0 shadow-inner border border-rose-500/30 transition-all group-hover:bg-rose-500 group-hover:text-white group-hover:rotate-6">
+                <i class="bi bi-graph-down-arrow"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-black text-rose-600 transition-colors">₱<?php echo number_format($total_expenses, 2); ?></h3>
+        <span class="bg-rose-500/10 text-rose-700 px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 mt-2 border border-rose-500/20 shadow-sm w-fit transition-colors">
+            <i class="bi bi-wallet"></i> Budget, ops, & salary advances
+        </span>
+    </div>
 
-                    <div class="bg-white-50 border border-slate-200/80 rounded-2xl p-5 shadow-sm border-l-4 border-l-[#ff6b4a] transition-all duration-300 hover:shadow-md hover:border-[#ff6b4a]/50 group transform hover:-translate-y-1">
-                        <div class="flex items-center justify-between mb-1">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Net Profit / (Loss)</p>
-                            <span class="p-2 bg-orange-50 text-[#ff6b4a] rounded-xl"><i class="bi bi-wallet2 text-lg"></i></span>
-                        </div>
-                        <h3 class="text-2xl font-black <?php echo ($net_profit >= 0) ? 'text-emerald-600' : 'text-rose-600'; ?>">₱<?php echo number_format($net_profit, 2); ?></h3>
-                        <p class="text-xs text-slate-500 mt-2">Revenue minus all expenses</p>
-                    </div>
-                </div>
+    <!-- Card 4: Net Profit / (Loss) -->
+    <div class="bg-white/90 backdrop-blur-2xl rounded-3xl p-5 border border-purple-200/80 shadow-xl shadow-purple-950/5 border-l-8 border-l-purple-600 transition-all duration-300 hover:shadow-2xl hover:border-purple-600 hover:bg-purple-50/10 group transform hover:-translate-y-1.5 cursor-pointer">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-bold text-purple-700 group-hover:text-purple-700 uppercase tracking-wider transition-colors">Net Profit / (Loss)</p>
+            <div class="w-10 h-10 rounded-2xl bg-purple-500/15 text-purple-600 flex items-center justify-center text-lg shrink-0 shadow-inner border border-purple-500/30 transition-all group-hover:bg-purple-600 group-hover:text-white group-hover:rotate-6">
+                <i class="bi bi-wallet2"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-black <?php echo ($net_profit >= 0) ? 'text-emerald-600' : 'text-purple-700'; ?>">₱<?php echo number_format($net_profit, 2); ?></h3>
+        <span class="bg-purple-500/10 text-purple-700 px-2.5 py-1 rounded-xl text-[11px] font-extrabold flex items-center gap-1 mt-2 border border-purple-500/20 shadow-sm w-fit transition-colors">
+            <i class="bi bi-calculator"></i> Revenue minus all expenses
+        </span>
+    </div>
+</div>
 
                 <!-- NO AOS applied to chart as requested -->
-                <div class="bg-white-50 p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-amber-200/80">
                     <div class="flex justify-between items-center mb-4">
-                        <h5 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <i class="bi bi-bar-chart-fill text-[#ff6b4a]"></i> Revenue vs Expenses Trend Analysis
+                        <h5 class="text-sm font-bold text-amber-950 flex items-center gap-2">
+                            <i class="bi bi-bar-chart-fill text-amber-500"></i> Revenue vs Expenses Trend Analysis
                         </h5>
-                        <span class="text-xs text-slate-400 font-medium">Fiscal Year Overview</span>
+                        <span class="text-xs text-amber-700/70 font-medium">Fiscal Year Overview</span>
                     </div>
                     <div class="relative h-[280px] w-full">
                         <canvas id="profitLossChart" 
@@ -249,38 +268,38 @@ if ($chart_res && $chart_res->num_rows > 0) {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     <!-- NO AOS applied to tables as requested -->
-                    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden lg:col-span-1">
-                        <div class="px-6 py-4 border-b border-slate-200 font-bold text-slate-900 flex justify-between items-center bg-white">
+                    <div class="bg-white border border-amber-200/80 rounded-2xl shadow-sm overflow-hidden lg:col-span-1">
+                        <div class="px-6 py-4 border-b border-amber-100 font-bold text-amber-950 flex justify-between items-center bg-amber-50/50">
                             <span>Income Statement Summary</span>
-                            <span class="text-xs text-slate-500 font-normal">PHP Currency</span>
+                            <span class="text-xs text-amber-700/70 font-normal">PHP Currency</span>
                         </div>
                         <div class="p-6 bg-white">
                             <table class="w-full text-left border-collapse" id="incomeSummaryTable">
                                 <thead>
-                                    <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                    <tr class="border-b border-amber-100 text-xs font-semibold text-amber-800 uppercase tracking-wider">
                                         <th class="py-3 px-2">Account / Category</th>
                                         <th class="py-3 px-2 text-right">Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 text-sm">
+                                <tbody class="divide-y divide-amber-50 text-sm">
                                     <tr>
-                                        <td class="py-3 px-2 font-medium text-slate-900">Gross Revenue (Sales)</td>
+                                        <td class="py-3 px-2 font-medium text-amber-950">Gross Revenue (Sales)</td>
                                         <td class="py-3 px-2 text-right text-emerald-600 font-semibold">₱<?php echo number_format($total_revenue, 2); ?></td>
                                     </tr>
                                     <tr>
-                                        <td class="py-3 px-2 font-medium text-slate-900">Payroll & Salaries</td>
+                                        <td class="py-3 px-2 font-medium text-amber-950">Payroll & Salaries</td>
                                         <td class="py-3 px-2 text-right text-blue-600 font-semibold">(₱<?php echo number_format($total_payroll, 2); ?>)</td>
                                     </tr>
                                     <tr>
-                                        <td class="py-3 px-2 font-medium text-slate-900">Approved Budget Deductions</td>
+                                        <td class="py-3 px-2 font-medium text-amber-950">Approved Budget Deductions</td>
                                         <td class="py-3 px-2 text-right text-rose-600 font-semibold">(₱<?php echo number_format($total_expenses_budget, 2); ?>)</td>
                                     </tr>
                                     <tr>
-                                        <td class="py-3 px-2 font-medium text-slate-900">Approved Salary Advances</td>
+                                        <td class="py-3 px-2 font-medium text-amber-950">Approved Salary Advances</td>
                                         <td class="py-3 px-2 text-right text-rose-600 font-semibold">(₱<?php echo number_format($total_salary_advances, 2); ?>)</td>
                                     </tr>
-                                    <tr class="bg-orange-50 font-bold">
-                                        <td class="py-3 px-2 text-slate-900">Net Profit / (Loss)</td>
+                                    <tr class="bg-amber-100/60 font-bold">
+                                        <td class="py-3 px-2 text-amber-950">Net Profit / (Loss)</td>
                                         <td class="py-3 px-2 text-right <?php echo ($net_profit >= 0) ? 'text-emerald-600' : 'text-rose-600'; ?>">₱<?php echo number_format($net_profit, 2); ?></td>
                                     </tr>
                                 </tbody>
@@ -289,56 +308,56 @@ if ($chart_res && $chart_res->num_rows > 0) {
                     </div>
 
                     <!-- NO AOS applied to tables as requested -->
-                    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden lg:col-span-2">
-                        <div class="px-6 py-4 border-b border-slate-200 font-bold text-slate-900 flex justify-between items-center bg-white flex-wrap gap-3">
+                    <div class="bg-white border border-amber-200/80 rounded-2xl shadow-sm overflow-hidden lg:col-span-2">
+                        <div class="px-6 py-4 border-b border-amber-100 font-bold text-amber-950 flex justify-between items-center bg-amber-50/50 flex-wrap gap-3">
                             <span>Itemized Expense & Salary Advance Ledger</span>
                             
                             <!-- Filter Buttons for Ledger Types -->
-                            <div class="flex items-center gap-2">
-                                <button onclick="filterLedgerType('all')" id="btn-all" class="px-3 py-1 text-xs font-semibold rounded-lg bg-[#ff6b4a] text-white transition-all shadow-sm cursor-pointer">
-                                    All
-                                </button>
-                                <button onclick="filterLedgerType('Budget Expense')" id="btn-budget" class="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer">
-                                    Budget Expense
-                                </button>
-                                <button onclick="filterLedgerType('Salary Advance')" id="btn-advance" class="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer">
-                                    Salary Advance
-                                </button>
-                            </div>
+                         <div class="flex items-center gap-2">
+    <button onclick="filterLedgerType('all')" id="btn-all" class="px-3 py-1 text-xs font-semibold rounded-lg bg-amber-500 text-white font-bold transition-all shadow-sm cursor-pointer">
+        All
+    </button>
+    <button onclick="filterLedgerType('Budget Expense')" id="btn-budget" class="px-3 py-1 text-xs font-semibold rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 transition-all cursor-pointer">
+        Budget Expense
+    </button>
+    <button onclick="filterLedgerType('Salary Advance')" id="btn-advance" class="px-3 py-1 text-xs font-semibold rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 transition-all cursor-pointer">
+        Salary Advance
+    </button>
+</div>
                         </div>
                         <div class="overflow-x-auto p-4 max-h-[350px] overflow-y-auto bg-white">
                             <table class="w-full text-left border-collapse text-sm" id="itemizedLedgerTable">
                                 <thead>
-                                    <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/50">
+                                    <tr class="border-b border-amber-100 text-xs font-semibold text-amber-800 uppercase tracking-wider bg-amber-50/30">
                                         <th class="py-3 px-4">Ref / Title</th>
                                         <th class="py-3 px-4">Type / Dept</th>
                                         <th class="py-3 px-4 text-right">Amount</th>
                                         <th class="py-3 px-4 text-center">Date Recorded</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-amber-50">
                                     <?php if ($deductions_result && $deductions_result->num_rows > 0): ?>
                                         <?php while ($d_row = $deductions_result->fetch_assoc()): ?>
-                                            <tr class="hover:bg-slate-50 transition-colors ledger-row" data-type="<?php echo htmlspecialchars($d_row['type']); ?>">
-                                                <td class="py-3 px-4 font-semibold text-slate-900 ledger-title">
+                                            <tr class="hover:bg-amber-50/50 transition-colors ledger-row" data-type="<?php echo htmlspecialchars($d_row['type']); ?>">
+                                                <td class="py-3 px-4 font-semibold text-amber-950 ledger-title">
                                                     <?php echo htmlspecialchars($d_row['ref_id']); ?>
-                                                    <div class="text-xs font-normal text-slate-500 ledger-desc"><?php echo htmlspecialchars($d_row['description']); ?></div>
+                                                    <div class="text-xs font-normal text-amber-700/70 ledger-desc"><?php echo htmlspecialchars($d_row['description']); ?></div>
                                                 </td>
                                                 <td class="py-3 px-4">
-                                                    <span class="px-2.5 py-1 rounded-md text-xs font-semibold border type-badge <?php echo ($d_row['type'] === 'Salary Advance') ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-orange-50 text-orange-700 border-orange-200'; ?>">
+                                                    <span class="px-2.5 py-1 rounded-md text-xs font-semibold border type-badge <?php echo ($d_row['type'] === 'Salary Advance') ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-yellow-50 text-yellow-800 border-yellow-300'; ?>">
                                                         <?php echo htmlspecialchars($d_row['type']); ?>
                                                     </span>
-                                                    <div class="text-xs text-slate-500 mt-0.5"><?php echo htmlspecialchars($d_row['department'] ?? 'General'); ?></div>
+                                                    <div class="text-xs text-amber-700/70 mt-0.5"><?php echo htmlspecialchars($d_row['department'] ?? 'General'); ?></div>
                                                 </td>
                                                 <td class="py-3 px-4 text-right font-bold text-rose-600">-₱<?php echo number_format($d_row['amount'], 2); ?></td>
-                                                <td class="py-3 px-4 text-center text-xs text-slate-500 font-medium">
+                                                <td class="py-3 px-4 text-center text-xs text-amber-700/70 font-medium">
                                                     <?php echo date('M d, Y', strtotime($d_row['created_at'])); ?>
                                                 </td>
                                             </tr>
                                         <?php endwhile; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="4" class="text-center py-8 text-slate-400 italic">No itemized expense or salary advance records found.</td>
+                                            <td colspan="4" class="text-center py-8 text-amber-700/50 italic">No itemized expense or salary advance records found.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -364,8 +383,8 @@ if ($chart_res && $chart_res->num_rows > 0) {
             const ctx = canvas.getContext('2d');
 
             let gradient = ctx.createLinearGradient(0, 0, 0, 280);
-            gradient.addColorStop(0, 'rgba(255, 107, 74, 0.4)');
-            gradient.addColorStop(1, 'rgba(255, 107, 74, 0.0)');
+          gradient.addColorStop(0, 'rgba(217, 119, 6, 0.35)');
+gradient.addColorStop(1, 'rgba(217, 119, 6, 0.0)');
 
             new Chart(ctx, {
                 type: 'line',
@@ -374,13 +393,13 @@ if ($chart_res && $chart_res->num_rows > 0) {
                     datasets: [{
                         label: 'Gross Revenue (₱)',
                         data: values,
-                        borderColor: '#ff6b4a',
+                        borderColor: '#d97706',
                         backgroundColor: gradient,
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
-                        pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#ff6b4a',
+                        pointBackgroundColor: '#78350f',
+                        pointBorderColor: '#d97706',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6
@@ -393,54 +412,54 @@ if ($chart_res && $chart_res->num_rows > 0) {
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: '#f1f5f9' },
+                            grid: { color: '#fef3c7' },
                             ticks: {
-                                color: '#94a3b8',
+                                color: '#b45309',
                                 callback: function(value) { return '₱' + value.toLocaleString(); }
                             }
                         },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        x: { grid: { display: false }, ticks: { color: '#b45309' } }
                     }
                 }
             });
         });
 
         // Filter Ledger by Type Buttons (All, Budget Expense, Salary Advance)
-        function filterLedgerType(type) {
-            let rows = document.querySelectorAll('.ledger-row');
-            let btnAll = document.getElementById('btn-all');
-            let btnBudget = document.getElementById('btn-budget');
-            let btnAdvance = document.getElementById('btn-advance');
+       function filterLedgerType(type) {
+    let rows = document.querySelectorAll('.ledger-row');
+    let btnAll = document.getElementById('btn-all');
+    let btnBudget = document.getElementById('btn-budget');
+    let btnAdvance = document.getElementById('btn-advance');
 
-            // Reset buttons style
-            [btnAll, btnBudget, btnAdvance].forEach(btn => {
-                btn.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer";
-            });
+    // Reset buttons style (Inactive state)
+    [btnAll, btnBudget, btnAdvance].forEach(btn => {
+        btn.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-amber-100/60 hover:bg-amber-200 text-amber-900 transition-all cursor-pointer";
+    });
 
-            // Highlight active button
-            if (type === 'all') {
-                btnAll.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-[#ff6b4a] text-white transition-all shadow-sm cursor-pointer";
-            } else if (type === 'Budget Expense') {
-                btnBudget.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-[#ff6b4a] text-white transition-all shadow-sm cursor-pointer";
-            } else if (type === 'Salary Advance') {
-                btnAdvance.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-[#ff6b4a] text-white transition-all shadow-sm cursor-pointer";
-            }
+    // Highlight active button (Amber background, White text)
+    if (type === 'all') {
+        btnAll.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-amber-500 text-white font-bold transition-all shadow-sm cursor-pointer";
+    } else if (type === 'Budget Expense') {
+        btnBudget.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-amber-500 text-white font-bold transition-all shadow-sm cursor-pointer";
+    } else if (type === 'Salary Advance') {
+        btnAdvance.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-amber-500 text-white font-bold transition-all shadow-sm cursor-pointer";
+    }
 
-            let searchInput = document.getElementById('ledgerSearchInput').value.toLowerCase();
+    let searchInput = document.getElementById('ledgerSearchInput').value.toLowerCase();
 
-            rows.forEach(row => {
-                let rowType = row.getAttribute('data-type');
-                let text = row.textContent.toLowerCase();
-                let matchesType = (type === 'all' || rowType === type);
-                let matchesSearch = text.includes(searchInput);
+    rows.forEach(row => {
+        let rowType = row.getAttribute('data-type');
+        let text = row.textContent.toLowerCase();
+        let matchesType = (type === 'all' || rowType === type);
+        let matchesSearch = text.includes(searchInput);
 
-                if (matchesType && matchesSearch) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            });
+        if (matchesType && matchesSearch) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
         }
+    });
+}
 
         // Live Search Filter Feature for Ledger Table (works alongside type filters)
         function filterLedgerTable() {
@@ -450,8 +469,8 @@ if ($chart_res && $chart_res->num_rows > 0) {
 
             // Find currently active type button
             let activeType = 'all';
-            if (document.getElementById('btn-budget').classList.contains('bg-[#ff6b4a]')) activeType = 'Budget Expense';
-            if (document.getElementById('btn-advance').classList.contains('bg-[#ff6b4a]')) activeType = 'Salary Advance';
+            if (document.getElementById('btn-budget').classList.contains('bg-amber-500')) activeType = 'Budget Expense';
+            if (document.getElementById('btn-advance').classList.contains('bg-amber-500')) activeType = 'Salary Advance';
 
             rows.forEach(row => {
                 let rowType = row.getAttribute('data-type');

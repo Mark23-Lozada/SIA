@@ -74,6 +74,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- AOS Animation Library -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
   <style>
     @media print {
       body * { visibility: hidden; }
@@ -90,31 +94,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
     <?php include 'sidebar.php'; ?>
     <div class="flex-1 h-screen overflow-y-auto p-8 min-w-0">
       
-      <!-- MODERN DYNAMIC BANNER HEADER -->
-      <div class="relative overflow-hidden bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
+      <!-- MODERN DYNAMIC BANNER HEADER (With AOS Animation) -->
+      <div data-aos="fade-down" data-aos-duration="800" class="relative overflow-hidden bg-amber-500 rounded-3xl shadow-lg p-8 mb-8 text-white border border-white/10">
         <!-- Background Glow FX -->
-        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-indigo-600/15 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-amber-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute left-1/3 -top-20 w-48 h-48 bg-yellow-600/15 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-purple-200 mb-3">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold uppercase tracking-wider text-white mb-3">
               <i class="bi bi-cash-stack"></i> Finance Department
             </div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">Employee Salary & Payroll Management</h1>
-            <p class="text-sm text-purple-100/80 max-w-2xl leading-relaxed">
-              Monitor employee base salaries, statutory contributions, department metrics, and generate official corporate payslips seamlessly.
+            <p class="text-sm text-white/90 max-w-2xl leading-relaxed">
+              Monitor employee base salaries, statutory contributions, department metrics, and generate official corporate payslips seamlessly.[cite: 1]
             </p>
           </div>
 
           <!-- Quick Action / Summary Indicator Pill -->
           <div class="flex items-center gap-3">
             <div class="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 shrink-0 shadow-inner">
-              <div class="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300">
+              <div class="w-10 h-10 rounded-xl text-white flex items-center justify-center">
                 <i class="bi bi-people-fill text-xl"></i>
               </div>
               <div>
-                <span class="block text-xs text-purple-200 font-medium">Total Workforce</span>
+                <span class="block text-xs text-white/80 font-medium">Total Workforce</span>
                 <span id="activeCountBadge" class="text-lg font-bold text-white">Loading...</span>
               </div>
             </div>
@@ -123,48 +127,62 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
 
         <!-- FINANCE TABS NAVIGATION -->
         <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-4">
-          <div class="text-xs text-purple-200/70 font-medium hidden sm:block">
+          <div class="text-xs text-white/80 font-medium hidden sm:block">
             <i class="bi bi-sliders mr-1"></i> Switch active directory view below
           </div>
+          <!-- Tab Navigation -->
           <div class="bg-black/20 backdrop-blur-md p-1 rounded-xl flex gap-1 border border-white/10 ml-auto">
-            <button id="tabPayroll" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
-              <i class="bi bi-cash-stack text-purple-600"></i> Payroll & Salary List
+            <button id="tabPayroll" onclick="switchTab('tabPayroll', 'payrollTable')" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold">
+              <i class="bi bi-cash-stack"></i> Payroll & Salary List
             </button>
-            <button id="tabHiredList" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-purple-200 hover:text-white">
-              <i class="bi bi-people text-purple-300"></i> Active Employees Directory
+            <button id="tabHiredList" onclick="switchTab('tabHiredList', 'hiredListTable')" class="px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white">
+              <i class="bi bi-people"></i> Active Employees Directory
             </button>
           </div>
         </div>
       </div>
 
-      <!-- METRIC CARDS SECTION -->
+      <!-- METRIC CARDS SECTION (With AOS Animations applied only to Dashboard Boxes) -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center text-xl font-bold">
-            <i class="bi bi-people-fill"></i>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Employees</p>
-            <h3 id="statTotalEmp" class="text-2xl font-black text-gray-800">0</h3>
-          </div>
+        
+        <!-- Total Employees (Mustard Theme) -->
+        <div data-aos="fade-up" data-aos-delay="100" class="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-amber-500/5 border border-amber-500/20 flex items-center justify-between relative overflow-hidden hover-lift hover:border-amber-500 hover:bg-amber-50/10 group transition-all duration-300">
+            <div class="absolute left-0 top-0 bottom-0 w-2 bg-blue-500 group-hover:w-3 transition-all"></div>
+            <div>
+                <p class="text-xs font-extrabold text-blue-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <i class="bi bi-people-fill text-base"></i>Total Employees
+                </p>
+                <h3 id="statTotalEmp" class="text-3xl font-black text-blue-500 mt-2">8</h3>
+                <p class="text-xs font-semibold text-gray-600 mt-1">Active registered staff</p>
+            </div>
+            <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-2xl shadow-inner border border-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white">
+                <i class="bi bi-people-fill"></i>
+            </div>
         </div>
 
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-violet-50 text-violet-700 flex items-center justify-center text-xl font-bold">
-            <i class="bi bi-person-plus-fill"></i>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Onboarding</p>
-            <h3 id="statOnboarding" class="text-2xl font-black text-gray-800">0</h3>
-          </div>
+        <!-- Onboarding (Mustard Theme) -->
+        <div data-aos="fade-up" data-aos-delay="200" class="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-amber-950/5 border border-amber-500/20 flex items-center justify-between relative overflow-hidden hover-lift hover:border-blue-500 hover:bg-amber-50/10 group transition-all duration-300">
+            <div class="absolute left-0 top-0 bottom-0 w-2 bg-emerald-500 group-hover:w-3 transition-all"></div>
+            <div>
+                <p class="text-xs font-extrabold text-emerald-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <i class="bi bi-person-plus-fill text-base"></i>Onboarding
+                </p>
+                <h3 id="statOnboarding" class="text-3xl font-black text-emerald-500 mt-2">3</h3>
+                <p class="text-xs font-semibold text-gray-600 mt-1">Pending processing</p>
+            </div>
+            <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center text-emerald-500 text-2xl shadow-inner border border-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white">
+                <i class="bi bi-person-plus-fill"></i>
+            </div>
         </div>
 
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 md:col-span-2 flex flex-col justify-between">
-          <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Employees per Department</p>
+        <!-- Employees per Department Breakdown Card -->
+        <div data-aos="fade-up" data-aos-delay="300" class="bg-white/90 backdrop-blur-2xl p-4 rounded-3xl shadow-xl shadow-gray-950/5 border border-gray-200 md:col-span-2 flex flex-col justify-between">
+          <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5"><i class="bi bi-building"></i> Employees per Department</p>
           <div id="deptBreakdownContainer" class="flex flex-wrap gap-2">
             <span class="text-xs text-gray-400 italic">Calculating breakdown...</span>
           </div>
         </div>
+
       </div>
 
       <!-- LINE WAVE GRAPH SECTION -->
@@ -180,15 +198,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
         </div>
       </div>
 
+      <!-- SEARCH BAR -->
       <div class="mb-4 flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div class="relative flex-1 max-w-md">
           <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
             <i class="bi bi-search"></i>
           </span>
-          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2 rounded-xl text-sm border-gray-200 focus:border-purple-600 focus:ring-1 focus:ring-purple-600" placeholder="Search by ID, name, department, or role...">
+          <input id="searchInput" type="text" class="form-control pl-10 pr-4 py-2 rounded-xl text-sm border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500" placeholder="Search by ID, name, department, or role...">
         </div>
       </div>
 
+      <!-- TABLES CONTAINER -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <div class="table-responsive bg-white rounded-xl overflow-hidden">
           
@@ -196,14 +216,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
           <table id="payrollTable" class="table table-hover align-middle mb-0 text-sm">
             <thead class="table-dark">
               <tr>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Role</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Department</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">SSS No.</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">PhilHealth</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Pag-IBIG No.</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-end">Base Salary</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Action</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Role</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Department</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">SSS No.</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">PhilHealth</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Pag-IBIG No.</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0 text-end">Base Salary</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0 text-center">Action</th>
               </tr>
             </thead>
             <tbody id="payrollBody"></tbody>
@@ -213,12 +233,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
           <table id="hiredListTable" class="table table-hover align-middle mb-0 text-sm d-none">
             <thead class="table-dark">
               <tr>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Employee ID</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Full Name</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Role</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Department</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0">Employment Type</th>
-                <th class="py-3 px-4 bg-purple-950 text-white font-semibold border-0 text-center">Status</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Employee ID</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Full Name</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Role</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Department</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0">Employment Type</th>
+                <th class="py-3 px-4 bg-amber-600 text-white font-semibold border-0 text-center">Status</th>
               </tr>
             </thead>
             <tbody id="hiredListBody"></tbody>
@@ -234,14 +254,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
         <div class="modal-content rounded-2xl shadow-xl border-0">
           <div class="modal-header border-0 bg-slate-50 rounded-t-2xl px-6 py-4 no-print">
             <h5 class="modal-title font-bold text-gray-800 flex items-center gap-2">
-              <i class="bi bi-receipt text-purple-700"></i> Corporate Payroll Statement (PH Standards)
+              <i class="bi bi-receipt text-amber-600"></i> Corporate Payroll Statement (PH Standards)
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-6" id="printArea"></div>
           <div class="modal-footer border-0 bg-slate-50 rounded-b-2xl px-6 py-3 no-print">
             <button type="button" class="btn btn-light font-semibold border text-gray-600 px-4" data-bs-dismiss="modal">Close</button>
-            <button type="button" id="btnPrintStatement" class="btn btn-primary font-semibold bg-purple-700 border-0 px-4 flex items-center gap-1.5 shadow-sm">
+            <button type="button" id="btnPrintStatement" class="btn font-semibold text-white bg-amber-600 border-0 px-4 flex items-center gap-1.5 shadow-sm hover:bg-amber-500">
               <i class="bi bi-printer"></i> Print Statement
             </button>
           </div>
@@ -254,9 +274,40 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
   <script src="../LIBRARIES/bootstrap.bundle.min.js"></script>
 
   <script>
+    // Initialize AOS Animation Engine
+    AOS.init({
+      duration: 800,
+      once: true,
+      offset: 50
+    });
+
     let allEmployees = [];
     let bsModalInstance = null;
     let hiringChartInstance = null;
+
+    // Helper function to generate profile avatar based on name and consistent unique color
+    function getAvatarHTML(name) {
+      if (!name) name = "U";
+      const firstLetter = name.trim().charAt(0).toUpperCase();
+      
+      const colors = [
+        'bg-amber-600 text-white',
+        'bg-yellow-600 text-white',
+        'bg-orange-600 text-white',
+        'bg-amber-500 text-white',
+        'bg-amber-500 text-white',
+        'bg-yellow-700 text-white'
+      ];
+      
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const index = Math.abs(hash) % colors.length;
+      const colorClass = colors[index];
+
+      return `<div class="w-9 h-9 rounded-xl ${colorClass} flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-white/20">${firstLetter}</div>`;
+    }
 
     async function loadEmployees() {
       try {
@@ -304,8 +355,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
       } else {
         for (const [dept, count] of Object.entries(deptCounts)) {
           const badge = document.createElement('div');
-          badge.className = "bg-slate-100 border border-slate-200 text-gray-700 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5";
-          badge.innerHTML = `<span>${dept}:</span> <span class="bg-purple-700 text-white px-1.5 py-0.5 rounded-full text-[10px]">${count}</span>`;
+          badge.className = "bg-amber-50/80 border border-amber-200 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm";
+          badge.innerHTML = `<span>${dept}:</span> <span class="bg-amber-600 text-white px-2 py-0.5 rounded-md text-xs font-bold">${count}</span>`;
           deptContainer.appendChild(badge);
         }
       }
@@ -327,12 +378,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
           datasets: [{
             label: 'Hired Employees Wave',
             data: dataValues,
-            borderColor: '#9333ea',
-            backgroundColor: 'rgba(147, 51, 234, 0.1)',
+            borderColor: '#d97706', 
+            backgroundColor: 'rgba(217, 119, 6, 0.1)', 
             borderWidth: 3,
             tension: 0.4,
             fill: true,
-            pointBackgroundColor: '#9333ea',
+            pointBackgroundColor: '#d97706', 
             pointRadius: 4
           }]
         },
@@ -378,21 +429,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
 
       filtered.forEach(emp => {
         const baseSalary = emp.salary ? parseFloat(emp.salary) : (emp.role === 'Manager' ? 45000 : 22000);
-        const roleClass = emp.role === 'Manager' ? 'bg-purple-50 text-purple-800 border-purple-200' : 'bg-indigo-50 text-indigo-800 border-indigo-200';
+        const roleClass = emp.role === 'Manager' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-yellow-50 text-yellow-800 border-yellow-200';
 
         payrollCount++;
         const trPayroll = document.createElement('tr');
         trPayroll.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
         trPayroll.innerHTML = `
-          <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-3">
+              ${getAvatarHTML(emp.full_name)}
+              <span class="font-semibold text-gray-800">${emp.full_name || ''}</span>
+            </div>
+          </td>
           <td class="py-3 px-4"><span class="${roleClass} px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role}</span></td>
           <td class="py-3 px-4 text-gray-600">${emp.department}</td>
           <td class="py-3 px-4 text-gray-600 font-mono">${emp.sss_id || '33-1234567-8'}</td>
           <td class="py-3 px-4 text-gray-600 font-mono">${emp.philhealth_id || '12-345678901-2'}</td>
           <td class="py-3 px-4 text-gray-600 font-mono">${emp.pagibig_id || '1210-9876-5432'}</td>
-          <td class="py-3 px-4 text-end font-bold text-gray-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+          <td class="py-3 px-4 text-end font-bold bg-amber-100 text-amber-900">₱${baseSalary.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
           <td class="py-3 px-4 text-center">
-            <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm btn-success py-1 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1 mx-auto bg-purple-700 border-purple-700 hover:bg-purple-800">
+            <button onclick="triggerPayslip(${emp.id})" class="btn btn-sm py-1 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1 mx-auto text-white bg-amber-600 border-amber-600 hover:bg-amber-500">
               <i class="bi bi-file-earmark-spreadsheet"></i> Payslip
             </button>
           </td>
@@ -404,7 +460,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
         trHired.className = "border-b border-gray-100 hover:bg-gray-50/50 transition-colors";
         trHired.innerHTML = `
           <td class="py-3 px-4 font-mono font-semibold text-gray-700">${emp.display_emp_id || ''}</td>
-          <td class="py-3 px-4 font-semibold text-gray-800">${emp.full_name || ''}</td>
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-3">
+              ${getAvatarHTML(emp.full_name)}
+              <span class="font-semibold text-gray-800">${emp.full_name || ''}</span>
+            </div>
+          </td>
           <td class="py-3 px-4"><span class="${roleClass} px-2.5 py-1 rounded-md text-xs font-semibold border">${emp.role}</span></td>
           <td class="py-3 px-4 text-gray-600">${emp.department}</td>
           <td class="py-3 px-4 text-gray-600">${emp.employment_type || 'Regular'}</td>
@@ -490,7 +551,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
             <h3 class="font-black text-xl tracking-wide uppercase text-gray-900">${emp.company_name || 'PannaKoda Stores Inc.'}</h3>
             <p class="text-[11px] text-gray-500 font-medium">${emp.company_address || '123 Business Corporate Center, Cavite, Philippines'}</p>
             <p class="text-[11px] text-gray-400 font-mono">TIN: 000-123-456-000 &bull; SSS Employer No: 03-9876543-2</p>
-            <div class="mt-2 inline-block bg-purple-50 text-purple-900 font-mono text-[11px] font-bold px-3 py-1 rounded border border-purple-200">
+            <div class="mt-2 inline-block bg-amber-50 text-amber-900 font-mono text-[11px] font-bold px-3 py-1 rounded border border-amber-200">
               OFFICIAL PAYSLIP STATEMENT (FINANCE DEPT) | ${cutOffPeriod}
             </div>
           </div>
@@ -505,7 +566,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
              <div>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Position/Role:</span> <span class="font-bold text-gray-800">${emp.role}</span></p>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Pay Date:</span> <span class="font-mono text-gray-800">${payDateStr}</span></p>
-              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-purple-700">${emp.employment_type || 'Regular'}</span></p>
+              <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Employment Type:</span> <span class="font-semibold text-amber-600">${emp.employment_type || 'Regular'}</span></p>
               <p class="mb-1"><span class="text-gray-500 uppercase font-semibold">Statutory Ref:</span> <span class="font-mono text-gray-600 text-[10px]">SSS/PH/PAG-IBIG Compliant</span></p>
              </div>
           </div>
@@ -524,7 +585,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
                 </div>
                 <div class="flex justify-between py-1.5 font-bold text-gray-900 bg-gray-50 px-2 rounded mt-1">
                   <span>Gross Pay (Period)</span> 
-                  <span class="font-mono text-purple-700">₱${f(kinsenasGross)}</span>
+                  <span class="font-mono text-amber-600">₱${f(kinsenasGross)}</span>
                 </div>
               </div>
             </div>
@@ -563,13 +624,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
             <div><span class="font-semibold">Monthly Net Pay Reference:</span> ₱${f(monthlyNet)}</div>
           </div>
 
-          <div class="bg-purple-950 text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
+          <div class="bg-amber-600 text-white p-4 rounded-xl flex justify-between items-center shadow-inner">
             <div>
-              <h4 class="text-[10px] uppercase tracking-widest text-white/60">Net Pay for this Period</h4>
-              <p class="text-[10px] text-white/40">Kinsenas Payout (15-Day Cycle)</p>
+              <h4 class="text-[10px] uppercase tracking-widest text-white/70">Net Pay for this Period</h4>
+              <p class="text-[10px] text-white/50">Kinsenas Payout (15-Day Cycle)</p>
             </div>
             <div class="text-right">
-              <h2 class="text-2xl font-black text-purple-300 font-mono">₱${f(kinsenasNet)}</h2>
+              <h2 class="text-2xl font-black text-white font-mono">₱${f(kinsenasNet)}</h2>
             </div>
           </div>
         </div>
@@ -590,7 +651,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_employees') {
         if (id === activeBtnId) {
           btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 bg-white text-gray-900 shadow-sm font-semibold";
         } else {
-          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-purple-200 hover:text-white";
+          btn.className = "px-4 py-2 rounded-lg text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white";
         }
       });
 
